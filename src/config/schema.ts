@@ -123,6 +123,17 @@ export type AppCategory =
   | "monitoring"
   | "infrastructure"
 
+export type Architecture = "x64" | "arm64" | "arm32"
+
+export interface ArchCompatibility {
+  /** Architectures with full support */
+  supported?: Architecture[]
+  /** Architectures with deprecated/broken support - will show warning */
+  deprecated?: Architecture[]
+  /** Warning message to show for deprecated architectures */
+  warning?: string
+}
+
 export interface AppDefinition {
   id: AppId
   name: string
@@ -141,6 +152,8 @@ export interface AppDefinition {
   cap_add?: string[]
   apiKeyMeta?: ApiKeyMeta
   rootFolder?: RootFolderMeta
+  /** Architecture compatibility info - omit if supports all */
+  arch?: ArchCompatibility
 }
 
 export interface RootFolderMeta {
