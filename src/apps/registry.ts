@@ -94,6 +94,10 @@ export const APPS: Record<AppId, AppDefinition> = {
       path: "/data/media/books",
       apiVersion: "v1",
     },
+    arch: {
+      deprecated: ["arm64", "arm32"],
+      warning: "Readarr is deprecated - no ARM64 support (project abandoned by upstream)",
+    },
   },
 
   bazarr: {
@@ -866,3 +870,32 @@ export function getAllApps(): AppDefinition[] {
 export function getAppIds(): AppId[] {
   return Object.keys(APPS) as AppId[]
 }
+
+import { getSystemArch, isAppCompatible, getArchWarning, isAppDeprecated } from "../util/arch"
+
+/**
+ * Get all apps compatible with the current system architecture
+ */
+export function getCompatibleApps(): AppDefinition[] {
+  const arch = getSystemArch()
+  return Object.values(APPS).filter((app) => isAppCompatible(app, arch))
+}
+
+/**
+ * Get apps that have warnings for the current architecture (deprecated but may work)
+ */
+export function getAppsWithArchWarnings(): { app: AppDefinition; warning: string }[] {
+  const arch = getSystemArch()
+  const result: { app: AppDefinition; warning: string }[] = []
+
+  for (const app of Object.values(APPS)) {
+    const warning = getArchWarning(app, arch)
+    if (warning) {
+      result.push({ app, warning })
+    }
+  }
+
+  return result
+}
+
+export { getSystemArch, isAppCompatible, getArchWarning, isAppDeprecated }
