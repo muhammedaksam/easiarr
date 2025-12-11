@@ -113,9 +113,9 @@ export const APPS: Record<AppId, AppDefinition> = {
     dependsOn: ["sonarr", "radarr"],
     trashGuide: "docs/Bazarr/",
     apiKeyMeta: {
-      configFile: "config/config.ini",
-      parser: "regex",
-      selector: "apikey\\s*=\\s*(.+)",
+      configFile: "config/config.yaml",
+      parser: "yaml",
+      selector: "auth.apikey",
     },
   },
 
@@ -131,8 +131,15 @@ export const APPS: Record<AppId, AppDefinition> = {
     volumes: (root) => [`${root}/config/mylar3:/config`, `${root}/data:/data`],
     apiKeyMeta: {
       configFile: "mylar/config.ini",
-      parser: "regex",
-      selector: "api_key\\s*=\\s*(.+)",
+      parser: "ini",
+      section: "API",
+      selector: "api_key",
+      enabledKey: "api_enabled",
+      generateIfMissing: true,
+    },
+    rootFolder: {
+      path: "/data/media/comics",
+      apiVersion: "v1",
     },
   },
 
@@ -142,7 +149,7 @@ export const APPS: Record<AppId, AppDefinition> = {
     description: "Adult media collection manager",
     category: "servarr",
     defaultPort: 6969,
-    image: "hotio/whisparr:nightly",
+    image: "ghcr.io/hotio/whisparr:nightly",
     puid: 13015,
     pgid: 13000,
     volumes: (root) => [`${root}/config/whisparr:/config`, `${root}/data:/data`],

@@ -164,12 +164,18 @@ export interface RootFolderMeta {
 export interface ApiKeyMeta {
   configFile: string // Relative to config volume root
   parser: ApiKeyParserType
-  selector: string // Regex group 1, or XML tag, or INI key, or JSON path
+  selector: string // Regex group 1, or XML tag, or INI key, JSON/YAML dot path
+  /** INI section name (for parser: "ini") */
+  section?: string
+  /** INI key that controls if API is enabled (for parser: "ini") */
+  enabledKey?: string
+  /** Generate API key if missing or None (for apps like Mylar3) */
+  generateIfMissing?: boolean
   description?: string
   transform?: (value: string) => string
 }
 
-export type ApiKeyParserType = "xml" | "ini" | "json" | "regex"
+export type ApiKeyParserType = "xml" | "ini" | "json" | "yaml" | "regex"
 
 export interface AppSecret {
   name: string
