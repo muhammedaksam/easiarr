@@ -11,7 +11,7 @@ import {
 } from "@opentui/core"
 import { AppId } from "../../config/schema"
 import { CATEGORY_ORDER } from "../../apps/categories"
-import { getAppsByCategory } from "../../apps"
+import { getAppsByCategory, getArchWarning } from "../../apps"
 
 export interface ApplicationSelectorOptions extends BoxOptions {
   selectedApps: Set<AppId>
@@ -139,10 +139,15 @@ export class ApplicationSelector extends BoxRenderable {
     const category = CATEGORY_ORDER[this.currentCategoryIndex]
     const apps = getAppsByCategory()[category.id] || []
 
-    const options = apps.map((app) => ({
-      name: `${this.selectedApps.has(app.id) ? "[✓]" : "[ ]"} ${app.name}`,
-      description: `Port ${app.defaultPort} - ${app.description}`,
-    }))
+    const options = apps.map((app) => {
+      const archWarning = getArchWarning(app)
+      const checkmark = this.selectedApps.has(app.id) ? "[✓]" : "[ ]"
+      const warnIcon = archWarning ? " ⚠️" : ""
+      return {
+        name: `${checkmark} ${app.name}${warnIcon}`,
+        description: archWarning ? `⚠️ ${archWarning}` : `Port ${app.defaultPort} - ${app.description}`,
+      }
+    })
 
     this.appList.options = options
   }
@@ -176,6 +181,17 @@ export class ApplicationSelector extends BoxRenderable {
     check(["plex", "jellyfin"], "Multiple media servers")
     check(["overseerr", "jellyseerr"], "Multiple request managers")
     check(["prowlarr", "jackett"], "Multiple indexers")
+
+    // Architecture warnings for selected apps
+    const allApps = Object.values(getAppsByCategory()).flat()
+    for (const app of allApps) {
+      if (this.selectedApps.has(app.id)) {
+        const archWarn = getArchWarning(app)
+        if (archWarn) {
+          warnings.push(archWarn)
+        }
+      }
+    }
 
     return warnings
   }
