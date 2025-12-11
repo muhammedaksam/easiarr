@@ -75,7 +75,7 @@ git commit -m "chore: bump version to ${NEW_VERSION}"
 
 # Create and push tag
 echo -e "${BLUE}Creating tag ${TAG_NAME}...${NC}"
-git tag "$TAG_NAME"
+git tag -a "$TAG_NAME" -m "Release $TAG_NAME"
 
 echo -e "${BLUE}Pushing commits and tag...${NC}"
 git push
