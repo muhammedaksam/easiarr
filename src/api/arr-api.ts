@@ -50,9 +50,9 @@ function getCategoryForApp(appId: AppId): string {
 function getCategoryFieldName(appId: AppId): string {
   switch (appId) {
     case "radarr":
-    case "whisparr":
       return "movieCategory"
     case "sonarr":
+    case "whisparr":
       return "tvCategory"
     case "lidarr":
       return "musicCategory"
