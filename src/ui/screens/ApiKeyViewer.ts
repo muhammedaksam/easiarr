@@ -1,15 +1,112 @@
 import { BoxRenderable, CliRenderer, TextRenderable, KeyEvent } from "@opentui/core"
-import { existsSync, readFileSync } from "node:fs"
+import { existsSync, readFileSync, writeFileSync } from "node:fs"
 import { writeFile, readFile } from "node:fs/promises"
 import { join } from "node:path"
+import { randomBytes } from "node:crypto"
+import { parse as parseYaml } from "yaml"
 import { createPageLayout } from "../components/PageLayout"
-import { EasiarrConfig } from "../../config/schema"
+import { EasiarrConfig, AppDefinition } from "../../config/schema"
 import { getApp } from "../../apps/registry"
 import { getComposePath } from "../../config/manager"
 
+/** Generate a random 32-character hex API key */
+function generateApiKey(): string {
+  return randomBytes(16).toString("hex")
+}
+
+/** Get nested value from object using dot notation */
+function getNestedValue(obj: Record<string, unknown>, path: string): unknown {
+  return path.split(".").reduce<unknown>((o, k) => (o as Record<string, unknown>)?.[k], obj)
+}
+
+/** Parse INI file and get value from section.key */
+function parseIniValue(content: string, section: string, key: string): string | null {
+  const lines = content.split("\n")
+  let inSection = false
+
+  for (const line of lines) {
+    const trimmed = line.trim()
+
+    // Check section header
+    if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
+      const sectionName = trimmed.slice(1, -1)
+      inSection = sectionName.toLowerCase() === section.toLowerCase()
+      continue
+    }
+
+    // Parse key=value in current section
+    if (inSection && trimmed.includes("=")) {
+      const [k, ...valueParts] = trimmed.split("=")
+      if (k.trim().toLowerCase() === key.toLowerCase()) {
+        let value = valueParts.join("=").trim()
+        // Remove quotes if present
+        if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+          value = value.slice(1, -1)
+        }
+        return value
+      }
+    }
+  }
+  return null
+}
+
+/** Update INI file with new values for section */
+function updateIniValue(content: string, section: string, updates: Record<string, string>): string {
+  const lines = content.split("\n")
+  const result: string[] = []
+  let inSection = false
+  const updatedKeys = new Set<string>()
+
+  for (const line of lines) {
+    const trimmed = line.trim()
+
+    // Check section header
+    if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
+      // Before leaving current section, add any missing keys
+      if (inSection) {
+        for (const [k, v] of Object.entries(updates)) {
+          if (!updatedKeys.has(k.toLowerCase())) {
+            result.push(`${k} = ${v}`)
+          }
+        }
+      }
+      const sectionName = trimmed.slice(1, -1)
+      inSection = sectionName.toLowerCase() === section.toLowerCase()
+      result.push(line)
+      continue
+    }
+
+    // Update key=value in current section
+    if (inSection && trimmed.includes("=")) {
+      const [k] = trimmed.split("=")
+      const keyName = k.trim()
+      const keyLower = keyName.toLowerCase()
+
+      let handled = false
+      for (const [updateKey, updateValue] of Object.entries(updates)) {
+        if (updateKey.toLowerCase() === keyLower) {
+          result.push(`${keyName} = ${updateValue}`)
+          updatedKeys.add(keyLower)
+          handled = true
+          break
+        }
+      }
+      if (!handled) {
+        result.push(line)
+      }
+    } else {
+      result.push(line)
+    }
+  }
+
+  return result.join("\n")
+}
+
+type KeyStatus = "found" | "missing" | "error" | "generated"
+
 export class ApiKeyViewer extends BoxRenderable {
   private config: EasiarrConfig
-  private keys: Array<{ appId: string; app: string; key: string; status: "found" | "missing" | "error" }> = []
+  private keys: Array<{ appId: string; app: string; key: string; status: KeyStatus }> = []
   private keyHandler!: (key: KeyEvent) => void
   private cliRenderer: CliRenderer
   private statusText: TextRenderable | null = null
@@ -19,8 +116,8 @@ export class ApiKeyViewer extends BoxRenderable {
       id: "api-key-viewer",
       width: "100%",
       height: "100%",
-      backgroundColor: "#111111", // Dark bg
-      zIndex: 200, // Above main menu
+      backgroundColor: "#111111",
+      zIndex: 200,
     })
     this.cliRenderer = renderer
     this.config = config
@@ -39,38 +136,17 @@ export class ApiKeyViewer extends BoxRenderable {
       if (!appDef || !appDef.apiKeyMeta) continue
 
       try {
-        // Resolve config path
-        // Volumes are: ["${root}/config/radarr:/config", ...]
-        // We assume index 0 is the config volume
         const volumes = appDef.volumes(this.config.rootDir)
         if (volumes.length === 0) continue
 
         const parts = volumes[0].split(":")
         const hostPath = parts[0]
-
         const configFilePath = join(hostPath, appDef.apiKeyMeta.configFile)
 
         if (existsSync(configFilePath)) {
           const content = readFileSync(configFilePath, "utf-8")
-
-          if (appDef.apiKeyMeta.parser === "regex") {
-            const regex = new RegExp(appDef.apiKeyMeta.selector)
-            const match = regex.exec(content)
-            if (match && match[1]) {
-              this.keys.push({ appId: appDef.id, app: appDef.name, key: match[1], status: "found" })
-            } else {
-              this.keys.push({ appId: appDef.id, app: appDef.name, key: "Not found in file", status: "error" })
-            }
-          } else if (appDef.apiKeyMeta.parser === "json") {
-            const json = JSON.parse(content)
-            // Support dot notation like "main.apiKey"
-            const value = appDef.apiKeyMeta.selector.split(".").reduce((obj, key) => obj?.[key], json)
-            if (value && typeof value === "string") {
-              this.keys.push({ appId: appDef.id, app: appDef.name, key: value, status: "found" })
-            } else {
-              this.keys.push({ appId: appDef.id, app: appDef.name, key: "Key not found in JSON", status: "error" })
-            }
-          }
+          const result = this.extractApiKey(appDef, content, configFilePath)
+          this.keys.push({ appId: appDef.id, app: appDef.name, ...result })
         } else {
           this.keys.push({
             appId: appDef.id,
@@ -79,14 +155,82 @@ export class ApiKeyViewer extends BoxRenderable {
             status: "missing",
           })
         }
-      } catch {
-        this.keys.push({ appId: appDef.id, app: appDef.name, key: "Error reading file", status: "error" })
+      } catch (e) {
+        this.keys.push({ appId: appDef.id, app: appDef.name, key: `Error: ${e}`, status: "error" })
       }
     }
   }
 
+  private extractApiKey(
+    appDef: AppDefinition,
+    content: string,
+    configFilePath: string
+  ): { key: string; status: "found" | "error" | "generated" } {
+    const meta = appDef.apiKeyMeta!
+
+    switch (meta.parser) {
+      case "regex": {
+        const regex = new RegExp(meta.selector)
+        const match = regex.exec(content)
+        if (match && match[1]) {
+          return { key: match[1], status: "found" }
+        }
+        return { key: "Not found in file", status: "error" }
+      }
+
+      case "json": {
+        const json = JSON.parse(content)
+        const value = getNestedValue(json, meta.selector)
+        if (value && typeof value === "string") {
+          return { key: value, status: "found" }
+        }
+        return { key: "Key not found in JSON", status: "error" }
+      }
+
+      case "yaml": {
+        const yaml = parseYaml(content) as Record<string, unknown>
+        const value = getNestedValue(yaml, meta.selector)
+        if (value && typeof value === "string") {
+          return { key: value, status: "found" }
+        }
+        return { key: "Key not found in YAML", status: "error" }
+      }
+
+      case "ini": {
+        const section = meta.section || "General"
+        const value = parseIniValue(content, section, meta.selector)
+
+        // Check if API is enabled and if we need to generate
+        if (meta.enabledKey) {
+          const enabled = parseIniValue(content, section, meta.enabledKey)
+          const isDisabled = !enabled || enabled.toLowerCase() === "false" || enabled === "0"
+          const needsGeneration = !value || value.toLowerCase() === "none" || value === ""
+
+          if (meta.generateIfMissing && (isDisabled || needsGeneration)) {
+            const newKey = generateApiKey()
+            const updates: Record<string, string> = { [meta.selector]: newKey }
+            if (meta.enabledKey) {
+              updates[meta.enabledKey] = "True"
+            }
+            const newContent = updateIniValue(content, section, updates)
+            writeFileSync(configFilePath, newContent, "utf-8")
+            return { key: newKey, status: "generated" }
+          }
+        }
+
+        if (value && value.toLowerCase() !== "none" && value !== "") {
+          return { key: value, status: "found" }
+        }
+        return { key: "API key not configured", status: "error" }
+      }
+
+      default:
+        return { key: `Unknown parser: ${meta.parser}`, status: "error" }
+    }
+  }
+
   private renderPage(onBack: () => void) {
-    const foundKeys = this.keys.filter((k) => k.status === "found")
+    const foundKeys = this.keys.filter((k) => k.status === "found" || k.status === "generated")
     const hasFoundKeys = foundKeys.length > 0
 
     const { container, content } = createPageLayout(this.cliRenderer, {
@@ -126,19 +270,28 @@ export class ApiKeyViewer extends BoxRenderable {
           marginBottom: 0,
         })
 
+        // Status color
+        let color = "#6272a4"
+        if (k.status === "found") color = "#50fa7b"
+        else if (k.status === "generated") color = "#8be9fd"
+        else if (k.status === "error") color = "#ff5555"
+
         // App Name
         row.add(
           new TextRenderable(this.cliRenderer, {
             content: k.app.padEnd(20),
-            fg: k.status === "found" ? "#50fa7b" : "#ff5555",
+            fg: color,
           })
         )
 
-        // Key
+        // Key with status indicator
+        let keyDisplay = k.key
+        if (k.status === "generated") keyDisplay = `${k.key} (generated)`
+
         row.add(
           new TextRenderable(this.cliRenderer, {
-            content: k.key,
-            fg: k.status === "found" ? "#f1fa8c" : "#6272a4",
+            content: keyDisplay,
+            fg: k.status === "found" || k.status === "generated" ? "#f1fa8c" : "#6272a4",
           })
         )
         content.add(row)
@@ -180,7 +333,7 @@ export class ApiKeyViewer extends BoxRenderable {
   }
 
   private async saveToEnv() {
-    const foundKeys = this.keys.filter((k) => k.status === "found")
+    const foundKeys = this.keys.filter((k) => k.status === "found" || k.status === "generated")
     if (foundKeys.length === 0) return
 
     try {
