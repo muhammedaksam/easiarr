@@ -1,0 +1,73 @@
+{
+  "name": "@muhammedaksam/easiarr",
+  "version": "0.1.0",
+  "private": true,
+  "description": "TUI tool for generating docker-compose files for the *arr media ecosystem with 41 apps, TRaSH Guides best practices, VPN routing, and Traefik reverse proxy support",
+  "module": "src/index.ts",
+  "type": "module",
+  "bin": {
+    "easiarr": "./src/index.ts"
+  },
+  "files": [
+    "src"
+  ],
+  "author": "Muhammed Mustafa AKŞAM <info@muhammedaksam.com.tr> (https://github.com/muhammedaksam)",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/muhammedaksam/easiarr.git"
+  },
+  "bugs": {
+    "url": "https://github.com/muhammedaksam/easiarr/issues"
+  },
+  "homepage": "https://github.com/muhammedaksam/easiarr#readme",
+  "keywords": [
+    "arr",
+    "radarr",
+    "sonarr",
+    "prowlarr",
+    "docker",
+    "docker-compose",
+    "trash-guides",
+    "tui",
+    "opentui",
+    "cli",
+    "media-server"
+  ],
+  "scripts": {
+    "dev": "bun run --watch src/index.ts",
+    "build": "bun build src/index.ts --outdir dist --target bun",
+    "typecheck": "bun x tsc --noEmit",
+    "lint": "eslint src/",
+    "lint:fix": "eslint src/ --fix",
+    "format": "prettier --write src/",
+    "format:check": "prettier --check src/",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "check": "bun run typecheck && bun run lint && bun run format:check && bun run test",
+    "fix": "bun run lint:fix && bun run format",
+    "start": "bun run src/index.ts"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.1",
+    "@types/bun": "latest",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^25.0.0",
+    "eslint": "^9.39.1",
+    "jest": "^30.2.0",
+    "jiti": "^2.6.1",
+    "prettier": "^3.7.4",
+    "ts-jest": "^29.4.6",
+    "typescript-eslint": "^8.49.0",
+    "yaml": "^2.8.2"
+  },
+  "peerDependencies": {
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "@opentui/core": "^0.1.60"
+  },
+  "engines": {
+    "bun": ">=1.0"
+  }
+}

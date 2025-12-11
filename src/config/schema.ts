@@ -1,0 +1,191 @@
+/**
+ * Easiarr Configuration Schema
+ * TypeScript interfaces for configuration management
+ */
+
+import { VersionInfo } from "../VersionInfo"
+
+export interface EasiarrConfig {
+  version: string
+  rootDir: string
+  timezone: string
+  uid: number
+  gid: number
+  umask: string
+  apps: AppConfig[]
+  network?: NetworkConfig
+  traefik?: TraefikConfig
+  vpn?: VpnConfig
+  createdAt: string
+  updatedAt: string
+}
+
+export type VpnMode = "full" | "mini" | "none"
+
+export interface VpnConfig {
+  mode: VpnMode
+  provider?: string // For future use (e.g. custom, airvpn, protonvpn)
+}
+
+export interface TraefikConfig {
+  enabled: boolean
+  domain: string
+  entrypoint: string
+  middlewares: string[]
+}
+
+export interface AppConfig {
+  id: AppId
+  enabled: boolean
+  port?: number
+  customEnv?: Record<string, string>
+  customVolumes?: string[]
+  labels?: string[]
+  devices?: string[]
+  cap_add?: string[]
+}
+
+export interface NetworkConfig {
+  name: string
+  driver: "bridge" | "host" | "none"
+}
+
+export type AppId =
+  // Media Management (Servarr)
+  | "radarr"
+  | "sonarr"
+  | "lidarr"
+  | "readarr"
+  | "bazarr"
+  | "mylar3"
+  | "whisparr"
+  | "audiobookshelf"
+  // Indexers
+  | "prowlarr"
+  | "jackett"
+  | "flaresolverr"
+  // Download Clients
+  | "qbittorrent"
+  | "sabnzbd"
+  // Media Servers
+  | "plex"
+  | "jellyfin"
+  | "tautulli"
+  | "tdarr"
+  // Request Management
+  | "overseerr"
+  | "jellyseerr"
+  // Dashboards
+  | "homarr"
+  | "heimdall"
+  | "homepage"
+  // Utilities
+  | "huntarr"
+  | "unpackerr"
+  | "filebot"
+  | "chromium"
+  | "guacamole"
+  | "guacd"
+  | "ddns-updater"
+  // VPN
+  | "gluetun"
+  // Monitoring & Infra
+  | "portainer"
+  | "dozzle"
+  | "uptime-kuma"
+  // Monitoring
+  | "grafana"
+  | "prometheus"
+  // Reverse Proxy
+  | "traefik"
+  | "traefik-certs-dumper"
+  | "crowdsec"
+  // Network/VPN
+  | "headscale"
+  | "headplane"
+  | "tailscale"
+  // Authentication
+  | "authentik"
+  | "authentik-worker"
+  // Database
+  | "postgresql"
+  | "valkey"
+
+export type AppCategory =
+  | "servarr"
+  | "indexer"
+  | "downloader"
+  | "mediaserver"
+  | "request"
+  | "dashboard"
+  | "utility"
+  | "vpn"
+  | "monitoring"
+  | "infrastructure"
+
+export interface AppDefinition {
+  id: AppId
+  name: string
+  description: string
+  category: AppCategory
+  defaultPort: number
+  image: string
+  puid: number
+  pgid: number
+  volumes: (rootDir: string) => string[]
+  environment?: Record<string, string>
+  dependsOn?: AppId[]
+  trashGuide?: string
+  secrets?: AppSecret[]
+  devices?: string[]
+  cap_add?: string[]
+  apiKeyMeta?: ApiKeyMeta
+  rootFolder?: RootFolderMeta
+}
+
+export interface RootFolderMeta {
+  path: string // e.g. "/data/media/movies"
+  apiVersion: "v1" | "v3"
+}
+
+export interface ApiKeyMeta {
+  configFile: string // Relative to config volume root
+  parser: ApiKeyParserType
+  selector: string // Regex group 1, or XML tag, or INI key, or JSON path
+  description?: string
+  transform?: (value: string) => string
+}
+
+export type ApiKeyParserType = "xml" | "ini" | "json" | "regex"
+
+export interface AppSecret {
+  name: string
+  description: string
+  required: boolean
+  default?: string
+  generate?: boolean // Suggest auto-generation
+  mask?: boolean // Mask input
+}
+
+export const APP_CATEGORIES: Record<AppCategory, string> = {
+  servarr: "Media Management",
+  indexer: "Indexers",
+  downloader: "Download Clients",
+  mediaserver: "Media Servers",
+  request: "Request Management",
+  dashboard: "Dashboards",
+  utility: "Utilities",
+  vpn: "VPN",
+  monitoring: "Monitoring",
+  infrastructure: "Infrastructure",
+}
+
+export const DEFAULT_CONFIG: Omit<EasiarrConfig, "createdAt" | "updatedAt"> = {
+  version: VersionInfo.version,
+  rootDir: "",
+  timezone: "",
+  uid: 1000,
+  gid: 1000,
+  umask: "002",
+  apps: [],
+}

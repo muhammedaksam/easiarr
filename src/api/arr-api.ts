@@ -1,0 +1,198 @@
+/**
+ * *arr API Client
+ * Interacts with Radarr, Sonarr, Lidarr, Readarr, Whisparr APIs
+ */
+
+// Types for Root Folder API
+export interface RootFolder {
+  id?: number
+  path: string
+  accessible?: boolean
+  freeSpace?: number | null
+  unmappedFolders?: { name: string | null; path: string | null; relativePath: string | null }[]
+}
+
+// Types for Download Client API
+export interface DownloadClientConfig {
+  name: string
+  implementation: string
+  configContract: string
+  enable?: boolean
+  priority?: number
+  fields: { name: string; value: unknown }[]
+}
+
+export interface DownloadClient extends DownloadClientConfig {
+  id?: number
+}
+
+import type { AppId } from "../config/schema"
+
+// Get category name for an app
+function getCategoryForApp(appId: AppId): string {
+  switch (appId) {
+    case "radarr":
+      return "movies"
+    case "sonarr":
+      return "tv"
+    case "lidarr":
+      return "music"
+    case "readarr":
+      return "books"
+    case "whisparr":
+      return "adult"
+    default:
+      return "default"
+  }
+}
+
+// Get category field name for an app (different apps use different field names)
+function getCategoryFieldName(appId: AppId): string {
+  switch (appId) {
+    case "radarr":
+    case "whisparr":
+      return "movieCategory"
+    case "sonarr":
+      return "tvCategory"
+    case "lidarr":
+      return "musicCategory"
+    case "readarr":
+      return "bookCategory"
+    default:
+      return "category"
+  }
+}
+
+// qBittorrent download client config
+export function createQBittorrentConfig(
+  host: string,
+  port: number,
+  username: string,
+  password: string,
+  appId?: AppId
+): DownloadClientConfig {
+  const category = appId ? getCategoryForApp(appId) : "default"
+  const categoryField = appId ? getCategoryFieldName(appId) : "category"
+
+  return {
+    name: "qBittorrent",
+    implementation: "QBittorrent",
+    configContract: "QBittorrentSettings",
+    enable: true,
+    priority: 1,
+    fields: [
+      { name: "host", value: host },
+      { name: "port", value: port },
+      { name: "username", value: username },
+      { name: "password", value: password },
+      { name: categoryField, value: category },
+      { name: "recentMoviePriority", value: 0 },
+      { name: "olderMoviePriority", value: 0 },
+      { name: "initialState", value: 0 },
+      { name: "sequentialOrder", value: false },
+      { name: "firstAndLast", value: false },
+    ],
+  }
+}
+
+// SABnzbd download client config
+export function createSABnzbdConfig(host: string, port: number, apiKey: string, appId?: AppId): DownloadClientConfig {
+  const category = appId ? getCategoryForApp(appId) : "default"
+  const categoryField = appId ? getCategoryFieldName(appId) : "category"
+
+  return {
+    name: "SABnzbd",
+    implementation: "Sabnzbd",
+    configContract: "SabnzbdSettings",
+    enable: true,
+    priority: 1,
+    fields: [
+      { name: "host", value: host },
+      { name: "port", value: port },
+      { name: "apiKey", value: apiKey },
+      { name: categoryField, value: category },
+      { name: "recentMoviePriority", value: -100 },
+      { name: "olderMoviePriority", value: -100 },
+    ],
+  }
+}
+
+export type ApiVersion = "v1" | "v3"
+
+/**
+ * *arr API Client
+ */
+export class ArrApiClient {
+  private baseUrl: string
+  private apiKey: string
+  private apiVersion: ApiVersion
+
+  constructor(host: string, port: number, apiKey: string, apiVersion: ApiVersion = "v3") {
+    this.baseUrl = `http://${host}:${port}`
+    this.apiKey = apiKey
+    this.apiVersion = apiVersion
+  }
+
+  private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+    const url = `${this.baseUrl}/api/${this.apiVersion}${endpoint}`
+    const headers = {
+      "X-Api-Key": this.apiKey,
+      "Content-Type": "application/json",
+      ...options.headers,
+    }
+
+    const response = await fetch(url, { ...options, headers })
+
+    if (!response.ok) {
+      throw new Error(`API request failed: ${response.status} ${response.statusText}`)
+    }
+
+    // Handle empty responses (DELETE returns empty body)
+    const text = await response.text()
+    if (!text) return {} as T
+
+    return JSON.parse(text) as T
+  }
+
+  // Root Folder methods
+  async getRootFolders(): Promise<RootFolder[]> {
+    return this.request<RootFolder[]>("/rootfolder")
+  }
+
+  async addRootFolder(path: string): Promise<RootFolder> {
+    return this.request<RootFolder>("/rootfolder", {
+      method: "POST",
+      body: JSON.stringify({ path }),
+    })
+  }
+
+  async deleteRootFolder(id: number): Promise<void> {
+    await this.request(`/rootfolder/${id}`, { method: "DELETE" })
+  }
+
+  // Download Client methods
+  async getDownloadClients(): Promise<DownloadClient[]> {
+    return this.request<DownloadClient[]>("/downloadclient")
+  }
+
+  async addDownloadClient(config: DownloadClientConfig): Promise<DownloadClient> {
+    return this.request<DownloadClient>("/downloadclient", {
+      method: "POST",
+      body: JSON.stringify(config),
+    })
+  }
+
+  async deleteDownloadClient(id: number): Promise<void> {
+    await this.request(`/downloadclient/${id}`, { method: "DELETE" })
+  }
+
+  // Health check
+  async isHealthy(): Promise<boolean> {
+    try {
+      await this.request("/system/status")
+      return true
+    } catch {
+      return false
+    }
+  }
+}
