@@ -57,14 +57,14 @@
     "jiti": "^2.6.1",
     "prettier": "^3.7.4",
     "ts-jest": "^29.4.6",
-    "typescript-eslint": "^8.49.0",
-    "yaml": "^2.8.2"
+    "typescript-eslint": "^8.49.0"
   },
   "peerDependencies": {
     "typescript": "^5.9.3"
   },
   "dependencies": {
-    "@opentui/core": "^0.1.60"
+    "@opentui/core": "^0.1.60",
+    "yaml": "^2.8.2"
   },
   "engines": {
     "bun": ">=1.0"
