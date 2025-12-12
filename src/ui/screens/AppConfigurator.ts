@@ -13,7 +13,6 @@ import {
 } from "@opentui/core"
 import { existsSync, readFileSync } from "node:fs"
 import { writeFile, readFile } from "node:fs/promises"
-import { join } from "node:path"
 import { createPageLayout } from "../components/PageLayout"
 import { EasiarrConfig, AppId } from "../../config/schema"
 import { getApp } from "../../apps/registry"
@@ -114,7 +113,7 @@ export class AppConfigurator extends BoxRenderable {
     const { container, content } = createPageLayout(this.cliRenderer, {
       title: "Configure Apps",
       stepInfo: "Global Credentials",
-      footerHint: "Enter credentials for all *arr apps  Tab Next Field  Enter Continue  Esc Skip",
+      footerHint: "Tab Cycle Fields/Shortcuts  O Override  Enter Continue  Esc Skip",
     })
     this.pageContainer = container
     this.add(container)
@@ -174,13 +173,16 @@ export class AppConfigurator extends BoxRenderable {
         overrideText.content = `[O] Override existing: ${this.overrideExisting ? "Yes" : "No"}`
         overrideText.fg = this.overrideExisting ? "#50fa7b" : "#6272a4"
       } else if (key.name === "tab") {
-        // Toggle focus between inputs
+        // Cycle focus: username -> password -> no focus (shortcuts work) -> username
         if (focusedInput === userInput) {
           userInput.blur()
           passInput.focus()
           focusedInput = passInput
-        } else {
+        } else if (focusedInput === passInput) {
           passInput.blur()
+          focusedInput = null // No focus state - shortcuts available
+        } else {
+          // No input focused, go back to username
           userInput.focus()
           focusedInput = userInput
         }
@@ -343,27 +345,25 @@ export class AppConfigurator extends BoxRenderable {
   }
 
   private extractApiKey(appId: AppId): string | null {
-    const appDef = getApp(appId)
-    if (!appDef?.apiKeyMeta) return null
+    // Use API keys from .env file (format: API_KEY_APPNAME)
+    try {
+      const envPath = getComposePath().replace("docker-compose.yml", ".env")
+      if (!existsSync(envPath)) return null
 
-    const volumes = appDef.volumes(this.config.rootDir)
-    if (volumes.length === 0) return null
+      const content = readFileSync(envPath, "utf-8")
+      const envKey = `API_KEY_${appId.toUpperCase()}`
 
-    const parts = volumes[0].split(":")
-    const hostPath = parts[0]
-    const configFilePath = join(hostPath, appDef.apiKeyMeta.configFile)
+      for (const line of content.split("\n")) {
+        const [key, ...val] = line.split("=")
+        if (key?.trim() === envKey && val.length > 0) {
+          return val.join("=").trim()
+        }
+      }
 
-    if (!existsSync(configFilePath)) return null
-
-    const content = readFileSync(configFilePath, "utf-8")
-
-    if (appDef.apiKeyMeta.parser === "regex") {
-      const regex = new RegExp(appDef.apiKeyMeta.selector)
-      const match = regex.exec(content)
-      return match?.[1] || null
+      return null
+    } catch {
+      return null
     }
-
-    return null
   }
 
   private renderConfigProgress() {
