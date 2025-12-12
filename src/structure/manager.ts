@@ -31,11 +31,13 @@ export async function ensureDirectoryStructure(config: EasiarrConfig): Promise<v
 
     for (const [appId, contentType] of Object.entries(CONTENT_TYPE_MAP)) {
       if (enabledApps.has(appId as AppId)) {
-        // Create this content type in ALL base dirs to follow TRaSH standard
-        // (e.g. data/torrents/movies, data/usenet/movies, data/media/movies)
-        for (const base of BASE_DIRS) {
-          await mkdir(join(dataRoot, base, contentType), { recursive: true })
-        }
+        // TRaSH Structure:
+        // - Torrents: flat categories (data/torrents/movies, etc.)
+        // - Usenet: categories inside complete (data/usenet/complete/movies, etc.)
+        // - Media: flat library folders (data/media/movies, etc.)
+        await mkdir(join(dataRoot, "torrents", contentType), { recursive: true })
+        await mkdir(join(dataRoot, "usenet", "complete", contentType), { recursive: true })
+        await mkdir(join(dataRoot, "media", contentType), { recursive: true })
       }
     }
 
@@ -44,16 +46,16 @@ export async function ensureDirectoryStructure(config: EasiarrConfig): Promise<v
     // Always create 'photos' in media (Personal photos)
     await mkdir(join(dataRoot, "media", "photos"), { recursive: true })
 
-    // Always create 'console' and 'software' in torrents/usenet (Manual DL categories)
+    // TRaSH: Usenet has incomplete/complete structure, torrents do NOT
+    await mkdir(join(dataRoot, "usenet", "incomplete"), { recursive: true })
+    await mkdir(join(dataRoot, "usenet", "complete"), { recursive: true })
+
+    // Manual download categories for both torrent and usenet
     for (const base of ["torrents", "usenet"]) {
       await mkdir(join(dataRoot, base, "console"), { recursive: true })
       await mkdir(join(dataRoot, base, "software"), { recursive: true })
       // Create 'watch' folder for manual .torrent/.nzb drops
       await mkdir(join(dataRoot, base, "watch"), { recursive: true })
-
-      // 'complete' and 'incomplete' default folders
-      await mkdir(join(dataRoot, base, "complete"), { recursive: true })
-      await mkdir(join(dataRoot, base, "incomplete"), { recursive: true })
     }
 
     if (enabledApps.has("prowlarr")) {

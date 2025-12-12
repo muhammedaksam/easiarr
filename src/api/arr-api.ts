@@ -50,9 +50,9 @@ function getCategoryForApp(appId: AppId): string {
 function getCategoryFieldName(appId: AppId): string {
   switch (appId) {
     case "radarr":
-    case "whisparr":
       return "movieCategory"
     case "sonarr":
+    case "whisparr":
       return "tvCategory"
     case "lidarr":
       return "musicCategory"
@@ -195,4 +195,76 @@ export class ArrApiClient {
       return false
     }
   }
+
+  // Host Config methods - for setting up authentication
+  async getHostConfig(): Promise<HostConfig> {
+    return this.request<HostConfig>("/config/host")
+  }
+
+  async updateHostConfig(username: string, password: string, override = false): Promise<HostConfig | null> {
+    // First get current config to preserve all other settings
+    const currentConfig = await this.getHostConfig()
+
+    // Only update if no password is set OR override is requested
+    if (currentConfig.password && !override) {
+      return null // Skip - password already configured
+    }
+
+    // Update with authentication settings
+    const updatedConfig = {
+      ...currentConfig,
+      authenticationMethod: "forms",
+      authenticationRequired: "enabled",
+      username,
+      password,
+      passwordConfirmation: password,
+    }
+
+    return this.request<HostConfig>(`/config/host/${currentConfig.id}`, {
+      method: "PUT",
+      body: JSON.stringify(updatedConfig),
+    })
+  }
+}
+
+// Types for Host Config API
+export interface HostConfig {
+  id: number
+  bindAddress: string | null
+  port: number
+  sslPort: number
+  enableSsl: boolean
+  launchBrowser: boolean
+  authenticationMethod: "none" | "basic" | "forms" | "external"
+  authenticationRequired: "enabled" | "disabledForLocalAddresses"
+  analyticsEnabled: boolean
+  username: string | null
+  password: string | null
+  passwordConfirmation: string | null
+  logLevel: string | null
+  logSizeLimit: number
+  consoleLogLevel: string | null
+  branch: string | null
+  apiKey: string | null
+  sslCertPath: string | null
+  sslCertPassword: string | null
+  urlBase: string | null
+  instanceName: string | null
+  applicationUrl: string | null
+  updateAutomatically: boolean
+  updateMechanism: string
+  updateScriptPath: string | null
+  proxyEnabled: boolean
+  proxyType: string
+  proxyHostname: string | null
+  proxyPort: number
+  proxyUsername: string | null
+  proxyPassword: string | null
+  proxyBypassFilter: string | null
+  proxyBypassLocalAddresses: boolean
+  certificateValidation: string
+  backupFolder: string | null
+  backupInterval: number
+  backupRetention: number
+  trustCgnatIpAddresses: boolean
 }
