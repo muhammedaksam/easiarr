@@ -27,16 +27,21 @@ interface ConfigResult {
   message?: string
 }
 
-type Step = "configure" | "qbittorrent" | "sabnzbd" | "done"
+type Step = "credentials" | "configure" | "qbittorrent" | "sabnzbd" | "done"
 
 export class AppConfigurator extends BoxRenderable {
   private config: EasiarrConfig
   private cliRenderer: CliRenderer
   private keyHandler!: (key: KeyEvent) => void
   private results: ConfigResult[] = []
-  private currentStep: Step = "configure"
+  private currentStep: Step = "credentials"
   private contentBox!: BoxRenderable
   private pageContainer!: BoxRenderable
+
+  // Global *arr credentials
+  private globalUsername = "admin"
+  private globalPassword = ""
+  private overrideExisting = false
 
   // Download client credentials
   private qbHost = "qbittorrent"
@@ -73,7 +78,8 @@ export class AppConfigurator extends BoxRenderable {
     // Load saved credentials from .env
     this.loadSavedCredentials()
 
-    this.runConfiguration()
+    // Start with credentials prompt
+    this.renderCredentialsPrompt()
   }
 
   private loadSavedCredentials() {
@@ -86,7 +92,11 @@ export class AppConfigurator extends BoxRenderable {
         const [key, ...val] = line.split("=")
         if (key && val.length > 0) {
           const value = val.join("=").trim()
-          if (key.trim() === "QBITTORRENT_PASSWORD") {
+          if (key.trim() === "GLOBAL_USERNAME") {
+            this.globalUsername = value
+          } else if (key.trim() === "GLOBAL_PASSWORD") {
+            this.globalPassword = value
+          } else if (key.trim() === "QBITTORRENT_PASSWORD") {
             this.qbPass = value
           } else if (key.trim() === "SABNZBD_API_KEY") {
             this.sabApiKey = value
@@ -95,6 +105,138 @@ export class AppConfigurator extends BoxRenderable {
       })
     } catch {
       // Ignore errors
+    }
+  }
+
+  private renderCredentialsPrompt() {
+    this.clear()
+
+    const { container, content } = createPageLayout(this.cliRenderer, {
+      title: "Configure Apps",
+      stepInfo: "Global Credentials",
+      footerHint: "Enter credentials for all *arr apps  Tab Next Field  Enter Continue  Esc Skip",
+    })
+    this.pageContainer = container
+    this.add(container)
+
+    content.add(
+      new TextRenderable(this.cliRenderer, {
+        content: "Set a global username/password for all *arr applications:\n",
+        fg: "#4a9eff",
+      })
+    )
+
+    // Username input
+    content.add(new TextRenderable(this.cliRenderer, { content: "Username:", fg: "#aaaaaa" }))
+    const userInput = new InputRenderable(this.cliRenderer, {
+      id: "global-user-input",
+      width: 30,
+      placeholder: "admin",
+      value: this.globalUsername,
+      focusedBackgroundColor: "#1a1a1a",
+    })
+    content.add(userInput)
+
+    content.add(new BoxRenderable(this.cliRenderer, { width: 1, height: 1 })) // Spacer
+
+    // Password input
+    content.add(new TextRenderable(this.cliRenderer, { content: "Password:", fg: "#aaaaaa" }))
+    const passInput = new InputRenderable(this.cliRenderer, {
+      id: "global-pass-input",
+      width: 30,
+      placeholder: "Enter password",
+      value: this.globalPassword,
+      focusedBackgroundColor: "#1a1a1a",
+    })
+    content.add(passInput)
+
+    content.add(new BoxRenderable(this.cliRenderer, { width: 1, height: 1 })) // Spacer
+
+    // Override toggle
+    const overrideText = new TextRenderable(this.cliRenderer, {
+      id: "override-toggle",
+      content: `[O] Override existing: ${this.overrideExisting ? "Yes" : "No"}`,
+      fg: this.overrideExisting ? "#50fa7b" : "#6272a4",
+    })
+    content.add(overrideText)
+
+    userInput.focus()
+    let focusedInput = userInput
+
+    // Handle key events
+    this.keyHandler = (key: KeyEvent) => {
+      if (key.name === "o" && !userInput.focused && !passInput.focused) {
+        // Toggle override
+        this.overrideExisting = !this.overrideExisting
+        overrideText.content = `[O] Override existing: ${this.overrideExisting ? "Yes" : "No"}`
+        overrideText.fg = this.overrideExisting ? "#50fa7b" : "#6272a4"
+      } else if (key.name === "tab") {
+        // Toggle focus between inputs
+        if (focusedInput === userInput) {
+          userInput.blur()
+          passInput.focus()
+          focusedInput = passInput
+        } else {
+          passInput.blur()
+          userInput.focus()
+          focusedInput = userInput
+        }
+      } else if (key.name === "escape") {
+        // Skip credentials setup
+        this.cliRenderer.keyInput.off("keypress", this.keyHandler)
+        userInput.blur()
+        passInput.blur()
+        this.currentStep = "configure"
+        this.runConfiguration()
+      } else if (key.name === "return") {
+        // Save and continue
+        this.globalUsername = userInput.value || "admin"
+        this.globalPassword = passInput.value
+
+        this.cliRenderer.keyInput.off("keypress", this.keyHandler)
+        userInput.blur()
+        passInput.blur()
+
+        // Save credentials to .env
+        this.saveGlobalCredentialsToEnv()
+
+        this.currentStep = "configure"
+        this.runConfiguration()
+      }
+    }
+    this.cliRenderer.keyInput.on("keypress", this.keyHandler)
+  }
+
+  private async saveGlobalCredentialsToEnv() {
+    try {
+      const envPath = getComposePath().replace("docker-compose.yml", ".env")
+
+      // Read existing .env if present
+      const currentEnv: Record<string, string> = {}
+      if (existsSync(envPath)) {
+        const content = await readFile(envPath, "utf-8")
+        content.split("\n").forEach((line) => {
+          const [key, ...val] = line.split("=")
+          if (key && val.length > 0) currentEnv[key.trim()] = val.join("=").trim()
+        })
+      }
+
+      // Add global credentials
+      if (this.globalUsername) {
+        currentEnv["GLOBAL_USERNAME"] = this.globalUsername
+      }
+      if (this.globalPassword) {
+        currentEnv["GLOBAL_PASSWORD"] = this.globalPassword
+      }
+
+      // Reconstruct .env content
+      const envContent = Object.entries(currentEnv)
+        .map(([k, v]) => `${k}=${v}`)
+        .join("\n")
+
+      await writeFile(envPath, envContent, "utf-8")
+    } catch {
+      // Ignore errors - not critical
     }
   }
 
@@ -184,6 +326,15 @@ export class AppConfigurator extends BoxRenderable {
 
     // Add root folder
     await client.addRootFolder(appDef.rootFolder.path)
+
+    // Set up authentication if credentials provided
+    if (this.globalPassword) {
+      try {
+        await client.updateHostConfig(this.globalUsername, this.globalPassword, this.overrideExisting)
+      } catch {
+        // Ignore auth setup errors - not critical
+      }
+    }
   }
 
   private extractApiKey(appId: AppId): string | null {
