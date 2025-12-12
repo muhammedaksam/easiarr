@@ -161,12 +161,15 @@ export class AppConfigurator extends BoxRenderable {
     content.add(overrideText)
 
     userInput.focus()
-    let focusedInput = userInput
+    let focusedInput: InputRenderable | null = userInput
 
     // Handle key events
     this.keyHandler = (key: KeyEvent) => {
-      if (key.name === "o" && !userInput.focused && !passInput.focused) {
-        // Toggle override
+      // Skip shortcut keys when an input is focused (allow typing 'o')
+      const inputIsFocused = focusedInput !== null
+
+      if (key.name === "o" && !inputIsFocused) {
+        // Toggle override only when no input is focused
         this.overrideExisting = !this.overrideExisting
         overrideText.content = `[O] Override existing: ${this.overrideExisting ? "Yes" : "No"}`
         overrideText.fg = this.overrideExisting ? "#50fa7b" : "#6272a4"
@@ -186,6 +189,7 @@ export class AppConfigurator extends BoxRenderable {
         this.cliRenderer.keyInput.off("keypress", this.keyHandler)
         userInput.blur()
         passInput.blur()
+        focusedInput = null
         this.currentStep = "configure"
         this.runConfiguration()
       } else if (key.name === "return") {
@@ -196,6 +200,7 @@ export class AppConfigurator extends BoxRenderable {
         this.cliRenderer.keyInput.off("keypress", this.keyHandler)
         userInput.blur()
         passInput.blur()
+        focusedInput = null
 
         // Save credentials to .env
         this.saveGlobalCredentialsToEnv()

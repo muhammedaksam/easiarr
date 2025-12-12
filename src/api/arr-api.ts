@@ -210,8 +210,8 @@ export class ArrApiClient {
       return null // Skip - password already configured
     }
 
-    // Update with authentication settings
-    const updatedConfig = {
+    // Update with authentication settings (id must be in body, not URL)
+    const updatedConfig: HostConfig = {
       ...currentConfig,
       authenticationMethod: "forms",
       authenticationRequired: "enabled",
@@ -220,7 +220,8 @@ export class ArrApiClient {
       passwordConfirmation: password,
     }
 
-    return this.request<HostConfig>(`/config/host/${currentConfig.id}`, {
+    // PUT to /config/host with id in body (not /config/host/{id})
+    return this.request<HostConfig>("/config/host", {
       method: "PUT",
       body: JSON.stringify(updatedConfig),
     })
