@@ -109,7 +109,8 @@ export const APPS: Record<AppId, AppDefinition> = {
     image: "lscr.io/linuxserver/bazarr:latest",
     puid: 13013,
     pgid: 13000,
-    volumes: (root) => [`${root}/config/bazarr:/config`, `${root}/data/media:/media`],
+    // TRaSH: Bazarr only needs media access, use /data/media for consistent paths
+    volumes: (root) => [`${root}/config/bazarr:/config`, `${root}/data/media:/data/media`],
     dependsOn: ["sonarr", "radarr"],
     trashGuide: "docs/Bazarr/",
     apiKeyMeta: {
@@ -279,7 +280,8 @@ export const APPS: Record<AppId, AppDefinition> = {
     image: "lscr.io/linuxserver/plex:latest",
     puid: 13010,
     pgid: 13000,
-    volumes: (root) => [`${root}/config/plex:/config`, `${root}/data/media:/media`],
+    // TRaSH: Media servers only need media access, use /data/media for consistent paths
+    volumes: (root) => [`${root}/config/plex:/config`, `${root}/data/media:/data/media`],
     environment: { VERSION: "docker" },
     trashGuide: "docs/Plex/",
     apiKeyMeta: {
