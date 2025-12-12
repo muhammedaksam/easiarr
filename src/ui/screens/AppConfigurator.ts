@@ -313,12 +313,13 @@ export class AppConfigurator extends BoxRenderable {
       throw new Error("Already configured")
     }
 
-    // Add root folder - Lidarr requires profile IDs
+    // Add root folder - Lidarr requires profile IDs and name
     if (appId === "lidarr") {
       const metadataProfiles = await client.getMetadataProfiles()
       const qualityProfiles = await client.getQualityProfiles()
       await client.addRootFolder({
         path: appDef.rootFolder.path,
+        name: "Music", // Required by Lidarr
         defaultMetadataProfileId: metadataProfiles[0]?.id || 1,
         defaultQualityProfileId: qualityProfiles[0]?.id || 1,
       })
@@ -560,6 +561,12 @@ export class AppConfigurator extends BoxRenderable {
       const client = new ArrApiClient("localhost", port, apiKey, appDef.rootFolder.apiVersion)
 
       try {
+        // Check if download client already exists
+        const existingClients = await client.getDownloadClients()
+        const clientName = type === "qbittorrent" ? "qBittorrent" : "SABnzbd"
+        const alreadyExists = existingClients.some((c) => c.name === clientName)
+        if (alreadyExists) continue
+
         if (type === "qbittorrent") {
           const config = createQBittorrentConfig(this.qbHost, this.qbPort, this.qbUser, this.qbPass, appConfig.id)
           await client.addDownloadClient(config)

@@ -260,11 +260,21 @@ export class ProwlarrClient {
     appApiKey: string,
     syncLevel: "disabled" | "addOnly" | "fullSync" = "fullSync"
   ): Promise<Application> {
+    // Default sync categories for each app type
+    // Radarr: Movies (2000, 2010, etc), Sonarr: TV (5000, 5010, etc)
+    // Lidarr: Audio (3000), Readarr: Books (7000, 8010)
+    const syncCategoriesMap: Record<ArrAppType, number[]> = {
+      Radarr: [2000, 2010, 2020, 2030, 2040, 2045, 2050, 2060, 2070, 2080],
+      Sonarr: [5000, 5010, 5020, 5030, 5040, 5045, 5050, 5060, 5070, 5080],
+      Lidarr: [3000, 3010, 3020, 3030, 3040],
+      Readarr: [7000, 7010, 7020, 7030, 8000, 8010, 8020],
+    }
+
     const fields: { name: string; value: unknown }[] = [
       { name: "prowlarrUrl", value: prowlarrUrl },
       { name: "baseUrl", value: appUrl },
       { name: "apiKey", value: appApiKey },
-      { name: "syncCategories", value: [] },
+      { name: "syncCategories", value: syncCategoriesMap[appType] || [] },
     ]
 
     return this.request<Application>("/applications", {
