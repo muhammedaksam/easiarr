@@ -21,6 +21,10 @@ async function main() {
     consoleOptions: {
       startInDebugMode: false,
     },
+    exitOnCtrlC: true,
+    onDestroy: () => {
+      process.exit(0)
+    },
   })
 
   const app = new App(renderer)
