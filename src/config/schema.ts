@@ -152,6 +152,7 @@ export interface AppDefinition {
   cap_add?: string[]
   apiKeyMeta?: ApiKeyMeta
   rootFolder?: RootFolderMeta
+  prowlarrCategoryIds?: number[]
   /** Architecture compatibility info - omit if supports all */
   arch?: ArchCompatibility
 }
