@@ -178,21 +178,33 @@ export class QBittorrentClient {
 
   /**
    * Configure qBittorrent for TRaSH Guide compliance
-   * Sets proper save paths and creates categories based on enabled apps
+   * Sets proper save paths and creates categories based on enabled *arr apps
    * @param categories - Array of {name, savePath} for each enabled *arr app
+   * @param auth - Optional credentials to enforce (update username/password)
    */
-  async configureTRaSHCompliant(categories: QBittorrentCategory[] = []): Promise<void> {
+  async configureTRaSHCompliant(
+    categories: QBittorrentCategory[] = [],
+    auth?: { user: string; pass: string }
+  ): Promise<void> {
     debugLog("qBittorrent", "Configuring TRaSH-compliant settings")
 
     // 1. Set global preferences
     debugLog("qBittorrent", "Setting save_path to /data/torrents")
-    await this.setPreferences({
+    const prefs: Record<string, unknown> = {
       save_path: "/data/torrents",
       temp_path_enabled: false,
       auto_tmm_enabled: true,
       category_changed_tmm_enabled: true,
       save_path_changed_tmm_enabled: true,
-    })
+    }
+
+    if (auth) {
+      debugLog("qBittorrent", "Setting WebUI username/password")
+      prefs.web_ui_username = auth.user
+      prefs.web_ui_password = auth.pass
+    }
+
+    await this.setPreferences(prefs)
 
     // 2. Create categories for each enabled media type
     for (const cat of categories) {
