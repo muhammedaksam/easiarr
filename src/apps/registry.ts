@@ -247,6 +247,20 @@ export const APPS: Record<AppId, AppDefinition> = {
     // TRaSH: Mount full /data for consistent paths with *arr apps (enables hardlinks)
     volumes: (root) => [`${root}/config/qbittorrent:/config`, `${root}/data:/data`],
     environment: { WEBUI_PORT: "8080" },
+    secrets: [
+      {
+        name: "QBITTORRENT_USER",
+        description: "Username for qBittorrent WebUI",
+        required: false,
+        default: "admin",
+      },
+      {
+        name: "QBITTORRENT_PASSWORD",
+        description: "Password for qBittorrent WebUI",
+        required: false,
+        mask: true,
+      },
+    ],
     trashGuide: "docs/Downloaders/qBittorrent/",
   },
 

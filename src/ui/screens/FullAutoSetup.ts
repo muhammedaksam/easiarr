@@ -296,10 +296,10 @@ export class FullAutoSetup extends BoxRenderable {
       const host = "localhost"
       const port = qbConfig.port || 8080
       const user = this.env["QBITTORRENT_USER"] || "admin"
-      const pass = this.env["QBITTORRENT_PASS"] || ""
+      const pass = this.env["QBITTORRENT_PASSWORD"] || this.env["QBITTORRENT_PASS"] || ""
 
       if (!pass) {
-        this.updateStep("qBittorrent", "skipped", "No QBITTORRENT_PASS in .env")
+        this.updateStep("qBittorrent", "skipped", "No QBITTORRENT_PASSWORD in .env")
         this.refreshContent()
         return
       }
