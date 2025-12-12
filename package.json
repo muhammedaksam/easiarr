@@ -35,6 +35,7 @@
   ],
   "scripts": {
     "dev": "bun run --watch src/index.ts",
+    "dev:debug": "bun run dev --debug",
     "build": "bun build src/index.ts --outdir dist --target bun",
     "typecheck": "bun x tsc --noEmit",
     "lint": "eslint src/",

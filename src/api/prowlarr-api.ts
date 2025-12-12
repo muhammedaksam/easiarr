@@ -3,6 +3,8 @@
  * Manages Indexer Proxies, Sync Profiles, and FlareSolverr integration
  */
 
+import { debugLog } from "../utils/debug"
+
 export interface IndexerProxy {
   id?: number
   name: string
@@ -55,13 +57,23 @@ export class ProwlarrClient {
       ...((options.headers as Record<string, string>) || {}),
     }
 
-    const response = await fetch(url, { ...options, headers })
-
-    if (!response.ok) {
-      throw new Error(`Prowlarr API request failed: ${response.status} ${response.statusText}`)
+    debugLog("Prowlarr", `${options.method || "GET"} ${url}`)
+    if (options.body) {
+      debugLog("Prowlarr", `Request Body: ${options.body}`)
     }
 
+    const response = await fetch(url, { ...options, headers })
     const text = await response.text()
+
+    debugLog("Prowlarr", `Response ${response.status} from ${endpoint}`)
+    if (text && text.length < 2000) {
+      debugLog("Prowlarr", `Response Body: ${text}`)
+    }
+
+    if (!response.ok) {
+      throw new Error(`Prowlarr API request failed: ${response.status} ${response.statusText} - ${text}`)
+    }
+
     if (!text) return {} as T
     return JSON.parse(text) as T
   }

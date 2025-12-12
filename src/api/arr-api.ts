@@ -3,6 +3,8 @@
  * Interacts with Radarr, Sonarr, Lidarr, Readarr, Whisparr APIs
  */
 
+import { debugLog } from "../utils/debug"
+
 // Types for Root Folder API
 export interface RootFolder {
   id?: number
@@ -124,16 +126,24 @@ export class ArrApiClient {
       ...options.headers,
     }
 
-    const response = await fetch(url, { ...options, headers })
-
-    if (!response.ok) {
-      throw new Error(`API request failed: ${response.status} ${response.statusText}`)
+    debugLog("ArrAPI", `${options.method || "GET"} ${url}`)
+    if (options.body) {
+      debugLog("ArrAPI", `Request Body: ${options.body}`)
     }
 
-    // Handle empty responses (DELETE returns empty body)
+    const response = await fetch(url, { ...options, headers })
     const text = await response.text()
-    if (!text) return {} as T
 
+    debugLog("ArrAPI", `Response ${response.status} from ${endpoint}`)
+    if (text && text.length < 2000) {
+      debugLog("ArrAPI", `Response Body: ${text}`)
+    }
+
+    if (!response.ok) {
+      throw new Error(`API request failed: ${response.status} ${response.statusText} - ${text}`)
+    }
+
+    if (!text) return {} as T
     return JSON.parse(text) as T
   }
 
