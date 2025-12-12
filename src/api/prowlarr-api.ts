@@ -188,13 +188,13 @@ export class ProwlarrClient {
     await this.request(`/indexerproxy/${id}`, { method: "DELETE" })
   }
 
-  // Sync Profile management
+  // Sync Profile management (aka App Sync Profile)
   async getSyncProfiles(): Promise<SyncProfile[]> {
-    return this.request<SyncProfile[]>("/syncprofile")
+    return this.request<SyncProfile[]>("/appsyncprofile")
   }
 
   async createSyncProfile(profile: Omit<SyncProfile, "id">): Promise<SyncProfile> {
-    return this.request<SyncProfile>("/syncprofile", {
+    return this.request<SyncProfile>("/appsyncprofile", {
       method: "POST",
       body: JSON.stringify(profile),
     })
@@ -296,7 +296,10 @@ export class ProwlarrClient {
 
   // Sync all apps - triggers Prowlarr to push indexers to connected apps
   async syncApplications(): Promise<void> {
-    await this.request("/applications/action/sync", { method: "POST" })
+    await this.request("/applications/action/sync", {
+      method: "POST",
+      body: JSON.stringify({}), // API requires non-empty body
+    })
   }
 
   // Add *arr app with auto-detection
