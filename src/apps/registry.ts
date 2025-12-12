@@ -138,10 +138,8 @@ export const APPS: Record<AppId, AppDefinition> = {
       enabledKey: "api_enabled",
       generateIfMissing: true,
     },
-    rootFolder: {
-      path: "/data/media/comics",
-      apiVersion: "v1",
-    },
+    // Note: Mylar3 is NOT an *arr app - has different API format (?cmd=<endpoint>)
+    // Root folder is configured via Web UI settings, not API
   },
 
   whisparr: {

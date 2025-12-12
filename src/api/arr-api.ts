@@ -12,6 +12,13 @@ export interface RootFolder {
   unmappedFolders?: { name: string | null; path: string | null; relativePath: string | null }[]
 }
 
+// Options for adding root folder (some apps like Lidarr need extra fields)
+export interface AddRootFolderOptions {
+  path: string
+  defaultMetadataProfileId?: number
+  defaultQualityProfileId?: number
+}
+
 // Types for Download Client API
 export interface DownloadClientConfig {
   name: string
@@ -135,11 +142,29 @@ export class ArrApiClient {
     return this.request<RootFolder[]>("/rootfolder")
   }
 
-  async addRootFolder(path: string): Promise<RootFolder> {
+  async addRootFolder(pathOrOptions: string | AddRootFolderOptions): Promise<RootFolder> {
+    const body = typeof pathOrOptions === "string" ? { path: pathOrOptions } : pathOrOptions
     return this.request<RootFolder>("/rootfolder", {
       method: "POST",
-      body: JSON.stringify({ path }),
+      body: JSON.stringify(body),
     })
+  }
+
+  // Profile methods (needed for Lidarr root folders)
+  async getMetadataProfiles(): Promise<{ id: number; name: string }[]> {
+    try {
+      return await this.request<{ id: number; name: string }[]>("/metadataprofile")
+    } catch {
+      return []
+    }
+  }
+
+  async getQualityProfiles(): Promise<{ id: number; name: string }[]> {
+    try {
+      return await this.request<{ id: number; name: string }[]>("/qualityprofile")
+    } catch {
+      return []
+    }
   }
 
   async deleteRootFolder(id: number): Promise<void> {

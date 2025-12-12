@@ -291,8 +291,18 @@ export class AppConfigurator extends BoxRenderable {
       throw new Error("Already configured")
     }
 
-    // Add root folder
-    await client.addRootFolder(appDef.rootFolder.path)
+    // Add root folder - Lidarr requires profile IDs
+    if (appId === "lidarr") {
+      const metadataProfiles = await client.getMetadataProfiles()
+      const qualityProfiles = await client.getQualityProfiles()
+      await client.addRootFolder({
+        path: appDef.rootFolder.path,
+        defaultMetadataProfileId: metadataProfiles[0]?.id || 1,
+        defaultQualityProfileId: qualityProfiles[0]?.id || 1,
+      })
+    } else {
+      await client.addRootFolder(appDef.rootFolder.path)
+    }
 
     // Set up authentication if credentials provided
     if (this.globalPassword) {
