@@ -448,6 +448,7 @@ export const APPS: Record<AppId, AppDefinition> = {
     puid: 0,
     pgid: 0,
     volumes: (root) => [`${root}/config/portainer:/data`, "/var/run/docker.sock:/var/run/docker.sock"],
+    minPasswordLength: 12, // Portainer requires minimum 12 character password
   },
 
   huntarr: {

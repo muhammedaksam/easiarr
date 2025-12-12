@@ -188,6 +188,8 @@ export interface AppDefinition {
   prowlarrCategoryIds?: number[]
   /** Architecture compatibility info - omit if supports all */
   arch?: ArchCompatibility
+  /** Minimum password length requirement for user creation */
+  minPasswordLength?: number
 }
 
 export interface RootFolderMeta {
