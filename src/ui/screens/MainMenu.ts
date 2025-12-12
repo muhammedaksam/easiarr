@@ -15,6 +15,7 @@ import { TRaSHProfileSetup } from "./TRaSHProfileSetup"
 import { ProwlarrSetup } from "./ProwlarrSetup"
 import { QBittorrentSetup } from "./QBittorrentSetup"
 import { FullAutoSetup } from "./FullAutoSetup"
+import { MonitorDashboard } from "./MonitorDashboard"
 
 export class MainMenu {
   private renderer: RenderContext
@@ -37,7 +38,7 @@ export class MainMenu {
     const { container: page, content } = createPageLayout(this.renderer as CliRenderer, {
       title: "Main Menu",
       stepInfo: "Docker Compose Generator for *arr Ecosystem",
-      footerHint: "Enter Select  Ctrl+C Exit",
+      footerHint: [{ type: "key", key: "Enter", value: "Select" }],
     })
     this.page = page
 
@@ -82,7 +83,7 @@ export class MainMenu {
     this.menu = new SelectRenderable(this.renderer, {
       id: "main-menu-select",
       width: "100%",
-      height: 10,
+      flexGrow: 1,
       options: [
         {
           name: "📦 Manage Apps",
@@ -123,6 +124,10 @@ export class MainMenu {
         {
           name: "🚀 Full Auto Setup",
           description: "Run all configurations (Auth, Root Folders, Prowlarr, etc.)",
+        },
+        {
+          name: "📊 Monitor Dashboard",
+          description: "Configure app health monitoring",
         },
         { name: "❌ Exit", description: "Close easiarr" },
       ],
@@ -211,7 +216,18 @@ export class MainMenu {
           this.container.add(autoSetup)
           break
         }
-        case 10:
+        case 10: {
+          // Monitor Dashboard
+          this.menu.blur()
+          this.page.visible = false
+          const monitor = new MonitorDashboard(this.renderer as CliRenderer, this.config, () => {
+            this.page.visible = true
+            this.menu.focus()
+          })
+          this.container.add(monitor)
+          break
+        }
+        case 11:
           process.exit(0)
           break
       }

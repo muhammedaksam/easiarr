@@ -45,7 +45,11 @@ export class ProwlarrSetup extends BoxRenderable {
     const { container: pageContainer, content: contentBox } = createPageLayout(cliRenderer, {
       title: "Prowlarr Setup",
       stepInfo: "Configure indexer sync and proxies",
-      footerHint: "↑↓ Navigate  Enter Select  Esc Back",
+      footerHint: [
+        { type: "key", key: "↑↓", value: "Navigate" },
+        { type: "key", key: "Enter", value: "Select" },
+        { type: "key", key: "Esc", value: "Back" },
+      ],
     })
     super(cliRenderer, { width: "100%", height: "100%" })
     this.add(pageContainer)

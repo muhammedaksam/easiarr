@@ -16,6 +16,7 @@ export interface EasiarrConfig {
   network?: NetworkConfig
   traefik?: TraefikConfig
   vpn?: VpnConfig
+  monitor?: MonitorConfig
   createdAt: string
   updatedAt: string
 }
@@ -25,6 +26,38 @@ export type VpnMode = "full" | "mini" | "none"
 export interface VpnConfig {
   mode: VpnMode
   provider?: string // For future use (e.g. custom, airvpn, protonvpn)
+}
+
+// ==========================================
+// Monitoring Configuration
+// ==========================================
+
+export type MonitorCheckType = "health" | "diskspace" | "status" | "queue"
+
+export interface MonitorOptions {
+  health: boolean
+  diskspace: boolean
+  status: boolean
+  queue: boolean
+}
+
+export interface CategoryMonitorConfig {
+  category: AppCategory
+  enabled: boolean
+  checks: MonitorOptions
+}
+
+export interface AppMonitorConfig {
+  appId: AppId
+  override: boolean // If true, uses app-specific settings instead of category defaults
+  enabled: boolean
+  checks: MonitorOptions
+}
+
+export interface MonitorConfig {
+  categories: CategoryMonitorConfig[]
+  apps: AppMonitorConfig[] // App-specific overrides
+  pollIntervalSeconds: number
 }
 
 export interface TraefikConfig {

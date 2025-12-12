@@ -235,7 +235,12 @@ export class ApiKeyViewer extends BoxRenderable {
     const { container, content } = createPageLayout(this.cliRenderer, {
       title: "API Key Extractor",
       stepInfo: "Found Keys",
-      footerHint: hasFoundKeys ? "S Save to .env  Esc/Enter Return" : "Esc/Enter: Return",
+      footerHint: hasFoundKeys
+        ? [
+            { type: "key", key: "S", value: "Save to .env" },
+            { type: "key", key: "Esc/Enter", value: "Return" },
+          ]
+        : [{ type: "key", key: "Esc/Enter", value: "Return" }],
     })
     this.add(container)
 

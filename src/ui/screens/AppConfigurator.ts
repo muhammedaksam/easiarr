@@ -95,7 +95,12 @@ export class AppConfigurator extends BoxRenderable {
     const { container, content } = createPageLayout(this.cliRenderer, {
       title: "Configure Apps",
       stepInfo: "Global Credentials",
-      footerHint: "Tab Cycle Fields/Shortcuts  O Override  Enter Continue  Esc Skip",
+      footerHint: [
+        { type: "key", key: "Tab", value: "Cycle Fields/Shortcuts" },
+        { type: "key", key: "O", value: "Override" },
+        { type: "key", key: "Enter", value: "Continue" },
+        { type: "key", key: "Esc", value: "Skip" },
+      ],
     })
     this.pageContainer = container
     this.add(container)
@@ -358,7 +363,7 @@ export class AppConfigurator extends BoxRenderable {
     const { container, content } = createPageLayout(this.cliRenderer, {
       title: "Configure Apps",
       stepInfo: "Setting up root folders",
-      footerHint: "Please wait...",
+      footerHint: [{ type: "text", value: "Please wait..." }],
     })
     this.pageContainer = container
     this.contentBox = content
@@ -427,7 +432,10 @@ export class AppConfigurator extends BoxRenderable {
     const { container, content } = createPageLayout(this.cliRenderer, {
       title: "Configure Apps",
       stepInfo: "qBittorrent Credentials",
-      footerHint: "Enter credentials from qBittorrent WebUI  Esc Skip",
+      footerHint: [
+        { type: "text", value: "Enter credentials from qBittorrent WebUI" },
+        { type: "key", key: "Esc", value: "Skip" },
+      ],
     })
     this.pageContainer = container
     this.add(container)
@@ -483,7 +491,10 @@ export class AppConfigurator extends BoxRenderable {
     const { container, content } = createPageLayout(this.cliRenderer, {
       title: "Configure Apps",
       stepInfo: "SABnzbd Credentials",
-      footerHint: "Enter API key from SABnzbd Config → General  Esc Skip",
+      footerHint: [
+        { type: "text", value: "Enter API key from SABnzbd Config → General" },
+        { type: "key", key: "Esc", value: "Skip" },
+      ],
     })
     this.pageContainer = container
     this.add(container)
@@ -615,7 +626,7 @@ export class AppConfigurator extends BoxRenderable {
     const { container, content } = createPageLayout(this.cliRenderer, {
       title: "Configure Apps",
       stepInfo: "Complete",
-      footerHint: "Press any key to return",
+      footerHint: [{ type: "text", value: "Press any key to return" }],
     })
     this.add(container)
 

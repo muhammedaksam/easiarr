@@ -44,7 +44,12 @@ export class TRaSHProfileSetup extends BoxRenderable {
     const { container: pageContainer, content: contentBox } = createPageLayout(cliRenderer, {
       title: "TRaSH Guide Setup",
       stepInfo: "Configure quality profiles and custom formats",
-      footerHint: "↑↓ Navigate  Space Select  Enter Confirm  Esc Back",
+      footerHint: [
+        { type: "key", key: "↑↓", value: "Navigate" },
+        { type: "key", key: "Space", value: "Select" },
+        { type: "key", key: "Enter", value: "Confirm" },
+        { type: "key", key: "Esc", value: "Back" },
+      ],
     })
     super(cliRenderer, { width: "100%", height: "100%" })
     this.add(pageContainer)
