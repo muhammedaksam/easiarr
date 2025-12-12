@@ -566,6 +566,8 @@ export class AppConfigurator extends BoxRenderable {
         const existingClients = await client.getDownloadClients()
         const clientName = type === "qbittorrent" ? "qBittorrent" : "SABnzbd"
         const alreadyExists = existingClients.some((c) => c.name === clientName)
+
+        // Skip adding if already exists, but qBittorrent config was already done above
         if (alreadyExists) continue
 
         if (type === "qbittorrent") {
