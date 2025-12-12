@@ -254,6 +254,40 @@ export class ArrApiClient {
   async deleteRemotePathMapping(id: number): Promise<void> {
     await this.request(`/remotepathmapping/${id}`, { method: "DELETE" })
   }
+
+  // ==========================================
+  // Health Check & Status Methods
+  // ==========================================
+
+  // Get health issues/warnings
+  async getHealth(): Promise<HealthResource[]> {
+    return this.request<HealthResource[]>("/health")
+  }
+
+  // Get disk space information for all monitored paths
+  async getDiskSpace(): Promise<DiskSpaceResource[]> {
+    return this.request<DiskSpaceResource[]>("/diskspace")
+  }
+
+  // Get system status (version, OS, runtime, etc.)
+  async getSystemStatus(): Promise<SystemResource> {
+    return this.request<SystemResource>("/system/status")
+  }
+
+  // Get all items in the download queue
+  async getQueueDetails(includeUnknown = true): Promise<QueueResource[]> {
+    const params = new URLSearchParams()
+    if (includeUnknown) {
+      params.set("includeUnknownMovieItems", "true")
+    }
+    const query = params.toString()
+    return this.request<QueueResource[]>(`/queue/details${query ? `?${query}` : ""}`)
+  }
+
+  // Get queue status summary (counts, errors, warnings)
+  async getQueueStatus(): Promise<QueueStatusResource> {
+    return this.request<QueueStatusResource>("/queue/status")
+  }
 }
 
 // Types for Host Config API
@@ -296,4 +330,126 @@ export interface HostConfig {
   backupInterval: number
   backupRetention: number
   trustCgnatIpAddresses: boolean
+}
+
+// ==========================================
+// Health Check & Status Types
+// ==========================================
+
+// Health check result types
+export type HealthCheckType = "ok" | "notice" | "warning" | "error"
+
+export interface HealthResource {
+  id?: number
+  source: string | null
+  type: HealthCheckType
+  message: string | null
+  wikiUrl: string | null
+}
+
+// Disk space types
+export interface DiskSpaceResource {
+  id?: number
+  path: string | null
+  label: string | null
+  freeSpace: number // int64
+  totalSpace: number // int64
+}
+
+// System status types
+export type RuntimeMode = "console" | "service" | "tray"
+export type DatabaseType = "sqLite" | "postgreSQL"
+
+export interface SystemResource {
+  appName: string | null
+  instanceName: string | null
+  version: string | null
+  buildTime: string | null
+  isDebug: boolean
+  isProduction: boolean
+  isAdmin: boolean
+  isUserInteractive: boolean
+  startupPath: string | null
+  appData: string | null
+  osName: string | null
+  osVersion: string | null
+  isNetCore: boolean
+  isLinux: boolean
+  isOsx: boolean
+  isWindows: boolean
+  isDocker: boolean
+  mode: RuntimeMode
+  branch: string | null
+  databaseType: DatabaseType
+  databaseVersion: string | null
+  authentication: "none" | "basic" | "forms" | "external"
+  migrationVersion: number
+  urlBase: string | null
+  runtimeVersion: string | null
+  runtimeName: string | null
+  startTime: string | null
+}
+
+// Queue types
+export type QueueStatus =
+  | "unknown"
+  | "queued"
+  | "paused"
+  | "downloading"
+  | "completed"
+  | "failed"
+  | "warning"
+  | "delay"
+  | "downloadClientUnavailable"
+  | "fallback"
+
+export type TrackedDownloadStatus = "ok" | "warning" | "error"
+export type TrackedDownloadState =
+  | "downloading"
+  | "importBlocked"
+  | "importPending"
+  | "importing"
+  | "imported"
+  | "failedPending"
+  | "failed"
+  | "ignored"
+
+export interface QueueStatusMessage {
+  title: string | null
+  messages: string[] | null
+}
+
+export interface QueueResource {
+  id?: number
+  movieId?: number | null // Radarr
+  seriesId?: number | null // Sonarr
+  artistId?: number | null // Lidarr
+  authorId?: number | null // Readarr
+  title: string | null
+  size: number
+  sizeleft?: number
+  timeleft?: string | null
+  estimatedCompletionTime: string | null
+  added: string | null
+  status: QueueStatus
+  trackedDownloadStatus: TrackedDownloadStatus
+  trackedDownloadState: TrackedDownloadState
+  statusMessages?: QueueStatusMessage[] | null
+  errorMessage: string | null
+  downloadId: string | null
+  protocol: "unknown" | "usenet" | "torrent"
+  downloadClient: string | null
+  indexer: string | null
+  outputPath: string | null
+}
+
+export interface QueueStatusResource {
+  id?: number
+  totalCount: number
+  count: number
+  unknownCount: number
+  errors: boolean
+  warnings: boolean
+  unknownErrors: boolean
+  unknownWarnings: boolean
 }
