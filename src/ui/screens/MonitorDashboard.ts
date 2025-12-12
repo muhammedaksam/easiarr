@@ -157,7 +157,15 @@ export class MonitorDashboard extends BoxRenderable {
     const { container: page, content } = createPageLayout(this._renderer, {
       title: "Monitor Dashboard",
       stepInfo: "Configure Health Monitoring",
-      footerHint: "Tab: Panel  ↑↓: Navigate  Space: Toggle  ←→: Mode  r: Refresh  s: Save  q: Back",
+      footerHint: [
+        { type: "key", key: "Tab", value: "Panel" },
+        { type: "key", key: "↑↓", value: "Navigate" },
+        { type: "key", key: "Space", value: "Toggle" },
+        { type: "key", key: "←→", value: "Mode" },
+        { type: "key", key: "r", value: "Refresh" },
+        { type: "key", key: "s", value: "Save" },
+        { type: "key", key: "q", value: "Back" },
+      ],
     })
     this.page = page
 

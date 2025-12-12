@@ -38,7 +38,7 @@ export class MainMenu {
     const { container: page, content } = createPageLayout(this.renderer as CliRenderer, {
       title: "Main Menu",
       stepInfo: "Docker Compose Generator for *arr Ecosystem",
-      footerHint: "Enter Select  Ctrl+C Exit",
+      footerHint: [{ type: "key", key: "Enter", value: "Select" }],
     })
     this.page = page
 

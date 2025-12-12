@@ -58,7 +58,10 @@ export class AdvancedSettings {
     const { container: page, content } = createPageLayout(this.renderer, {
       title: "Advanced Settings",
       stepInfo: "Direct File Editing",
-      footerHint: "Enter Select  Esc Back",
+      footerHint: [
+        { type: "key", key: "Enter", value: "Select" },
+        { type: "key", key: "Esc", value: "Back" },
+      ],
     })
 
     const menu = new SelectRenderable(this.renderer, {

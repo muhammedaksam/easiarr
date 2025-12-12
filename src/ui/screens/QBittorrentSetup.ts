@@ -34,7 +34,10 @@ export class QBittorrentSetup extends BoxRenderable {
     const { container: pageContainer, content: contentBox } = createPageLayout(cliRenderer, {
       title: "qBittorrent Setup",
       stepInfo: "Configure TRaSH-compliant paths and categories",
-      footerHint: "Enter Submit  Esc Back",
+      footerHint: [
+        { type: "key", key: "Enter", value: "Submit" },
+        { type: "key", key: "Esc", value: "Back" },
+      ],
     })
     super(cliRenderer, { width: "100%", height: "100%" })
     this.add(pageContainer)

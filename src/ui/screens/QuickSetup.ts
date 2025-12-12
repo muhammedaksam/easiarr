@@ -106,7 +106,10 @@ export class QuickSetup {
   private renderWelcome(): void {
     const { container: page, content } = createPageLayout(this.renderer, {
       title: "Welcome to easiarr",
-      footerHint: "Enter Select  q Quit",
+      footerHint: [
+        { type: "key", key: "Enter", value: "Select" },
+        { type: "key", key: "q", value: "Quit" },
+      ],
     })
 
     // Spacer
@@ -248,7 +251,10 @@ export class QuickSetup {
 
     const { container: page, content } = createPageLayout(this.renderer, {
       title: "About easiarr",
-      footerHint: "Esc Back  q Quit",
+      footerHint: [
+        { type: "key", key: "Esc", value: "Back" },
+        { type: "key", key: "q", value: "Quit" },
+      ],
     })
 
     content.add(new TextRenderable(this.renderer, { id: "about-spacer1", content: "" }))
@@ -347,12 +353,16 @@ export class QuickSetup {
   private renderAppSelection(): void {
     const title = "Select Apps"
     const stepInfo = `${title} (${this.selectedApps.size} selected)`
-    const footerHint = "←→ Tab  Enter Toggle  q Quit"
+    const footerHint = [
+      { type: "key", key: "←→", value: "Tab" },
+      { type: "key", key: "Enter", value: "Toggle" },
+      { type: "key", key: "q", value: "Quit" },
+    ] as const
 
     const { container: page, content } = createPageLayout(this.renderer, {
       title: title,
       stepInfo: stepInfo,
-      footerHint: footerHint,
+      footerHint: [...footerHint],
     })
 
     // Application Selector
@@ -442,7 +452,12 @@ export class QuickSetup {
     const { container: page, content } = createPageLayout(this.renderer, {
       title: "System Configuration",
       stepInfo: `Step 2/${totalSteps}`,
-      footerHint: "Tab Next  Enter Next/Continue  Esc Back  q Quit",
+      footerHint: [
+        { type: "key", key: "Tab", value: "Next" },
+        { type: "key", key: "Enter", value: "Next/Continue" },
+        { type: "key", key: "Esc", value: "Back" },
+        { type: "key", key: "q", value: "Quit" },
+      ],
     })
 
     // Instructions
@@ -580,7 +595,11 @@ export class QuickSetup {
     const { container: page, content } = createPageLayout(this.renderer, {
       title: "VPN Configuration",
       stepInfo: `Step ${stepNum}/${totalSteps}`,
-      footerHint: "Enter Select  Esc Back  q Quit",
+      footerHint: [
+        { type: "key", key: "Enter", value: "Select" },
+        { type: "key", key: "Esc", value: "Back" },
+        { type: "key", key: "q", value: "Quit" },
+      ],
     })
 
     content.add(
@@ -667,7 +686,12 @@ export class QuickSetup {
     const { container: page, content } = createPageLayout(this.renderer, {
       title: "Traefik Configuration",
       stepInfo: `Step ${stepNum}/${totalSteps}`,
-      footerHint: "Tab Next Field  Enter Continue  Esc Back  q Quit",
+      footerHint: [
+        { type: "key", key: "Tab", value: "Next Field" },
+        { type: "key", key: "Enter", value: "Continue" },
+        { type: "key", key: "Esc", value: "Back" },
+        { type: "key", key: "q", value: "Quit" },
+      ],
     })
 
     content.add(
@@ -908,7 +932,11 @@ export class QuickSetup {
     const { container: page, content } = createPageLayout(this.renderer, {
       title: "Confirm Setup",
       stepInfo: `Step ${totalSteps}/${totalSteps}`,
-      footerHint: "Enter Select  Esc Back  q Quit",
+      footerHint: [
+        { type: "key", key: "Enter", value: "Select" },
+        { type: "key", key: "Esc", value: "Back" },
+        { type: "key", key: "q", value: "Quit" },
+      ],
     })
 
     content.add(new TextRenderable(this.renderer, { id: "confirm-spacer", content: "" }))

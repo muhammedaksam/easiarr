@@ -47,7 +47,10 @@ export class ContainerControl {
     const { container: page, content } = createPageLayout(this.renderer as CliRenderer, {
       title: "Container Control",
       stepInfo: finalStepInfo,
-      footerHint: "Enter Select/Action  q Back",
+      footerHint: [
+        { type: "key", key: "Enter", value: "Select/Action" },
+        { type: "key", key: "q", value: "Back" },
+      ],
     })
 
     if (!dockerOk) {

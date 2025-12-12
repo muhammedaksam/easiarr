@@ -1,10 +1,11 @@
 import { BoxRenderable, TextRenderable, type CliRenderer } from "@opentui/core"
 import { getVersion } from "../../VersionInfo"
+import { type FooterHint, renderFooterHint } from "./FooterHint"
 
 export interface PageLayoutOptions {
   title: string
   stepInfo?: string
-  footerHint?: string
+  footerHint?: FooterHint | string
 }
 
 export interface PageLayoutResult {
@@ -79,8 +80,23 @@ export function createPageLayout(renderer: CliRenderer, options: PageLayoutOptio
     backgroundColor: "#1a1a2e",
   })
 
-  // Hint text
-  const hintText = footerHint || "↑↓ Navigate  Enter Select  q Quit"
+  // Hint text - handle both array and string formats
+  // Always append separator + Ctrl+C Exit when hints are provided
+  let hintText: string
+  if (!footerHint) {
+    hintText = "↑↓ Navigate  Enter Select  Ctrl+C Exit"
+  } else if (typeof footerHint === "string") {
+    hintText = footerHint + "  Ctrl+C Exit"
+  } else {
+    // Append separator and global Ctrl+C hint to array
+    const hintsWithExit: FooterHint = [
+      ...footerHint,
+      { type: "separator", char: "|" },
+      { type: "key", key: "Ctrl+C", value: "Exit" },
+    ]
+    hintText = renderFooterHint(hintsWithExit)
+  }
+
   footerBox.add(
     new TextRenderable(renderer, {
       id: `${idPrefix}-footer-hint`,
