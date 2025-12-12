@@ -54,7 +54,12 @@ export class AppManager {
     const { container: page, content } = createPageLayout(this.renderer as CliRenderer, {
       title: "Manage Apps",
       stepInfo: "Toggle apps linked to your configuration",
-      footerHint: "←→ Tab  Enter Toggle  s Save  q Back",
+      footerHint: [
+        { type: "key", key: "←→", value: "Tab" },
+        { type: "key", key: "Enter", value: "Toggle" },
+        { type: "key", key: "s", value: "Save" },
+        { type: "key", key: "q", value: "Back" },
+      ],
     })
     this.page = page
 

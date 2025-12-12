@@ -47,7 +47,10 @@ export class FullAutoSetup extends BoxRenderable {
     const { container: pageContainer, content: contentBox } = createPageLayout(cliRenderer, {
       title: "Full Auto Setup",
       stepInfo: "Configure all services automatically",
-      footerHint: "Enter Start/Continue  Esc Back",
+      footerHint: [
+        { type: "key", key: "Enter", value: "Start/Continue" },
+        { type: "key", key: "Esc", value: "Back" },
+      ],
     })
     super(cliRenderer, { width: "100%", height: "100%" })
     this.add(pageContainer)
