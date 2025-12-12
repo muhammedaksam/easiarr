@@ -6,7 +6,8 @@ import { parse as parseYaml } from "yaml"
 import { createPageLayout } from "../components/PageLayout"
 import { EasiarrConfig, AppDefinition } from "../../config/schema"
 import { getApp } from "../../apps/registry"
-import { updateEnv } from "../../utils/env"
+import { updateEnv, readEnvSync } from "../../utils/env"
+import { PortainerApiClient } from "../../api/portainer-api"
 
 /** Generate a random 32-character hex API key */
 function generateApiKey(): string {
@@ -103,12 +104,18 @@ function updateIniValue(content: string, section: string, updates: Record<string
 
 type KeyStatus = "found" | "missing" | "error" | "generated"
 
+interface PortainerCredentials {
+  apiKey: string
+  password?: string // Only set if padded (different from global)
+}
+
 export class ApiKeyViewer extends BoxRenderable {
   private config: EasiarrConfig
   private keys: Array<{ appId: string; app: string; key: string; status: KeyStatus }> = []
   private keyHandler!: (key: KeyEvent) => void
   private cliRenderer: CliRenderer
   private statusText: TextRenderable | null = null
+  private portainerCredentials: PortainerCredentials | null = null
 
   constructor(renderer: CliRenderer, config: EasiarrConfig, onBack: () => void) {
     super(renderer, {
@@ -130,6 +137,12 @@ export class ApiKeyViewer extends BoxRenderable {
 
     for (const appConfig of this.config.apps) {
       if (!appConfig.enabled) continue
+
+      // Handle Portainer separately (uses API, not config file)
+      if (appConfig.id === "portainer") {
+        this.scanPortainer(appConfig.port || 9000)
+        continue
+      }
 
       const appDef = getApp(appConfig.id)
       if (!appDef || !appDef.apiKeyMeta) continue
@@ -158,6 +171,41 @@ export class ApiKeyViewer extends BoxRenderable {
         this.keys.push({ appId: appDef.id, app: appDef.name, key: `Error: ${e}`, status: "error" })
       }
     }
+  }
+
+  private scanPortainer(_port: number) {
+    const env = readEnvSync()
+    const existingApiKey = env["API_KEY_PORTAINER"]
+
+    if (existingApiKey) {
+      this.keys.push({
+        appId: "portainer",
+        app: "Portainer",
+        key: existingApiKey,
+        status: "found",
+      })
+      return
+    }
+
+    // Will attempt to initialize/login when saving
+    const globalPassword = env["GLOBAL_PASSWORD"]
+    if (!globalPassword) {
+      this.keys.push({
+        appId: "portainer",
+        app: "Portainer",
+        key: "No GLOBAL_PASSWORD set in .env",
+        status: "missing",
+      })
+      return
+    }
+
+    // Add pending entry - actual API call happens on save
+    this.keys.push({
+      appId: "portainer",
+      app: "Portainer",
+      key: "Press S to generate API key",
+      status: "missing",
+    })
   }
 
   private extractApiKey(
@@ -338,24 +386,112 @@ export class ApiKeyViewer extends BoxRenderable {
 
   private async saveToEnv() {
     const foundKeys = this.keys.filter((k) => k.status === "found" || k.status === "generated")
-    if (foundKeys.length === 0) return
 
     try {
       // Build updates object with API keys
       const updates: Record<string, string> = {}
+
       for (const k of foundKeys) {
-        updates[`API_KEY_${k.appId.toUpperCase()}`] = k.key
+        if (k.appId !== "portainer") {
+          updates[`API_KEY_${k.appId.toUpperCase()}`] = k.key
+        }
+      }
+
+      // Handle Portainer separately - need to call API
+      const portainerEntry = this.keys.find((k) => k.appId === "portainer")
+      if (portainerEntry && portainerEntry.status === "missing") {
+        await this.initializePortainer(updates)
+      } else if (portainerEntry && portainerEntry.status === "found") {
+        updates["API_KEY_PORTAINER"] = portainerEntry.key
+      }
+
+      // Save Portainer credentials if we have them
+      if (this.portainerCredentials) {
+        updates["API_KEY_PORTAINER"] = this.portainerCredentials.apiKey
+        if (this.portainerCredentials.password) {
+          updates["PORTAINER_PASSWORD"] = this.portainerCredentials.password
+        }
+      }
+
+      if (Object.keys(updates).length === 0) {
+        if (this.statusText) {
+          this.statusText.content = "No keys to save"
+          this.statusText.fg = "#f1fa8c"
+        }
+        return
       }
 
       await updateEnv(updates)
 
       // Update status
       if (this.statusText) {
-        this.statusText.content = `✓ Saved ${foundKeys.length} API key(s) to .env`
+        const count = Object.keys(updates).length
+        this.statusText.content = `✓ Saved ${count} key(s) to .env`
       }
     } catch (e) {
       if (this.statusText) {
         this.statusText.content = `✗ Error saving to .env: ${e}`
+        this.statusText.fg = "#ff5555"
+      }
+    }
+  }
+
+  private async initializePortainer(_updates: Record<string, string>) {
+    const env = readEnvSync()
+    const globalUsername = env["GLOBAL_USERNAME"] || "admin"
+    const globalPassword = env["GLOBAL_PASSWORD"]
+
+    if (!globalPassword) return
+
+    const portainerConfig = this.config.apps.find((a) => a.id === "portainer" && a.enabled)
+    if (!portainerConfig) return
+
+    const port = portainerConfig.port || 9000
+    const client = new PortainerApiClient("localhost", port)
+
+    try {
+      // Check if reachable
+      const healthy = await client.isHealthy()
+      if (!healthy) {
+        if (this.statusText) {
+          this.statusText.content = "Portainer not reachable"
+          this.statusText.fg = "#f1fa8c"
+        }
+        return
+      }
+
+      // Try to initialize or login
+      const result = await client.initializeAdmin(globalUsername, globalPassword)
+
+      if (result) {
+        // New initialization
+        const apiKey = await client.generateApiKey(result.actualPassword, "easiarr-api-key")
+        this.portainerCredentials = {
+          apiKey,
+          password: result.passwordWasPadded ? result.actualPassword : undefined,
+        }
+
+        // Update the display
+        const portainerEntry = this.keys.find((k) => k.appId === "portainer")
+        if (portainerEntry) {
+          portainerEntry.key = apiKey
+          portainerEntry.status = "generated"
+        }
+      } else {
+        // Already initialized, try login
+        await client.login(globalUsername, globalPassword)
+        const apiKey = await client.generateApiKey(globalPassword, "easiarr-api-key")
+        this.portainerCredentials = { apiKey }
+
+        const portainerEntry = this.keys.find((k) => k.appId === "portainer")
+        if (portainerEntry) {
+          portainerEntry.key = apiKey
+          portainerEntry.status = "generated"
+        }
+      }
+    } catch (e) {
+      if (this.statusText) {
+        this.statusText.content = `Portainer error: ${e}`
         this.statusText.fg = "#ff5555"
       }
     }

@@ -9,10 +9,11 @@ import type { EasiarrConfig } from "../../config/schema"
 import { ArrApiClient, type AddRootFolderOptions } from "../../api/arr-api"
 import { ProwlarrClient, type ArrAppType } from "../../api/prowlarr-api"
 import { QBittorrentClient, type QBittorrentCategory } from "../../api/qbittorrent-api"
+import { PortainerApiClient } from "../../api/portainer-api"
 import { getApp } from "../../apps/registry"
 // import type { AppId } from "../../config/schema"
 import { getCategoriesForApps } from "../../utils/categories"
-import { readEnvSync } from "../../utils/env"
+import { readEnvSync, updateEnv } from "../../utils/env"
 import { debugLog } from "../../utils/debug"
 
 interface SetupStep {
@@ -77,6 +78,7 @@ export class FullAutoSetup extends BoxRenderable {
       { name: "Prowlarr Apps", status: "pending" },
       { name: "FlareSolverr", status: "pending" },
       { name: "qBittorrent", status: "pending" },
+      { name: "Portainer", status: "pending" },
     ]
   }
 
@@ -121,6 +123,9 @@ export class FullAutoSetup extends BoxRenderable {
 
     // Step 5: qBittorrent
     await this.setupQBittorrent()
+
+    // Step 6: Portainer
+    await this.setupPortainer()
 
     this.isRunning = false
     this.isDone = true
@@ -326,6 +331,74 @@ export class FullAutoSetup extends BoxRenderable {
       this.updateStep("qBittorrent", "success")
     } catch (e) {
       this.updateStep("qBittorrent", "error", `${e}`)
+    }
+    this.refreshContent()
+  }
+
+  private async setupPortainer(): Promise<void> {
+    this.updateStep("Portainer", "running")
+    this.refreshContent()
+
+    const portainerConfig = this.config.apps.find((a) => a.id === "portainer" && a.enabled)
+    if (!portainerConfig) {
+      this.updateStep("Portainer", "skipped", "Not enabled")
+      this.refreshContent()
+      return
+    }
+
+    if (!this.globalPassword) {
+      this.updateStep("Portainer", "skipped", "No GLOBAL_PASSWORD set")
+      this.refreshContent()
+      return
+    }
+
+    try {
+      const port = portainerConfig.port || 9000
+      const client = new PortainerApiClient("localhost", port)
+
+      // Check if we can reach Portainer
+      const healthy = await client.isHealthy()
+      if (!healthy) {
+        this.updateStep("Portainer", "skipped", "Not reachable yet")
+        this.refreshContent()
+        return
+      }
+
+      // Initialize admin user (auto-pads password if needed)
+      const result = await client.initializeAdmin(this.globalUsername, this.globalPassword)
+
+      if (result) {
+        // Generate API key and save to .env
+        const apiKey = await client.generateApiKey(result.actualPassword, "easiarr-api-key")
+
+        const envUpdates: Record<string, string> = {
+          API_KEY_PORTAINER: apiKey,
+        }
+
+        // Save password if it was padded (different from global)
+        if (result.passwordWasPadded) {
+          envUpdates.PORTAINER_PASSWORD = result.actualPassword
+        }
+
+        await updateEnv(envUpdates)
+        this.updateStep("Portainer", "success", "Admin + API key created")
+      } else {
+        // Already initialized, try to login and get API key if we don't have one
+        if (!this.env["API_KEY_PORTAINER"]) {
+          try {
+            await client.login(this.globalUsername, this.globalPassword)
+            const apiKey = await client.generateApiKey(this.globalPassword, "easiarr-api-key")
+            await updateEnv({ API_KEY_PORTAINER: apiKey })
+            this.updateStep("Portainer", "success", "API key generated")
+          } catch {
+            this.updateStep("Portainer", "skipped", "Already initialized")
+          }
+        } else {
+          this.updateStep("Portainer", "skipped", "Already configured")
+        }
+      }
+    } catch (e) {
+      this.updateStep("Portainer", "error", `${e}`)
     }
     this.refreshContent()
   }
