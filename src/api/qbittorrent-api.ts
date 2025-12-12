@@ -4,6 +4,8 @@
  * API docs: https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-4.1)
  */
 
+import { debugLog } from "../utils/debug"
+
 export interface QBittorrentPreferences {
   save_path?: string
   temp_path_enabled?: boolean
@@ -172,7 +174,10 @@ export class QBittorrentClient {
    * @param categories - Array of {name, savePath} for each enabled *arr app
    */
   async configureTRaSHCompliant(categories: QBittorrentCategory[] = []): Promise<void> {
+    debugLog("qBittorrent", "Configuring TRaSH-compliant settings")
+
     // 1. Set global preferences
+    debugLog("qBittorrent", "Setting save_path to /data/torrents")
     await this.setPreferences({
       save_path: "/data/torrents",
       temp_path_enabled: false,
@@ -183,6 +188,7 @@ export class QBittorrentClient {
 
     // 2. Create categories for each enabled media type
     for (const cat of categories) {
+      debugLog("qBittorrent", `Creating category: ${cat.name} -> ${cat.savePath}`)
       try {
         await this.createCategory(cat.name, cat.savePath)
       } catch {
@@ -194,5 +200,6 @@ export class QBittorrentClient {
         }
       }
     }
+    debugLog("qBittorrent", "TRaSH configuration complete")
   }
 }

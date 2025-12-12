@@ -252,7 +252,8 @@ export class AppConfigurator extends BoxRenderable {
 
         const appDef = getApp(appId as AppId)
         const port = appConfig.port || appDef?.defaultPort || 9696
-        const client = new ArrApiClient("localhost", port, apiKey)
+        // Prowlarr uses v1 API, not v3
+        const client = new ArrApiClient("localhost", port, apiKey, "v1")
 
         try {
           await client.updateHostConfig(this.globalUsername, this.globalPassword, this.overrideExisting)
