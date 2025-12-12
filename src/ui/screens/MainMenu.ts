@@ -11,6 +11,8 @@ import { createPageLayout } from "../components/PageLayout"
 import { saveCompose } from "../../compose"
 import { ApiKeyViewer } from "./ApiKeyViewer"
 import { AppConfigurator } from "./AppConfigurator"
+import { TRaSHProfileSetup } from "./TRaSHProfileSetup"
+import { ProwlarrSetup } from "./ProwlarrSetup"
 
 export class MainMenu {
   private renderer: RenderContext
@@ -101,8 +103,16 @@ export class MainMenu {
           description: "Set root folders and download clients via API",
         },
         {
+          name: "🎯 TRaSH Guide Setup",
+          description: "Apply TRaSH quality profiles and custom formats",
+        },
+        {
           name: "🔄 Regenerate Compose",
           description: "Rebuild docker-compose.yml",
+        },
+        {
+          name: "🔗 Prowlarr Setup",
+          description: "Sync indexers to *arr apps, FlareSolverr",
         },
         { name: "❌ Exit", description: "Close easiarr" },
       ],
@@ -143,11 +153,33 @@ export class MainMenu {
           break
         }
         case 5: {
+          // TRaSH Profile Setup
+          this.menu.blur()
+          this.page.visible = false
+          const trashSetup = new TRaSHProfileSetup(this.renderer as CliRenderer, this.config, () => {
+            this.page.visible = true
+            this.menu.focus()
+          })
+          this.container.add(trashSetup)
+          break
+        }
+        case 6: {
           // Regenerate compose
           await saveCompose(this.config)
           break
         }
-        case 6:
+        case 7: {
+          // Prowlarr Setup
+          this.menu.blur()
+          this.page.visible = false
+          const prowlarrSetup = new ProwlarrSetup(this.renderer as CliRenderer, this.config, () => {
+            this.page.visible = true
+            this.menu.focus()
+          })
+          this.container.add(prowlarrSetup)
+          break
+        }
+        case 8:
           process.exit(0)
           break
       }
