@@ -13,6 +13,8 @@ import { ApiKeyViewer } from "./ApiKeyViewer"
 import { AppConfigurator } from "./AppConfigurator"
 import { TRaSHProfileSetup } from "./TRaSHProfileSetup"
 import { ProwlarrSetup } from "./ProwlarrSetup"
+import { QBittorrentSetup } from "./QBittorrentSetup"
+import { FullAutoSetup } from "./FullAutoSetup"
 
 export class MainMenu {
   private renderer: RenderContext
@@ -114,6 +116,14 @@ export class MainMenu {
           name: "🔗 Prowlarr Setup",
           description: "Sync indexers to *arr apps, FlareSolverr",
         },
+        {
+          name: "⚡ qBittorrent Setup",
+          description: "Configure TRaSH-compliant paths and categories",
+        },
+        {
+          name: "🚀 Full Auto Setup",
+          description: "Run all configurations (Auth, Root Folders, Prowlarr, etc.)",
+        },
         { name: "❌ Exit", description: "Close easiarr" },
       ],
     })
@@ -179,7 +189,29 @@ export class MainMenu {
           this.container.add(prowlarrSetup)
           break
         }
-        case 8:
+        case 8: {
+          // qBittorrent Setup
+          this.menu.blur()
+          this.page.visible = false
+          const qbSetup = new QBittorrentSetup(this.renderer as CliRenderer, this.config, () => {
+            this.page.visible = true
+            this.menu.focus()
+          })
+          this.container.add(qbSetup)
+          break
+        }
+        case 9: {
+          // Full Auto Setup
+          this.menu.blur()
+          this.page.visible = false
+          const autoSetup = new FullAutoSetup(this.renderer as CliRenderer, this.config, () => {
+            this.page.visible = true
+            this.menu.focus()
+          })
+          this.container.add(autoSetup)
+          break
+        }
+        case 10:
           process.exit(0)
           break
       }

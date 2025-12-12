@@ -38,13 +38,17 @@ export class QBittorrentClient {
    */
   async login(): Promise<boolean> {
     try {
+      debugLog("qBittorrent", `Logging in to ${this.baseUrl} as ${this.username}`)
       const response = await fetch(`${this.baseUrl}/api/v2/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
         body: `username=${encodeURIComponent(this.username)}&password=${encodeURIComponent(this.password)}`,
       })
 
-      if (!response.ok) return false
+      if (!response.ok) {
+        debugLog("qBittorrent", `Login failed: ${response.status}`)
+        return false
+      }
 
       // Extract SID cookie from response
       const setCookie = response.headers.get("set-cookie")
@@ -52,14 +56,18 @@ export class QBittorrentClient {
         const match = setCookie.match(/SID=([^;]+)/)
         if (match) {
           this.cookie = `SID=${match[1]}`
+          debugLog("qBittorrent", "Login successful (cookie)")
           return true
         }
       }
 
       // Check response text for "Ok."
       const text = await response.text()
-      return text === "Ok."
-    } catch {
+      const success = text === "Ok."
+      debugLog("qBittorrent", `Login response: ${text}, success: ${success}`)
+      return success
+    } catch (e) {
+      debugLog("qBittorrent", `Login error: ${e}`)
       return false
     }
   }
