@@ -162,7 +162,7 @@ export class QBittorrentSetup extends BoxRenderable {
         savePath: `/data/torrents/${cat.name}`,
       }))
 
-      await client.configureTRaSHCompliant(categories)
+      await client.configureTRaSHCompliant(categories, { user: this.user, pass: this.pass })
 
       const catNames = categories.map((c) => c.name).join(", ") || "none"
       this.statusMessage = `✅ Done!\n\n  save_path: /data/torrents\n  Categories: ${catNames}\n\n  Press Enter to continue.`

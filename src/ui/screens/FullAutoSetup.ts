@@ -319,7 +319,7 @@ export class FullAutoSetup extends BoxRenderable {
         savePath: `/data/torrents/${cat.name}`,
       }))
 
-      await client.configureTRaSHCompliant(categories)
+      await client.configureTRaSHCompliant(categories, { user, pass })
       this.updateStep("qBittorrent", "success")
     } catch (e) {
       this.updateStep("qBittorrent", "error", `${e}`)
