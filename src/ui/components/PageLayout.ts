@@ -1,6 +1,6 @@
-import { BoxRenderable, TextRenderable, type CliRenderer } from "@opentui/core"
+import { BoxRenderable, TextRenderable, TextNodeRenderable, type CliRenderer } from "@opentui/core"
 import { getVersion } from "../../VersionInfo"
-import { type FooterHint, renderFooterHint } from "./FooterHint"
+import { type FooterHint } from "./FooterHint"
 
 export interface PageLayoutOptions {
   title: string
@@ -82,28 +82,60 @@ export function createPageLayout(renderer: CliRenderer, options: PageLayoutOptio
 
   // Hint text - handle both array and string formats
   // Always append separator + Ctrl+C Exit when hints are provided
-  let hintText: string
+  const hintContainer = new TextRenderable(renderer, {
+    id: `${idPrefix}-footer-hint`,
+    content: "",
+    fg: "#aaaaaa",
+  })
+
   if (!footerHint) {
-    hintText = "↑↓ Navigate  Enter Select  Ctrl+C Exit"
+    hintContainer.content = "↑↓: Navigate  Enter: Select  Ctrl+C: Exit"
   } else if (typeof footerHint === "string") {
-    hintText = footerHint + "  Ctrl+C Exit"
+    hintContainer.content = footerHint + "  Ctrl+C: Exit"
   } else {
-    // Append separator and global Ctrl+C hint to array
+    // Append separator and global Ctrl+C hint (styled red for demo)
     const hintsWithExit: FooterHint = [
       ...footerHint,
-      { type: "separator", char: "|" },
-      { type: "key", key: "Ctrl+C", value: "Exit" },
+      { type: "separator", char: " | " },
+      { type: "key", key: "Ctrl+C", value: "Exit", keyColor: "#ff6666", valueColor: "#888888" },
     ]
-    hintText = renderFooterHint(hintsWithExit)
+
+    // Build styled content using TextNodeRenderable
+    const DEFAULT_KEY_COLOR = "#8be9fd" // cyan/bright
+    const DEFAULT_VALUE_COLOR = "#aaaaaa" // dim
+    const DEFAULT_SEP_COLOR = "#555555"
+
+    // Helper to create a styled text node
+    const styledText = (text: string, fg?: string, bg?: string): TextNodeRenderable => {
+      const node = new TextNodeRenderable({ fg, bg })
+      node.add(text)
+      return node
+    }
+
+    hintsWithExit.forEach((item, idx) => {
+      if (item.type === "separator") {
+        hintContainer.add(styledText(item.char ?? "  ", DEFAULT_SEP_COLOR))
+      } else if (item.type === "text") {
+        hintContainer.add(styledText(item.value, item.fg ?? DEFAULT_VALUE_COLOR))
+        // Add spacing after text (except last)
+        if (idx < hintsWithExit.length - 1 && hintsWithExit[idx + 1]?.type !== "separator") {
+          hintContainer.add(styledText("  "))
+        }
+      } else if (item.type === "key") {
+        const keyDisplay = item.withBrackets ? `[${item.key}]` : item.key
+        // Key part (styled)
+        hintContainer.add(styledText(keyDisplay, item.keyColor ?? DEFAULT_KEY_COLOR, item.keyBgColor))
+        // Colon + Value
+        hintContainer.add(styledText(`: ${item.value}`, item.valueColor ?? DEFAULT_VALUE_COLOR))
+        // Add spacing after (except last or before separator)
+        if (idx < hintsWithExit.length - 1 && hintsWithExit[idx + 1]?.type !== "separator") {
+          hintContainer.add(styledText("  "))
+        }
+      }
+    })
   }
 
-  footerBox.add(
-    new TextRenderable(renderer, {
-      id: `${idPrefix}-footer-hint`,
-      content: hintText,
-      fg: "#aaaaaa",
-    })
-  )
+  footerBox.add(hintContainer)
 
   // Version
   footerBox.add(

@@ -3,23 +3,37 @@
  * Provides a flexible array-based structure for footer hints
  */
 
+/** Base interface for all footer hint types with common styling */
+export interface FooterHintBase {
+  /** Foreground color */
+  fg?: string
+  /** Background color */
+  bg?: string
+}
+
 /** A simple text message hint (e.g., "Press ? for help.") */
-export interface FooterHintText {
+export interface FooterHintText extends FooterHintBase {
   type: "text"
   value: string
-  color?: string
 }
 
 /** A keyboard shortcut hint (e.g., key: "↓", value: "Down") */
-export interface FooterHintKey {
+export interface FooterHintKey extends FooterHintBase {
   type: "key"
   key: string
   value: string
-  color?: string
+  /** Color for the key part (default: bright/highlighted) */
+  keyColor?: string
+  /** Color for the value part (default: dimmer) */
+  valueColor?: string
+  /** Background color for the key badge */
+  keyBgColor?: string
+  /** Whether to show brackets around the key */
+  withBrackets?: boolean
 }
 
 /** Separator between hint groups */
-export interface FooterHintSeparator {
+export interface FooterHintSeparator extends FooterHintBase {
   type: "separator"
   char?: string
 }
@@ -82,15 +96,19 @@ export function parseFooterHintString(hint: string): FooterHint {
 /**
  * Helper to create a key hint
  */
-export function key(key: string, value: string, color?: string): FooterHintKey {
-  return { type: "key", key, value, color }
+export function key(
+  key: string,
+  value: string,
+  options?: { keyColor?: string; valueColor?: string; keyBgColor?: string; withBrackets?: boolean }
+): FooterHintKey {
+  return { type: "key", key, value, ...options }
 }
 
 /**
  * Helper to create a text hint
  */
-export function text(value: string, color?: string): FooterHintText {
-  return { type: "text", value, color }
+export function text(value: string, fg?: string): FooterHintText {
+  return { type: "text", value, fg }
 }
 
 /**
