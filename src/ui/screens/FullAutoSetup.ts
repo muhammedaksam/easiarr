@@ -386,8 +386,10 @@ export class FullAutoSetup extends BoxRenderable {
         // Already initialized, try to login and get API key if we don't have one
         if (!this.env["API_KEY_PORTAINER"]) {
           try {
-            await client.login(this.globalUsername, this.globalPassword)
-            const apiKey = await client.generateApiKey(this.globalPassword, "easiarr-api-key")
+            // Use saved Portainer password if available (may have been padded)
+            const portainerPassword = this.env["PORTAINER_PASSWORD"] || this.globalPassword
+            await client.login(this.globalUsername, portainerPassword)
+            const apiKey = await client.generateApiKey(portainerPassword, "easiarr-api-key")
             await updateEnv({ API_KEY_PORTAINER: apiKey })
             this.updateStep("Portainer", "success", "API key generated")
           } catch {

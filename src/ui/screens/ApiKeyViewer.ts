@@ -478,9 +478,10 @@ export class ApiKeyViewer extends BoxRenderable {
           portainerEntry.status = "generated"
         }
       } else {
-        // Already initialized, try login
-        await client.login(globalUsername, globalPassword)
-        const apiKey = await client.generateApiKey(globalPassword, "easiarr-api-key")
+        // Already initialized, try login with saved password if available
+        const portainerPassword = env["PORTAINER_PASSWORD"] || globalPassword
+        await client.login(globalUsername, portainerPassword)
+        const apiKey = await client.generateApiKey(portainerPassword, "easiarr-api-key")
         this.portainerCredentials = { apiKey }
 
         const portainerEntry = this.keys.find((k) => k.appId === "portainer")
