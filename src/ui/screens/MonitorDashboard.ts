@@ -161,8 +161,8 @@ export class MonitorDashboard extends BoxRenderable {
         { type: "key", key: "Tab", value: "Panel" },
         { type: "key", key: "↑↓", value: "Navigate" },
         { type: "key", key: "Space", value: "Toggle" },
+        { type: "key", key: "1-4", value: "Checks" },
         { type: "key", key: "←→", value: "Mode" },
-        { type: "key", key: "r", value: "Refresh" },
         { type: "key", key: "s", value: "Save" },
         { type: "key", key: "q", value: "Back" },
       ],
@@ -356,6 +356,13 @@ export class MonitorDashboard extends BoxRenderable {
     const selectedCat = this.availableCategories[this.categoryIndex]
     if (!selectedCat) return
 
+    // When Categories panel is focused, show category-level settings
+    if (this.currentPanel === 0) {
+      this.renderCategoryChecks(selectedCat)
+      return
+    }
+
+    // When Apps or Checks panel is focused, show app-level settings
     const apps = this.getAppsInCategory(selectedCat)
     const selectedApp = apps[this.appIndex]
     if (!selectedApp) return
@@ -413,6 +420,65 @@ export class MonitorDashboard extends BoxRenderable {
         id: "override-toggle",
         content: `${overridePointer}${overrideIcon} Override Category`,
         fg: overrideFg,
+      })
+    )
+  }
+
+  private renderCategoryChecks(category: AppCategory): void {
+    const cfg = this.categoryConfigs.get(category)
+    if (!cfg) return
+
+    // Title
+    this.checksPanel.add(
+      new TextRenderable(this._renderer, {
+        id: "cat-checks-title",
+        content: `${APP_CATEGORIES[category]} Defaults`,
+        fg: "#4a9eff",
+        attributes: 1, // bold
+      })
+    )
+
+    this.checksPanel.add(
+      new TextRenderable(this._renderer, {
+        id: "cat-checks-subtitle",
+        content: "Default checks for all apps in category",
+        fg: "#888888",
+      })
+    )
+
+    this.checksPanel.add(
+      new TextRenderable(this._renderer, {
+        id: "cat-checks-divider",
+        content: "─".repeat(25),
+        fg: "#555555",
+      })
+    )
+
+    // Check toggles for category defaults
+    const checks: (keyof MonitorOptions)[] = ["health", "diskspace", "status", "queue"]
+
+    checks.forEach((check, idx) => {
+      const isEnabled = cfg.checks[check]
+      const pointer = idx === this.checkIndex ? "▶ " : "  "
+      const icon = isEnabled ? "[✓]" : "[ ]"
+      const fg = idx === this.checkIndex ? "#50fa7b" : "#aaaaaa"
+
+      this.checksPanel.add(
+        new TextRenderable(this._renderer, {
+          id: `cat-check-${idx}`,
+          content: `${pointer}${icon} ${CHECK_LABELS[check]}`,
+          fg,
+        })
+      )
+    })
+
+    // Info about inheritance
+    this.checksPanel.add(new TextRenderable(this._renderer, { content: " " }))
+    this.checksPanel.add(
+      new TextRenderable(this._renderer, {
+        id: "cat-checks-info",
+        content: "Apps inherit these unless overridden",
+        fg: "#555555",
       })
     )
   }
@@ -653,6 +719,24 @@ export class MonitorDashboard extends BoxRenderable {
       this.toggleCurrentItem()
       return
     }
+
+    // Number keys 1-4 for quick check toggling
+    const numKey = parseInt(key.sequence || "", 10)
+    if (numKey >= 1 && numKey <= 4) {
+      const checkIdx = numKey - 1 // 0-indexed
+      if (this.currentPanel === 0) {
+        // Toggle category-level check directly
+        this.toggleCategoryCheck(checkIdx)
+      } else {
+        // Toggle app-level check (or category if not overriding)
+        this.checkIndex = checkIdx
+        this.toggleCurrentItem()
+        this.currentPanel = 2 // Move to checks panel for visual feedback
+        this.updatePanelBorders()
+      }
+      this.renderChecksPanel()
+      return
+    }
   }
 
   private navigatePanel(delta: number): void {
@@ -680,18 +764,18 @@ export class MonitorDashboard extends BoxRenderable {
   }
 
   private toggleCurrentItem(): void {
+    const cat = this.availableCategories[this.categoryIndex]
+    if (!cat) return
+
     if (this.currentPanel === 0) {
-      // Toggle category enabled
-      const cat = this.availableCategories[this.categoryIndex]
-      if (cat) {
-        const cfg = this.categoryConfigs.get(cat)!
-        cfg.enabled = !cfg.enabled
-        this.renderCategoriesPanel()
-      }
+      // When in Categories panel, toggle category enabled status
+      const cfg = this.categoryConfigs.get(cat)!
+      cfg.enabled = !cfg.enabled
+      this.renderCategoriesPanel()
+      this.renderChecksPanel()
     } else if (this.currentPanel === 1) {
       // Toggle app enabled
-      const cat = this.availableCategories[this.categoryIndex]
-      const apps = cat ? this.getAppsInCategory(cat) : []
+      const apps = this.getAppsInCategory(cat)
       const app = apps[this.appIndex]
       if (app) {
         const cfg = this.appConfigs.get(app.id)!
@@ -699,9 +783,10 @@ export class MonitorDashboard extends BoxRenderable {
         this.renderAppsPanel()
       }
     } else if (this.currentPanel === 2) {
-      // Toggle check or override
-      const cat = this.availableCategories[this.categoryIndex]
-      const apps = cat ? this.getAppsInCategory(cat) : []
+      // Toggle check or override - depends on whether we're viewing category or app
+      // Since we show category checks when panel 0 is focused, but we're now in panel 2,
+      // we're viewing an app's checks
+      const apps = this.getAppsInCategory(cat)
       const app = apps[this.appIndex]
       if (!app) return
 
@@ -718,11 +803,29 @@ export class MonitorDashboard extends BoxRenderable {
         if (cfg.override) {
           cfg.checks[checkKey] = !cfg.checks[checkKey]
         } else {
-          // Toggle on category level
+          // Toggle on category level (affects all apps without override)
           const catCfg = this.categoryConfigs.get(cat)!
           catCfg.checks[checkKey] = !catCfg.checks[checkKey]
         }
       }
+      this.renderChecksPanel()
+    }
+  }
+
+  /**
+   * Toggle category-level check by number key (1-4)
+   * This allows direct toggling of category defaults from any panel
+   */
+  private toggleCategoryCheck(checkIdx: number): void {
+    const cat = this.availableCategories[this.categoryIndex]
+    if (!cat) return
+
+    const catCfg = this.categoryConfigs.get(cat)
+    if (!catCfg) return
+
+    const checks: (keyof MonitorOptions)[] = ["health", "diskspace", "status", "queue"]
+    if (checkIdx >= 0 && checkIdx < checks.length) {
+      catCfg.checks[checks[checkIdx]] = !catCfg.checks[checks[checkIdx]]
       this.renderChecksPanel()
     }
   }
@@ -751,6 +854,13 @@ export class MonitorDashboard extends BoxRenderable {
 
   private cleanup(): void {
     this._renderer.keyInput.off("keypress", this.keyHandler)
-    this.page.visible = false
+    // Remove self from parent container
+    if (this.parent && this.id) {
+      try {
+        this.parent.remove(this.id)
+      } catch {
+        /* ignore removal errors */
+      }
+    }
   }
 }
