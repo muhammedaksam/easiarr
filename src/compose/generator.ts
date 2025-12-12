@@ -3,12 +3,12 @@
  * Generates docker-compose.yml from Easiarr configuration
  */
 
-import { writeFile, readFile } from "node:fs/promises"
-import { existsSync } from "node:fs"
+import { writeFile } from "node:fs/promises"
 import type { EasiarrConfig, AppConfig, TraefikConfig, AppId } from "../config/schema"
 import { getComposePath } from "../config/manager"
 import { getApp } from "../apps/registry"
 import { generateServiceYaml } from "./templates"
+import { updateEnv } from "../utils/env"
 
 export interface ComposeService {
   image: string
@@ -205,30 +205,12 @@ export async function saveCompose(config: EasiarrConfig): Promise<string> {
 }
 
 async function updateEnvFile(config: EasiarrConfig) {
-  const envPath = getComposePath().replace("docker-compose.yml", ".env")
-  let envContent = ""
-
-  // Read existing .env if present to preserve secrets
-  const currentEnv: Record<string, string> = {}
-  if (existsSync(envPath)) {
-    const content = await readFile(envPath, "utf-8")
-    content.split("\n").forEach((line) => {
-      const [key, ...val] = line.split("=")
-      if (key && val) currentEnv[key.trim()] = val.join("=").trim()
-    })
-  }
-
-  // Update/Set globals
-  currentEnv["ROOT_DIR"] = config.rootDir
-  currentEnv["TIMEZONE"] = config.timezone
-  currentEnv["PUID"] = config.uid.toString()
-  currentEnv["PGID"] = config.gid.toString()
-  currentEnv["UMASK"] = config.umask
-
-  // Reconstruct .env content
-  envContent = Object.entries(currentEnv)
-    .map(([k, v]) => `${k}=${v}`)
-    .join("\n")
-
-  await writeFile(envPath, envContent, "utf-8")
+  // Update .env with global configuration values
+  await updateEnv({
+    ROOT_DIR: config.rootDir,
+    TIMEZONE: config.timezone,
+    PUID: config.uid.toString(),
+    PGID: config.gid.toString(),
+    UMASK: config.umask,
+  })
 }

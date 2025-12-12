@@ -1,13 +1,12 @@
 import { BoxRenderable, CliRenderer, TextRenderable, KeyEvent } from "@opentui/core"
 import { existsSync, readFileSync, writeFileSync } from "node:fs"
-import { writeFile, readFile } from "node:fs/promises"
 import { join } from "node:path"
 import { randomBytes } from "node:crypto"
 import { parse as parseYaml } from "yaml"
 import { createPageLayout } from "../components/PageLayout"
 import { EasiarrConfig, AppDefinition } from "../../config/schema"
 import { getApp } from "../../apps/registry"
-import { getComposePath } from "../../config/manager"
+import { updateEnv } from "../../utils/env"
 
 /** Generate a random 32-character hex API key */
 function generateApiKey(): string {
@@ -337,30 +336,13 @@ export class ApiKeyViewer extends BoxRenderable {
     if (foundKeys.length === 0) return
 
     try {
-      const envPath = getComposePath().replace("docker-compose.yml", ".env")
-
-      // Read existing .env if present
-      const currentEnv: Record<string, string> = {}
-      if (existsSync(envPath)) {
-        const content = await readFile(envPath, "utf-8")
-        content.split("\n").forEach((line) => {
-          const [key, ...val] = line.split("=")
-          if (key && val.length > 0) currentEnv[key.trim()] = val.join("=").trim()
-        })
-      }
-
-      // Add API keys with format API_KEY_SONARR, API_KEY_RADARR, etc.
+      // Build updates object with API keys
+      const updates: Record<string, string> = {}
       for (const k of foundKeys) {
-        const envKey = `API_KEY_${k.appId.toUpperCase()}`
-        currentEnv[envKey] = k.key
+        updates[`API_KEY_${k.appId.toUpperCase()}`] = k.key
       }
 
-      // Reconstruct .env content
-      const envContent = Object.entries(currentEnv)
-        .map(([k, v]) => `${k}=${v}`)
-        .join("\n")
-
-      await writeFile(envPath, envContent, "utf-8")
+      await updateEnv(updates)
 
       // Update status
       if (this.statusText) {

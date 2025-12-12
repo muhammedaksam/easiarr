@@ -26,42 +26,16 @@ export interface DownloadClient extends DownloadClientConfig {
   id?: number
 }
 
+// Types for Remote Path Mapping API
+export interface RemotePathMapping {
+  id?: number
+  host: string
+  remotePath: string
+  localPath: string
+}
+
 import type { AppId } from "../config/schema"
-
-// Get category name for an app
-function getCategoryForApp(appId: AppId): string {
-  switch (appId) {
-    case "radarr":
-      return "movies"
-    case "sonarr":
-      return "tv"
-    case "lidarr":
-      return "music"
-    case "readarr":
-      return "books"
-    case "whisparr":
-      return "adult"
-    default:
-      return "default"
-  }
-}
-
-// Get category field name for an app (different apps use different field names)
-function getCategoryFieldName(appId: AppId): string {
-  switch (appId) {
-    case "radarr":
-      return "movieCategory"
-    case "sonarr":
-    case "whisparr":
-      return "tvCategory"
-    case "lidarr":
-      return "musicCategory"
-    case "readarr":
-      return "bookCategory"
-    default:
-      return "category"
-  }
-}
+import { getCategoryForApp, getCategoryFieldName } from "../utils/categories"
 
 // qBittorrent download client config
 export function createQBittorrentConfig(
@@ -227,6 +201,22 @@ export class ArrApiClient {
       method: "PUT",
       body: JSON.stringify(updatedConfig),
     })
+  }
+
+  // Remote Path Mapping methods - for Docker path translation
+  async getRemotePathMappings(): Promise<RemotePathMapping[]> {
+    return this.request<RemotePathMapping[]>("/remotepathmapping")
+  }
+
+  async addRemotePathMapping(host: string, remotePath: string, localPath: string): Promise<RemotePathMapping> {
+    return this.request<RemotePathMapping>("/remotepathmapping", {
+      method: "POST",
+      body: JSON.stringify({ host, remotePath, localPath }),
+    })
+  }
+
+  async deleteRemotePathMapping(id: number): Promise<void> {
+    await this.request(`/remotepathmapping/${id}`, { method: "DELETE" })
   }
 }
 

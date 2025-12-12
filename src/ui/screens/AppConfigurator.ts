@@ -11,13 +11,13 @@ import {
   InputRenderableEvents,
   KeyEvent,
 } from "@opentui/core"
-import { existsSync, readFileSync } from "node:fs"
-import { writeFile, readFile } from "node:fs/promises"
 import { createPageLayout } from "../components/PageLayout"
 import { EasiarrConfig, AppId } from "../../config/schema"
 import { getApp } from "../../apps/registry"
 import { ArrApiClient, createQBittorrentConfig, createSABnzbdConfig } from "../../api/arr-api"
-import { getComposePath } from "../../config/manager"
+import { QBittorrentClient } from "../../api/qbittorrent-api"
+import { getCategoriesForApps } from "../../utils/categories"
+import { readEnvSync, updateEnv } from "../../utils/env"
 
 interface ConfigResult {
   appId: AppId
@@ -82,29 +82,11 @@ export class AppConfigurator extends BoxRenderable {
   }
 
   private loadSavedCredentials() {
-    try {
-      const envPath = getComposePath().replace("docker-compose.yml", ".env")
-      if (!existsSync(envPath)) return
-
-      const content = readFileSync(envPath, "utf-8")
-      content.split("\n").forEach((line) => {
-        const [key, ...val] = line.split("=")
-        if (key && val.length > 0) {
-          const value = val.join("=").trim()
-          if (key.trim() === "GLOBAL_USERNAME") {
-            this.globalUsername = value
-          } else if (key.trim() === "GLOBAL_PASSWORD") {
-            this.globalPassword = value
-          } else if (key.trim() === "QBITTORRENT_PASSWORD") {
-            this.qbPass = value
-          } else if (key.trim() === "SABNZBD_API_KEY") {
-            this.sabApiKey = value
-          }
-        }
-      })
-    } catch {
-      // Ignore errors
-    }
+    const env = readEnvSync()
+    if (env.GLOBAL_USERNAME) this.globalUsername = env.GLOBAL_USERNAME
+    if (env.GLOBAL_PASSWORD) this.globalPassword = env.GLOBAL_PASSWORD
+    if (env.QBITTORRENT_PASSWORD) this.qbPass = env.QBITTORRENT_PASSWORD
+    if (env.SABNZBD_API_KEY) this.sabApiKey = env.SABNZBD_API_KEY
   }
 
   private renderCredentialsPrompt() {
@@ -216,32 +198,10 @@ export class AppConfigurator extends BoxRenderable {
 
   private async saveGlobalCredentialsToEnv() {
     try {
-      const envPath = getComposePath().replace("docker-compose.yml", ".env")
-
-      // Read existing .env if present
-      const currentEnv: Record<string, string> = {}
-      if (existsSync(envPath)) {
-        const content = await readFile(envPath, "utf-8")
-        content.split("\n").forEach((line) => {
-          const [key, ...val] = line.split("=")
-          if (key && val.length > 0) currentEnv[key.trim()] = val.join("=").trim()
-        })
-      }
-
-      // Add global credentials
-      if (this.globalUsername) {
-        currentEnv["GLOBAL_USERNAME"] = this.globalUsername
-      }
-      if (this.globalPassword) {
-        currentEnv["GLOBAL_PASSWORD"] = this.globalPassword
-      }
-
-      // Reconstruct .env content
-      const envContent = Object.entries(currentEnv)
-        .map(([k, v]) => `${k}=${v}`)
-        .join("\n")
-
-      await writeFile(envPath, envContent, "utf-8")
+      const updates: Record<string, string> = {}
+      if (this.globalUsername) updates.GLOBAL_USERNAME = this.globalUsername
+      if (this.globalPassword) updates.GLOBAL_PASSWORD = this.globalPassword
+      await updateEnv(updates)
     } catch {
       // Ignore errors - not critical
     }
@@ -346,24 +306,16 @@ export class AppConfigurator extends BoxRenderable {
 
   private extractApiKey(appId: AppId): string | null {
     // Use API keys from .env file (format: API_KEY_APPNAME)
-    try {
-      const envPath = getComposePath().replace("docker-compose.yml", ".env")
-      if (!existsSync(envPath)) return null
+    const envKey = `API_KEY_${appId.toUpperCase()}`
+    return readEnvSync()[envKey] ?? null
+  }
 
-      const content = readFileSync(envPath, "utf-8")
-      const envKey = `API_KEY_${appId.toUpperCase()}`
-
-      for (const line of content.split("\n")) {
-        const [key, ...val] = line.split("=")
-        if (key?.trim() === envKey && val.length > 0) {
-          return val.join("=").trim()
-        }
-      }
-
-      return null
-    } catch {
-      return null
-    }
+  /**
+   * Get qBittorrent categories based on enabled *arr apps
+   */
+  private getEnabledCategories(): { name: string; savePath: string }[] {
+    const enabledAppIds = this.config.apps.filter((a) => a.enabled).map((a) => a.id)
+    return getCategoriesForApps(enabledAppIds)
   }
 
   private renderConfigProgress() {
@@ -543,6 +495,22 @@ export class AppConfigurator extends BoxRenderable {
   }
 
   private async addDownloadClients(type: "qbittorrent" | "sabnzbd") {
+    // Configure qBittorrent settings via its API first
+    if (type === "qbittorrent") {
+      try {
+        const qbClient = new QBittorrentClient(this.qbHost, this.qbPort, this.qbUser, this.qbPass)
+        const loggedIn = await qbClient.login()
+        if (loggedIn) {
+          // Generate categories from enabled *arr apps that use download clients
+          const categories = this.getEnabledCategories()
+          // Configure TRaSH-compliant settings: save_path, auto_tmm, categories
+          await qbClient.configureTRaSHCompliant(categories)
+        }
+      } catch {
+        // Ignore qBittorrent config errors - may not be ready or have different auth
+      }
+    }
+
     // Add download client to all *arr apps
     const servarrApps = this.config.apps.filter((a) => {
       const def = getApp(a.id)
@@ -587,31 +555,13 @@ export class AppConfigurator extends BoxRenderable {
 
   private async saveCredentialsToEnv(type: "qbittorrent" | "sabnzbd") {
     try {
-      const envPath = getComposePath().replace("docker-compose.yml", ".env")
-
-      // Read existing .env if present
-      const currentEnv: Record<string, string> = {}
-      if (existsSync(envPath)) {
-        const content = await readFile(envPath, "utf-8")
-        content.split("\n").forEach((line) => {
-          const [key, ...val] = line.split("=")
-          if (key && val.length > 0) currentEnv[key.trim()] = val.join("=").trim()
-        })
-      }
-
-      // Add credentials
+      const updates: Record<string, string> = {}
       if (type === "qbittorrent" && this.qbPass) {
-        currentEnv["QBITTORRENT_PASSWORD"] = this.qbPass
+        updates.QBITTORRENT_PASSWORD = this.qbPass
       } else if (type === "sabnzbd" && this.sabApiKey) {
-        currentEnv["SABNZBD_API_KEY"] = this.sabApiKey
+        updates.SABNZBD_API_KEY = this.sabApiKey
       }
-
-      // Reconstruct .env content
-      const envContent = Object.entries(currentEnv)
-        .map(([k, v]) => `${k}=${v}`)
-        .join("\n")
-
-      await writeFile(envPath, envContent, "utf-8")
+      await updateEnv(updates)
     } catch {
       // Ignore errors - not critical
     }

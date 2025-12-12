@@ -246,7 +246,8 @@ export const APPS: Record<AppId, AppDefinition> = {
     image: "lscr.io/linuxserver/qbittorrent:latest",
     puid: 13007,
     pgid: 13000,
-    volumes: (root) => [`${root}/config/qbittorrent:/config`, `${root}/data/torrents:/data/torrents`],
+    // TRaSH: Mount full /data for consistent paths with *arr apps (enables hardlinks)
+    volumes: (root) => [`${root}/config/qbittorrent:/config`, `${root}/data:/data`],
     environment: { WEBUI_PORT: "8080" },
     trashGuide: "docs/Downloaders/qBittorrent/",
   },
@@ -260,7 +261,8 @@ export const APPS: Record<AppId, AppDefinition> = {
     image: "lscr.io/linuxserver/sabnzbd:latest",
     puid: 13011,
     pgid: 13000,
-    volumes: (root) => [`${root}/config/sabnzbd:/config`, `${root}/data/usenet:/data/usenet`],
+    // TRaSH: Mount full /data for consistent paths with *arr apps (enables hardlinks)
+    volumes: (root) => [`${root}/config/sabnzbd:/config`, `${root}/data:/data`],
 
     trashGuide: "docs/Downloaders/SABnzbd/",
     apiKeyMeta: {

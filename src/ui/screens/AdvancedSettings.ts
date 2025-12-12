@@ -17,6 +17,7 @@ import { createPageLayout } from "../components/PageLayout"
 import { FileEditor } from "../components/FileEditor"
 import { readFile, writeFile } from "node:fs/promises"
 import { getConfigPath, getComposePath } from "../../config/manager"
+import { getEnvPath } from "../../utils/env"
 import { existsSync } from "node:fs"
 
 export class AdvancedSettings {
@@ -100,7 +101,7 @@ export class AdvancedSettings {
           })
           break
         case 1: {
-          const envPath = getComposePath().replace("docker-compose.yml", ".env")
+          const envPath = getEnvPath()
           await this.editFile(".env", envPath, async (content) => {
             await writeFile(envPath, content, "utf-8")
             this.renderMenu()

@@ -10,10 +10,9 @@ import {
 } from "@opentui/core"
 import { EasiarrConfig, AppSecret } from "../../config/schema"
 import { getApp } from "../../apps/registry"
-import { getComposePath } from "../../config/manager"
-import { readFile, writeFile, mkdir } from "node:fs/promises"
+import { readEnv, updateEnv, getEnvPath } from "../../utils/env"
+import { mkdir } from "node:fs/promises"
 import { dirname } from "node:path"
-import { existsSync } from "node:fs"
 
 export interface SecretsEditorOptions extends BoxOptions {
   config: EasiarrConfig
@@ -177,65 +176,25 @@ export class SecretsEditor extends BoxRenderable {
   }
 
   private async loadEnv() {
-    const envPath = getComposePath().replace("docker-compose.yml", ".env")
-    if (existsSync(envPath)) {
-      try {
-        const content = await readFile(envPath, "utf-8")
-        content.split("\n").forEach((line) => {
-          const parts = line.split("=")
-          if (parts.length >= 2) {
-            const key = parts[0].trim()
-            const value = parts.slice(1).join("=").trim()
-            // Remove potential quotes
-            this.envValues[key] = value.replace(/^["'](.*?)["']$/, "$1")
-          }
-        })
-      } catch (e) {
-        console.error("Failed to read .env", e)
-      }
-    }
+    this.envValues = await readEnv()
   }
 
   private async save() {
-    const envPath = getComposePath().replace("docker-compose.yml", ".env")
-
-    // Read existing .env to preserve other values
-    const currentEnv: Record<string, string> = {}
-    if (existsSync(envPath)) {
-      try {
-        const content = await readFile(envPath, "utf-8")
-        content.split("\n").forEach((line) => {
-          const [key, ...val] = line.split("=")
-          if (key && val.length > 0) {
-            currentEnv[key.trim()] = val
-              .join("=")
-              .trim()
-              .replace(/^["'](.*?)["']$/, "$1")
-          }
-        })
-      } catch {
-        // Ignore read errors
-      }
-    }
-
-    // Update with new values from inputs
+    // Collect values from inputs
+    const updates: Record<string, string> = {}
     this.inputs.forEach((input, key) => {
-      currentEnv[key] = input.value
+      updates[key] = input.value
     })
 
     // Ensure directory exists
     try {
-      await mkdir(dirname(envPath), { recursive: true })
+      await mkdir(dirname(getEnvPath()), { recursive: true })
     } catch {
       // Ignore if exists
     }
 
-    // Write back
-    const envContent = Object.entries(currentEnv)
-      .map(([k, v]) => `${k}=${v}`)
-      .join("\n")
-
-    await writeFile(envPath, envContent, "utf-8")
+    // Update .env file
+    await updateEnv(updates)
 
     this.onSave()
   }
