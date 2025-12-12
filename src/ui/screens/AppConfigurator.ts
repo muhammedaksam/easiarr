@@ -240,6 +240,28 @@ export class AppConfigurator extends BoxRenderable {
       this.updateDisplay()
     }
 
+    // Setup auth for *arr apps without root folders (e.g., Prowlarr)
+    if (this.globalPassword) {
+      const arrAppsNeedingAuth = ["prowlarr"]
+      for (const appId of arrAppsNeedingAuth) {
+        const appConfig = this.config.apps.find((a) => a.id === appId && a.enabled)
+        if (!appConfig) continue
+
+        const apiKey = this.extractApiKey(appId as AppId)
+        if (!apiKey) continue
+
+        const appDef = getApp(appId as AppId)
+        const port = appConfig.port || appDef?.defaultPort || 9696
+        const client = new ArrApiClient("localhost", port, apiKey)
+
+        try {
+          await client.updateHostConfig(this.globalUsername, this.globalPassword, this.overrideExisting)
+        } catch {
+          // Auth setup for these apps is best-effort
+        }
+      }
+    }
+
     // After root folders, prompt for download clients if needed
     if (this.hasQBittorrent || this.hasSABnzbd) {
       if (this.hasQBittorrent) {

@@ -178,7 +178,8 @@ export class ProwlarrSetup extends BoxRenderable {
         const appDef = getApp(app.id)
         const port = app.port || appDef?.defaultPort || 7878
 
-        await this.prowlarrClient.addArrApp(appType, "localhost", port, apiKey, "localhost", prowlarrPort)
+        // In Docker, use container names for inter-container communication
+        await this.prowlarrClient.addArrApp(appType, app.id, port, apiKey, "prowlarr", prowlarrPort)
 
         const result = this.results.find((r) => r.name === app.id)
         if (result) {
@@ -225,6 +226,7 @@ export class ProwlarrSetup extends BoxRenderable {
         this.results[0].message = "FlareSolverr not enabled in config"
       } else {
         const fsPort = fsConfig.port || 8191
+        // In Docker, use container name for FlareSolverr
         await this.prowlarrClient.configureFlareSolverr(`http://flaresolverr:${fsPort}`)
         this.results[0].status = "success"
         this.results[0].message = "Proxy added with 'flaresolverr' tag"
