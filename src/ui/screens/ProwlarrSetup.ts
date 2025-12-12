@@ -3,11 +3,11 @@
  * Configures Prowlarr integration with *arr apps, FlareSolverr, and proxies
  */
 
-import { BoxRenderable, CliRenderer, TextRenderable, KeyEvent } from "@opentui/core"
+import { BoxRenderable, CliRenderer, TextRenderable, TextNodeRenderable, KeyEvent } from "@opentui/core"
 import { createPageLayout } from "../components/PageLayout"
 import { EasiarrConfig } from "../../config/schema"
 import { getApp } from "../../apps/registry"
-import { ProwlarrClient, ArrAppType } from "../../api/prowlarr-api"
+import { ProwlarrClient, ArrAppType, ProwlarrIndexerSchema, PROWLARR_CATEGORIES } from "../../api/prowlarr-api"
 import { readEnvSync } from "../../utils/env"
 import { debugLog } from "../../utils/debug"
 
@@ -17,7 +17,7 @@ interface SetupResult {
   message?: string
 }
 
-type Step = "menu" | "sync-apps" | "flaresolverr" | "sync-profiles" | "done"
+type Step = "menu" | "sync-apps" | "flaresolverr" | "sync-profiles" | "select-indexers" | "done"
 
 const ARR_APP_TYPES: Record<string, ArrAppType> = {
   radarr: "Radarr",
@@ -37,6 +37,9 @@ export class ProwlarrSetup extends BoxRenderable {
   private pageContainer!: BoxRenderable
   private menuIndex = 0
   private prowlarrClient: ProwlarrClient | null = null
+  private availableIndexers: ProwlarrIndexerSchema[] = []
+  private selectedIndexers: Set<number> = new Set() // Using index in availableIndexers array
+  private listScrollOffset = 0
 
   constructor(cliRenderer: CliRenderer, config: EasiarrConfig, onBack: () => void) {
     const { container: pageContainer, content: contentBox } = createPageLayout(cliRenderer, {
@@ -84,6 +87,8 @@ export class ProwlarrSetup extends BoxRenderable {
 
       if (this.currentStep === "menu") {
         this.handleMenuKeys(key)
+      } else if (this.currentStep === "select-indexers") {
+        this.handleIndexerSelectionKeys(key)
       } else if (this.currentStep === "done") {
         if (key.name === "return" || key.name === "escape") {
           this.currentStep = "menu"
@@ -120,6 +125,11 @@ export class ProwlarrSetup extends BoxRenderable {
         name: "🛡️ Setup FlareSolverr",
         description: "Add Cloudflare bypass proxy",
         action: () => this.setupFlareSolverr(),
+      },
+      {
+        name: "🔍 Add Public Indexers",
+        description: "Search and add public trackers",
+        action: () => this.searchIndexers(),
       },
       {
         name: "📊 Create Sync Profiles",
@@ -179,7 +189,15 @@ export class ProwlarrSetup extends BoxRenderable {
         const port = app.port || appDef?.defaultPort || 7878
 
         // In Docker, use container names for inter-container communication
-        await this.prowlarrClient.addArrApp(appType, app.id, port, apiKey, "prowlarr", prowlarrPort)
+        await this.prowlarrClient.addArrApp(
+          appType,
+          app.id,
+          port,
+          apiKey,
+          "prowlarr",
+          prowlarrPort,
+          appDef?.prowlarrCategoryIds
+        )
 
         const result = this.results.find((r) => r.name === app.id)
         if (result) {
@@ -272,11 +290,118 @@ export class ProwlarrSetup extends BoxRenderable {
     this.refreshContent()
   }
 
+  private async searchIndexers(): Promise<void> {
+    if (!this.prowlarrClient) return
+
+    this.currentStep = "select-indexers"
+    this.results = [{ name: "Fetching indexers...", status: "configuring" }]
+    this.refreshContent()
+
+    try {
+      const schemas = await this.prowlarrClient.getIndexerSchemas()
+      this.availableIndexers = schemas
+        .filter((i) => i.privacy === "public" && i.enable)
+        // Sort by category count descending (most capable first)
+        .sort((a, b) => {
+          const infoA = (a.capabilities?.categories || []).length
+          const infoB = (b.capabilities?.categories || []).length
+          return infoB - infoA
+        })
+
+      this.selectedIndexers.clear()
+      this.menuIndex = 0
+      this.listScrollOffset = 0
+      this.results = []
+    } catch (error) {
+      this.results = [{ name: "Error", status: "error", message: String(error) }]
+      this.currentStep = "done"
+    }
+    this.refreshContent()
+  }
+
+  private handleIndexerSelectionKeys(key: KeyEvent): void {
+    if (this.results.length > 0) return // If actively adding
+
+    if (key.name === "up") {
+      this.menuIndex = Math.max(0, this.menuIndex - 1)
+      if (this.menuIndex < this.listScrollOffset) {
+        this.listScrollOffset = this.menuIndex
+      }
+      this.refreshContent()
+    } else if (key.name === "down") {
+      this.menuIndex = Math.min(this.availableIndexers.length - 1, this.menuIndex + 1)
+      // Visible items = height - header (approx 15)
+      const visibleItems = 15
+      if (this.menuIndex >= this.listScrollOffset + visibleItems) {
+        this.listScrollOffset = this.menuIndex - visibleItems + 1
+      }
+      this.refreshContent()
+    } else if (key.name === "space") {
+      if (this.selectedIndexers.has(this.menuIndex)) {
+        this.selectedIndexers.delete(this.menuIndex)
+      } else {
+        this.selectedIndexers.add(this.menuIndex)
+      }
+      this.refreshContent()
+    } else if (key.name === "return") {
+      this.addSelectedIndexers()
+    }
+  }
+
+  private async addSelectedIndexers(): Promise<void> {
+    const toAdd = Array.from(this.selectedIndexers).map((idx) => this.availableIndexers[idx])
+    if (toAdd.length === 0) return
+
+    this.results = toAdd.map((i) => ({ name: i.name, status: "pending" }))
+    this.refreshContent()
+
+    for (const indexer of toAdd) {
+      // Update UI
+      const res = this.results.find((r) => r.name === indexer.name)
+      if (res) res.status = "configuring"
+      this.refreshContent()
+
+      try {
+        if (!this.prowlarrClient) throw new Error("No client")
+
+        // Auto-add FlareSolverr tag if it exists
+        const tags = await this.prowlarrClient.getTags()
+        const fsTag = tags.find((t) => t.label.toLowerCase() === "flaresolverr")
+
+        if (fsTag) {
+          indexer.tags = indexer.tags || []
+          if (!indexer.tags.includes(fsTag.id)) {
+            indexer.tags.push(fsTag.id)
+          }
+        }
+
+        await this.prowlarrClient.createIndexer(indexer)
+        if (res) {
+          res.status = "success"
+          const extra = fsTag ? " + FlareSolverr" : ""
+          res.message = `Added with ${indexer.capabilities?.categories?.length || 0} categories${extra}`
+        }
+      } catch (e) {
+        if (res) {
+          res.status = "error"
+          res.message = String(e)
+        }
+      }
+      this.refreshContent()
+    }
+
+    // After done, stay on done screen
+    this.currentStep = "done"
+    this.refreshContent()
+  }
+
   private refreshContent(): void {
     this.contentBox.getChildren().forEach((child) => child.destroy())
 
     if (this.currentStep === "menu") {
       this.renderMenu()
+    } else if (this.currentStep === "select-indexers" && this.results.length === 0) {
+      this.renderIndexerSelection()
     } else {
       this.renderResults()
     }
@@ -364,6 +489,132 @@ export class ProwlarrSetup extends BoxRenderable {
       this.contentBox.add(
         new TextRenderable(this.cliRenderer, {
           content: "\nPress Enter or Esc to continue...",
+          fg: "#6272a4",
+        })
+      )
+    }
+  }
+
+  private renderIndexerSelection(): void {
+    const visibleHeight = 15
+    const endIndex = Math.min(this.availableIndexers.length, this.listScrollOffset + visibleHeight)
+    const items = this.availableIndexers.slice(this.listScrollOffset, endIndex)
+
+    // Calculate active category IDs from selected apps
+    const activeCategoryIds = new Set<number>()
+    this.config.apps.forEach((app) => {
+      const def = getApp(app.id)
+      def?.prowlarrCategoryIds?.forEach((id) => activeCategoryIds.add(id))
+    })
+
+    this.contentBox.add(
+      new TextRenderable(this.cliRenderer, {
+        content: `Select Indexers (Space to toggle, Enter to add):\n\n`,
+        fg: "#f1fa8c",
+      })
+    )
+    // Removed extra `})` and `)` here to fix syntax.
+    // The original instruction had an extra `})` and `)` after the first `this.contentBox.add` call.
+
+    items.forEach((idx, i) => {
+      const realIndex = this.listScrollOffset + i
+      const isSelected = this.selectedIndexers.has(realIndex)
+      const isCurrent = realIndex === this.menuIndex
+
+      const check = isSelected ? "[x]" : "[ ]"
+      const pointer = isCurrent ? "→" : " "
+
+      const cats = idx.capabilities?.categories || []
+
+      // Group capabilities
+      const groups = new Map<string, boolean>() // Name -> IsRelevant
+
+      // Helper to check relevance
+      const checkRel = (min: number, max: number) => [...activeCategoryIds].some((id) => id >= min && id < max)
+
+      // Map to track which badge colors to use
+      // We can pre-define colors or just cycle them, but for now let's keep the user's preferred colors if possible,
+      // or define a mapping.
+      const categoryColors: Record<string, { active: string; inactive: string }> = {
+        Movies: { active: "#00ffff", inactive: "#008b8b" },
+        TV: { active: "#ff00ff", inactive: "#8b008b" },
+        Audio: { active: "#00ff00", inactive: "#006400" },
+        Books: { active: "#50fa7b", inactive: "#00008b" },
+        XXX: { active: "#ff5555", inactive: "#8b0000" },
+        PC: { active: "#f8f8f2", inactive: "#6272a4" },
+        Console: { active: "#f1fa8c", inactive: "#8b8000" },
+        Other: { active: "#aaaaaa", inactive: "#555555" },
+      }
+
+      cats.forEach((c) => {
+        const id = c.id
+        let name = ""
+        let isRel = false
+
+        // Find parent category from static data
+        const parentCat = PROWLARR_CATEGORIES.find((pc) => {
+          // Check if id matches parent
+          if (pc.id === id) return true
+          // Check if id matches any subcategory
+          if (pc.subCategories?.some((sub) => sub.id === id)) return true
+          // Check range heuristic if needed, but the static data should cover known IDs
+          // Fallback to range check if no exact match found?
+          // Actually, the static data structure implies ranges (e.g. Movies 2000-2999)
+          // Let's use the ID ranges implied by the static data if possible, or just strict matching.
+          // The previous code used ranges. Let's try to match ranges based on the starting ID of the parent category.
+          // Assuming categories are 1000s blocks.
+          const rangeStart = Math.floor(pc.id / 1000) * 1000
+          if (id >= rangeStart && id < rangeStart + 1000) return true
+          return false
+        })
+
+        if (parentCat) {
+          name = parentCat.name
+          const rangeStart = Math.floor(parentCat.id / 1000) * 1000
+          isRel = checkRel(rangeStart, rangeStart + 1000)
+        }
+
+        if (name) {
+          groups.set(name, groups.get(name) || isRel)
+        }
+      })
+
+      const line = new TextRenderable(this.cliRenderer, { content: "" })
+      line.add(`${pointer} ${check} ${idx.name} `)
+
+      // Render Badge Helper
+      const addBadge = (name: string) => {
+        if (groups.has(name)) {
+          const isRel = groups.get(name)
+          const colors = categoryColors[name] || categoryColors["Other"]
+          const color = isRel ? colors.active : colors.inactive
+
+          const badge = new TextNodeRenderable({ fg: color })
+          badge.add(`[${name}] `)
+          if (isRel) {
+            badge.attributes = 1
+          } // Bold if supported/relevant
+
+          line.add(badge)
+        }
+      }
+
+      // Iterate through our static categories to render badges in order
+      PROWLARR_CATEGORIES.forEach((cat) => {
+        addBadge(cat.name)
+      })
+
+      line.add("\n")
+      line.fg = isCurrent ? "#ffffff" : isSelected ? "#50fa7b" : "#aaaaaa"
+
+      this.contentBox.add(line)
+    })
+
+    const remaining = this.availableIndexers.length - endIndex
+    if (remaining > 0) {
+      this.contentBox.add(
+        new TextRenderable(this.cliRenderer, {
+          content: `... and ${remaining} more`,
           fg: "#6272a4",
         })
       )
