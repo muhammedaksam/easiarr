@@ -17,6 +17,7 @@ export interface RootFolder {
 // Options for adding root folder (some apps like Lidarr need extra fields)
 export interface AddRootFolderOptions {
   path: string
+  name?: string // Required for Lidarr
   defaultMetadataProfileId?: number
   defaultQualityProfileId?: number
 }
