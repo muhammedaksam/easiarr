@@ -436,6 +436,10 @@ export const APPS: Record<AppId, AppDefinition> = {
     puid: 0,
     pgid: 0,
     volumes: (root) => [`${root}/config/homepage:/app/config`, "/var/run/docker.sock:/var/run/docker.sock"],
+    environment: {
+      HOMEPAGE_ALLOWED_HOSTS:
+        "homepage,homepage.${CLOUDFLARE_DNS_ZONE},${CLOUDFLARE_DNS_ZONE},localhost,${LOCAL_DOCKER_IP}",
+    },
   },
 
   // === UTILITIES ===

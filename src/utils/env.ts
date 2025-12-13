@@ -5,7 +5,30 @@
 
 import { existsSync, readFileSync } from "node:fs"
 import { writeFile, readFile } from "node:fs/promises"
+import { networkInterfaces } from "node:os"
 import { getComposePath } from "../config/manager"
+
+/**
+ * Get the local IP address of the Docker host
+ * Returns the first non-internal IPv4 address found
+ */
+export function getLocalIp(): string {
+  const nets = networkInterfaces()
+
+  for (const name of Object.keys(nets)) {
+    const interfaces = nets[name]
+    if (!interfaces) continue
+
+    for (const net of interfaces) {
+      // Skip internal (loopback) and non-IPv4 addresses
+      if (net.family === "IPv4" && !net.internal) {
+        return net.address
+      }
+    }
+  }
+
+  return "localhost"
+}
 
 /**
  * Get the path to the .env file
