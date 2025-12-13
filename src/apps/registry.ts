@@ -142,6 +142,7 @@ export const APPS: Record<AppId, AppDefinition> = {
       enabledKey: "api_enabled",
       generateIfMissing: true,
     },
+    prowlarrCategoryIds: [7030], // Comics
     // Note: Mylar3 is NOT an *arr app - has different API format (?cmd=<endpoint>)
     // Root folder is configured via Web UI settings, not API
   },
