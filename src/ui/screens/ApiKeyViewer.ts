@@ -188,12 +188,12 @@ export class ApiKeyViewer extends BoxRenderable {
     }
 
     // Will attempt to initialize/login when saving
-    const globalPassword = env["GLOBAL_PASSWORD"]
+    const globalPassword = env["PASSWORD_GLOBAL"]
     if (!globalPassword) {
       this.keys.push({
         appId: "portainer",
         app: "Portainer",
-        key: "No GLOBAL_PASSWORD set in .env",
+        key: "No PASSWORD_GLOBAL set in .env",
         status: "missing",
       })
       return
@@ -409,7 +409,7 @@ export class ApiKeyViewer extends BoxRenderable {
       if (this.portainerCredentials) {
         updates["API_KEY_PORTAINER"] = this.portainerCredentials.apiKey
         if (this.portainerCredentials.password) {
-          updates["PORTAINER_PASSWORD"] = this.portainerCredentials.password
+          updates["PASSWORD_PORTAINER"] = this.portainerCredentials.password
         }
       }
 
@@ -438,8 +438,8 @@ export class ApiKeyViewer extends BoxRenderable {
 
   private async initializePortainer(_updates: Record<string, string>) {
     const env = readEnvSync()
-    const globalUsername = env["GLOBAL_USERNAME"] || "admin"
-    const globalPassword = env["GLOBAL_PASSWORD"]
+    const globalUsername = env["USERNAME_GLOBAL"] || "admin"
+    const globalPassword = env["PASSWORD_GLOBAL"]
 
     if (!globalPassword) return
 
@@ -479,7 +479,7 @@ export class ApiKeyViewer extends BoxRenderable {
         }
       } else {
         // Already initialized, try login with saved password if available
-        const portainerPassword = env["PORTAINER_PASSWORD"] || globalPassword
+        const portainerPassword = env["PASSWORD_PORTAINER"] || globalPassword
         await client.login(globalUsername, portainerPassword)
         const apiKey = await client.generateApiKey(portainerPassword, "easiarr-api-key")
         this.portainerCredentials = { apiKey }
