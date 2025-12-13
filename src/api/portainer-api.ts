@@ -228,4 +228,115 @@ export class PortainerApiClient {
       return false
     }
   }
+
+  // ==========================================
+  // Container Management Methods
+  // ==========================================
+
+  /**
+   * Get list of Docker endpoints
+   */
+  async getEndpoints(): Promise<PortainerEndpoint[]> {
+    return this.request<PortainerEndpoint[]>("/endpoints")
+  }
+
+  /**
+   * Get all containers for an endpoint
+   */
+  async getContainers(endpointId: number = 1): Promise<PortainerContainer[]> {
+    return this.request<PortainerContainer[]>(`/endpoints/${endpointId}/docker/containers/json?all=true`)
+  }
+
+  /**
+   * Start a container by ID
+   */
+  async startContainer(containerId: string, endpointId: number = 1): Promise<void> {
+    await this.request(`/endpoints/${endpointId}/docker/containers/${containerId}/start`, {
+      method: "POST",
+    })
+  }
+
+  /**
+   * Stop a container by ID
+   */
+  async stopContainer(containerId: string, endpointId: number = 1): Promise<void> {
+    await this.request(`/endpoints/${endpointId}/docker/containers/${containerId}/stop`, {
+      method: "POST",
+    })
+  }
+
+  /**
+   * Restart a container by ID
+   */
+  async restartContainer(containerId: string, endpointId: number = 1): Promise<void> {
+    await this.request(`/endpoints/${endpointId}/docker/containers/${containerId}/restart`, {
+      method: "POST",
+    })
+  }
+
+  /**
+   * Get container logs
+   */
+  async getContainerLogs(
+    containerId: string,
+    endpointId: number = 1,
+    options: { stdout?: boolean; stderr?: boolean; tail?: number } = {}
+  ): Promise<string> {
+    const { stdout = true, stderr = true, tail = 100 } = options
+    const params = new URLSearchParams({
+      stdout: String(stdout),
+      stderr: String(stderr),
+      tail: String(tail),
+    })
+    return this.request<string>(`/endpoints/${endpointId}/docker/containers/${containerId}/logs?${params}`)
+  }
+
+  /**
+   * Get container stats (CPU, Memory usage)
+   */
+  async getContainerStats(containerId: string, endpointId: number = 1): Promise<PortainerContainerStats> {
+    return this.request<PortainerContainerStats>(
+      `/endpoints/${endpointId}/docker/containers/${containerId}/stats?stream=false`
+    )
+  }
+}
+
+// ==========================================
+// Additional Type Definitions
+// ==========================================
+
+export interface PortainerEndpoint {
+  Id: number
+  Name: string
+  Type: number
+  Status: number
+  URL: string
+}
+
+export interface PortainerContainer {
+  Id: string
+  Names: string[]
+  Image: string
+  State: string
+  Status: string
+  Ports: Array<{
+    IP?: string
+    PrivatePort: number
+    PublicPort?: number
+    Type: string
+  }>
+  Labels: Record<string, string>
+  Created: number
+}
+
+export interface PortainerContainerStats {
+  cpu_stats: {
+    cpu_usage: { total_usage: number }
+    system_cpu_usage: number
+    online_cpus: number
+  }
+  memory_stats: {
+    usage: number
+    limit: number
+  }
 }
