@@ -65,7 +65,7 @@ export interface Application {
   tags: number[]
 }
 
-export type ArrAppType = "Radarr" | "Sonarr" | "Lidarr" | "Readarr"
+export type ArrAppType = "Radarr" | "Sonarr" | "Lidarr" | "Readarr" | "Whisparr" | "Mylar"
 
 export class ProwlarrClient {
   private baseUrl: string

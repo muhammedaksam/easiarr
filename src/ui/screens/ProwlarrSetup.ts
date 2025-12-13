@@ -24,6 +24,8 @@ const ARR_APP_TYPES: Record<string, ArrAppType> = {
   sonarr: "Sonarr",
   lidarr: "Lidarr",
   readarr: "Readarr",
+  whisparr: "Whisparr",
+  mylar3: "Mylar",
 }
 
 export class ProwlarrSetup extends BoxRenderable {
