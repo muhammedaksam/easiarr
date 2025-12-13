@@ -580,6 +580,31 @@ export const APPS: Record<AppId, AppDefinition> = {
     volumes: (root) => [`${root}/config/ddns-updater:/data`],
   },
 
+  "easiarr-status": {
+    id: "easiarr-status",
+    name: "Easiarr Status",
+    description: "Exposes Easiarr version for Homepage dashboard",
+    category: "utility",
+    defaultPort: 3009,
+    image: "halverneus/static-file-server:latest",
+    puid: 0,
+    pgid: 0,
+    volumes: (root) => [`${root}/.easiarr:/web:ro`],
+    environment: {
+      FOLDER: "/web",
+      PORT: "3009",
+      CORS: "true",
+    },
+    homepage: {
+      icon: "mdi-docker",
+      widget: "customapi",
+      widgetFields: {
+        url: "http://easiarr-status:3009/config.json",
+        mappings: JSON.stringify([{ field: "version", label: "Installed" }]),
+      },
+    },
+  },
+
   // === VPN ===
   gluetun: {
     id: "gluetun",

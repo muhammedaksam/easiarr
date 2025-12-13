@@ -40,6 +40,8 @@ export class QuickSetup {
     "jellyfin",
     "jellyseerr",
     "flaresolverr",
+    "homepage",
+    "easiarr-status",
   ])
 
   private rootDir: string = `${homedir()}/media`
