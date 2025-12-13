@@ -83,9 +83,9 @@ export class AppConfigurator extends BoxRenderable {
 
   private loadSavedCredentials() {
     const env = readEnvSync()
-    if (env.GLOBAL_USERNAME) this.globalUsername = env.GLOBAL_USERNAME
-    if (env.GLOBAL_PASSWORD) this.globalPassword = env.GLOBAL_PASSWORD
-    if (env.QBITTORRENT_PASSWORD) this.qbPass = env.QBITTORRENT_PASSWORD
+    if (env.USERNAME_GLOBAL) this.globalUsername = env.USERNAME_GLOBAL
+    if (env.PASSWORD_GLOBAL) this.globalPassword = env.PASSWORD_GLOBAL
+    if (env.PASSWORD_QBITTORRENT) this.qbPass = env.PASSWORD_QBITTORRENT
     if (env.SABNZBD_API_KEY) this.sabApiKey = env.SABNZBD_API_KEY
   }
 
@@ -204,8 +204,8 @@ export class AppConfigurator extends BoxRenderable {
   private async saveGlobalCredentialsToEnv() {
     try {
       const updates: Record<string, string> = {}
-      if (this.globalUsername) updates.GLOBAL_USERNAME = this.globalUsername
-      if (this.globalPassword) updates.GLOBAL_PASSWORD = this.globalPassword
+      if (this.globalUsername) updates.USERNAME_GLOBAL = this.globalUsername
+      if (this.globalPassword) updates.PASSWORD_GLOBAL = this.globalPassword
       await updateEnv(updates)
     } catch {
       // Ignore errors - not critical
@@ -610,7 +610,7 @@ export class AppConfigurator extends BoxRenderable {
     try {
       const updates: Record<string, string> = {}
       if (type === "qbittorrent" && this.qbPass) {
-        updates.QBITTORRENT_PASSWORD = this.qbPass
+        updates.PASSWORD_QBITTORRENT = this.qbPass
       } else if (type === "sabnzbd" && this.sabApiKey) {
         updates.SABNZBD_API_KEY = this.sabApiKey
       }

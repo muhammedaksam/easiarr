@@ -46,6 +46,8 @@
     "test:watch": "jest --watch",
     "check": "bun run typecheck && bun run lint && bun run format:check && bun run test",
     "fix": "bun run lint:fix && bun run format",
+    "migration:create": "bun run scripts/create-migration.ts",
+    "release": "./scripts/release.sh",
     "start": "bun run src/index.ts"
   },
   "devDependencies": {

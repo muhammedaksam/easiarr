@@ -63,8 +63,8 @@ export class FullAutoSetup extends BoxRenderable {
     this.pageContainer = pageContainer
 
     this.env = readEnvSync()
-    this.globalUsername = this.env["GLOBAL_USERNAME"] || "admin"
-    this.globalPassword = this.env["GLOBAL_PASSWORD"] || ""
+    this.globalUsername = this.env["USERNAME_GLOBAL"] || "admin"
+    this.globalPassword = this.env["PASSWORD_GLOBAL"] || ""
 
     this.initKeyHandler()
     this.initSteps()
@@ -176,7 +176,7 @@ export class FullAutoSetup extends BoxRenderable {
     this.refreshContent()
 
     if (!this.globalPassword) {
-      this.updateStep("Authentication", "skipped", "No GLOBAL_PASSWORD set")
+      this.updateStep("Authentication", "skipped", "No PASSWORD_GLOBAL set")
       this.refreshContent()
       return
     }
@@ -303,11 +303,11 @@ export class FullAutoSetup extends BoxRenderable {
     try {
       const host = "localhost"
       const port = qbConfig.port || 8080
-      const user = this.env["QBITTORRENT_USER"] || "admin"
-      const pass = this.env["QBITTORRENT_PASSWORD"] || this.env["QBITTORRENT_PASS"] || ""
+      const user = this.env["USERNAME_QBITTORRENT"] || "admin"
+      const pass = this.env["PASSWORD_QBITTORRENT"] || this.env["QBITTORRENT_PASS"] || ""
 
       if (!pass) {
-        this.updateStep("qBittorrent", "skipped", "No QBITTORRENT_PASSWORD in .env")
+        this.updateStep("qBittorrent", "skipped", "No PASSWORD_QBITTORRENT in .env")
         this.refreshContent()
         return
       }
@@ -347,7 +347,7 @@ export class FullAutoSetup extends BoxRenderable {
     }
 
     if (!this.globalPassword) {
-      this.updateStep("Portainer", "skipped", "No GLOBAL_PASSWORD set")
+      this.updateStep("Portainer", "skipped", "No PASSWORD_GLOBAL set")
       this.refreshContent()
       return
     }
@@ -377,7 +377,7 @@ export class FullAutoSetup extends BoxRenderable {
 
         // Save password if it was padded (different from global)
         if (result.passwordWasPadded) {
-          envUpdates.PORTAINER_PASSWORD = result.actualPassword
+          envUpdates.PASSWORD_PORTAINER = result.actualPassword
         }
 
         await updateEnv(envUpdates)
@@ -387,7 +387,7 @@ export class FullAutoSetup extends BoxRenderable {
         if (!this.env["API_KEY_PORTAINER"]) {
           try {
             // Use saved Portainer password if available (may have been padded)
-            const portainerPassword = this.env["PORTAINER_PASSWORD"] || this.globalPassword
+            const portainerPassword = this.env["PASSWORD_PORTAINER"] || this.globalPassword
             await client.login(this.globalUsername, portainerPassword)
             const apiKey = await client.generateApiKey(portainerPassword, "easiarr-api-key")
             await updateEnv({ API_KEY_PORTAINER: apiKey })

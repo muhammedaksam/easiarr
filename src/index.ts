@@ -12,10 +12,14 @@
 import { createCliRenderer } from "@opentui/core"
 import { App } from "./ui/App"
 import { initDebug } from "./utils/debug"
+import { runMigrations } from "./utils/migrations"
 
 async function main() {
   // Initialize debug logging if enabled
   initDebug()
+
+  // Run migrations to update env variable names if needed
+  await runMigrations()
 
   const renderer = await createCliRenderer({
     consoleOptions: {
