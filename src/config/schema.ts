@@ -120,6 +120,7 @@ export type AppId =
   | "guacamole"
   | "guacd"
   | "ddns-updater"
+  | "easiarr-status"
   // VPN
   | "gluetun"
   // Monitoring & Infra
@@ -190,6 +191,18 @@ export interface AppDefinition {
   arch?: ArchCompatibility
   /** Minimum password length requirement for user creation */
   minPasswordLength?: number
+  /** Homepage dashboard configuration */
+  homepage?: HomepageMeta
+}
+
+/** Homepage dashboard widget/service configuration */
+export interface HomepageMeta {
+  /** Icon name from Dashboard Icons (e.g., "radarr.png", "mdi-web") */
+  icon?: string
+  /** Widget type for Homepage (e.g., "radarr", "sonarr", "qbittorrent") */
+  widget?: string
+  /** Custom widget fields if needed */
+  widgetFields?: Record<string, string>
 }
 
 export interface RootFolderMeta {

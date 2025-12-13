@@ -16,6 +16,7 @@ import { ProwlarrSetup } from "./ProwlarrSetup"
 import { QBittorrentSetup } from "./QBittorrentSetup"
 import { FullAutoSetup } from "./FullAutoSetup"
 import { MonitorDashboard } from "./MonitorDashboard"
+import { HomepageSetup } from "./HomepageSetup"
 
 export class MainMenu {
   private renderer: RenderContext
@@ -129,6 +130,10 @@ export class MainMenu {
           name: "📊 Monitor Dashboard",
           description: "Configure app health monitoring",
         },
+        {
+          name: "🏠 Homepage Setup",
+          description: "Generate Homepage dashboard config",
+        },
         { name: "❌ Exit", description: "Close easiarr" },
       ],
     })
@@ -227,7 +232,18 @@ export class MainMenu {
           this.container.add(monitor)
           break
         }
-        case 11:
+        case 11: {
+          // Homepage Setup
+          this.menu.blur()
+          this.page.visible = false
+          const homepageSetup = new HomepageSetup(this.renderer as CliRenderer, this.config, () => {
+            this.page.visible = true
+            this.menu.focus()
+          })
+          this.container.add(homepageSetup)
+          break
+        }
+        case 12:
           process.exit(0)
           break
       }

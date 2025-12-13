@@ -29,7 +29,8 @@ export const APPS: Record<AppId, AppDefinition> = {
       path: "/data/media/movies",
       apiVersion: "v3",
     },
-    prowlarrCategoryIds: [2000, 2010, 2020, 2030, 2040, 2045, 2050, 2060, 2070, 2080, 2090],
+    prowlarrCategoryIds: [2000], // Movies
+    homepage: { icon: "radarr.png", widget: "radarr" },
   },
 
   sonarr: {
@@ -53,7 +54,8 @@ export const APPS: Record<AppId, AppDefinition> = {
       path: "/data/media/tv",
       apiVersion: "v3",
     },
-    prowlarrCategoryIds: [5000, 5010, 5020, 5030, 5040, 5045, 5050, 5060, 5070, 5080, 5090],
+    prowlarrCategoryIds: [5000], // TV
+    homepage: { icon: "sonarr.png", widget: "sonarr" },
   },
 
   lidarr: {
@@ -75,7 +77,8 @@ export const APPS: Record<AppId, AppDefinition> = {
       path: "/data/media/music",
       apiVersion: "v1",
     },
-    prowlarrCategoryIds: [3000, 3010, 3020, 3030, 3040, 3050, 3060],
+    prowlarrCategoryIds: [3000], // Audio
+    homepage: { icon: "lidarr.png", widget: "lidarr" },
   },
 
   readarr: {
@@ -97,11 +100,12 @@ export const APPS: Record<AppId, AppDefinition> = {
       path: "/data/media/books",
       apiVersion: "v1",
     },
-    prowlarrCategoryIds: [7000, 7010, 7020, 7030, 7040, 7050, 7060],
+    prowlarrCategoryIds: [7000], // Books
     arch: {
       deprecated: ["arm64", "arm32"],
       warning: "Readarr is deprecated - no ARM64 support (project abandoned by upstream)",
     },
+    homepage: { icon: "readarr.png", widget: "readarr" },
   },
 
   bazarr: {
@@ -122,6 +126,7 @@ export const APPS: Record<AppId, AppDefinition> = {
       parser: "yaml",
       selector: "auth.apikey",
     },
+    homepage: { icon: "bazarr.png", widget: "bazarr" },
   },
 
   mylar3: {
@@ -166,7 +171,8 @@ export const APPS: Record<AppId, AppDefinition> = {
       path: "/data/media/adult",
       apiVersion: "v3",
     },
-    prowlarrCategoryIds: [6000, 6010, 6020, 6030, 6040, 6045, 6050, 6060, 6070, 6080, 6090],
+    prowlarrCategoryIds: [6000], // XXX
+    homepage: { icon: "whisparr.png", widget: "sonarr" }, // Uses sonarr widget type
   },
 
   audiobookshelf: {
@@ -204,6 +210,7 @@ export const APPS: Record<AppId, AppDefinition> = {
       parser: "regex",
       selector: "<ApiKey>(.*?)</ApiKey>",
     },
+    homepage: { icon: "prowlarr.png", widget: "prowlarr" },
   },
 
   jackett: {
@@ -268,6 +275,7 @@ export const APPS: Record<AppId, AppDefinition> = {
       },
     ],
     trashGuide: "docs/Downloaders/qBittorrent/",
+    homepage: { icon: "qbittorrent.png", widget: "qbittorrent" },
   },
 
   sabnzbd: {
@@ -288,6 +296,7 @@ export const APPS: Record<AppId, AppDefinition> = {
       parser: "regex",
       selector: "api_key\\s*=\\s*(.+)",
     },
+    homepage: { icon: "sabnzbd.png", widget: "sabnzbd" },
   },
 
   // === MEDIA SERVERS ===
@@ -309,6 +318,7 @@ export const APPS: Record<AppId, AppDefinition> = {
       parser: "regex",
       selector: 'PlexOnlineToken="([^"]+)"',
     },
+    homepage: { icon: "plex.png", widget: "plex" },
   },
 
   jellyfin: {
@@ -321,6 +331,7 @@ export const APPS: Record<AppId, AppDefinition> = {
     puid: 0,
     pgid: 13000,
     volumes: (root) => [`${root}/config/jellyfin:/config`, `${root}/data/media:/data/media`],
+    homepage: { icon: "jellyfin.png", widget: "jellyfin" },
   },
 
   tautulli: {
@@ -339,6 +350,7 @@ export const APPS: Record<AppId, AppDefinition> = {
       parser: "regex",
       selector: "api_key\\s*=\\s*(.+)",
     },
+    homepage: { icon: "tautulli.png", widget: "tautulli" },
   },
 
   tdarr: {
@@ -376,6 +388,7 @@ export const APPS: Record<AppId, AppDefinition> = {
       parser: "json",
       selector: "main.apiKey",
     },
+    homepage: { icon: "overseerr.png", widget: "overseerr" },
   },
 
   jellyseerr: {
@@ -436,6 +449,10 @@ export const APPS: Record<AppId, AppDefinition> = {
     puid: 0,
     pgid: 0,
     volumes: (root) => [`${root}/config/homepage:/app/config`, "/var/run/docker.sock:/var/run/docker.sock"],
+    environment: {
+      HOMEPAGE_ALLOWED_HOSTS:
+        "homepage,homepage.${CLOUDFLARE_DNS_ZONE},${CLOUDFLARE_DNS_ZONE},localhost,${LOCAL_DOCKER_IP}",
+    },
   },
 
   // === UTILITIES ===
@@ -450,6 +467,7 @@ export const APPS: Record<AppId, AppDefinition> = {
     pgid: 0,
     volumes: (root) => [`${root}/config/portainer:/data`, "/var/run/docker.sock:/var/run/docker.sock"],
     minPasswordLength: 12, // Portainer requires minimum 12 character password
+    homepage: { icon: "portainer.png", widget: "portainer" },
   },
 
   huntarr: {
@@ -562,6 +580,31 @@ export const APPS: Record<AppId, AppDefinition> = {
     volumes: (root) => [`${root}/config/ddns-updater:/data`],
   },
 
+  "easiarr-status": {
+    id: "easiarr-status",
+    name: "Easiarr Status",
+    description: "Exposes Easiarr version for Homepage dashboard",
+    category: "utility",
+    defaultPort: 3009,
+    image: "halverneus/static-file-server:latest",
+    puid: 0,
+    pgid: 0,
+    volumes: (root) => [`${root}/.easiarr:/web:ro`],
+    environment: {
+      FOLDER: "/web",
+      PORT: "3009",
+      CORS: "true",
+    },
+    homepage: {
+      icon: "mdi-docker",
+      widget: "customapi",
+      widgetFields: {
+        url: "http://easiarr-status:3009/config.json",
+        mappings: JSON.stringify([{ field: "version", label: "Installed" }]),
+      },
+    },
+  },
+
   // === VPN ===
   gluetun: {
     id: "gluetun",
@@ -608,6 +651,7 @@ export const APPS: Record<AppId, AppDefinition> = {
         mask: true,
       },
     ],
+    homepage: { icon: "gluetun.png", widget: "gluetun" },
   },
 
   // === MONITORING ===
@@ -621,6 +665,7 @@ export const APPS: Record<AppId, AppDefinition> = {
     puid: 0,
     pgid: 13000,
     volumes: (root) => [`${root}/config/grafana:/var/lib/grafana`],
+    homepage: { icon: "grafana.png", widget: "grafana" },
   },
 
   prometheus: {
@@ -633,6 +678,7 @@ export const APPS: Record<AppId, AppDefinition> = {
     puid: 0,
     pgid: 13000,
     volumes: (root) => [`${root}/config/prometheus:/prometheus`],
+    homepage: { icon: "prometheus.png" }, // No widget, just icon
   },
 
   dozzle: {
@@ -660,6 +706,7 @@ export const APPS: Record<AppId, AppDefinition> = {
     puid: 0,
     pgid: 0,
     volumes: (root) => [`${root}/config/uptime-kuma:/app/data`, "/var/run/docker.sock:/var/run/docker.sock"],
+    homepage: { icon: "uptime-kuma.png", widget: "uptimekuma" },
   },
 
   // === INFRASTRUCTURE ===
@@ -690,6 +737,7 @@ export const APPS: Record<AppId, AppDefinition> = {
         required: true,
       },
     ],
+    homepage: { icon: "traefik.png", widget: "traefik" },
   },
 
   "traefik-certs-dumper": {
@@ -715,6 +763,7 @@ export const APPS: Record<AppId, AppDefinition> = {
     puid: 0,
     pgid: 0,
     volumes: (root) => [`${root}/config/crowdsec:/etc/crowdsec`, "/var/run/docker.sock:/var/run/docker.sock:ro"],
+    homepage: { icon: "crowdsec.png", widget: "crowdsec" },
   },
 
   headscale: {
@@ -727,6 +776,7 @@ export const APPS: Record<AppId, AppDefinition> = {
     puid: 0,
     pgid: 0,
     volumes: (root) => [`${root}/config/headscale:/etc/headscale`, `${root}/config/headscale/data:/var/lib/headscale`],
+    homepage: { icon: "headscale.png", widget: "headscale" },
   },
 
   headplane: {
@@ -762,6 +812,7 @@ export const APPS: Record<AppId, AppDefinition> = {
         mask: true,
       },
     ],
+    homepage: { icon: "tailscale.png", widget: "tailscale" },
   },
 
   authentik: {
@@ -804,6 +855,7 @@ export const APPS: Record<AppId, AppDefinition> = {
         mask: true,
       },
     ],
+    homepage: { icon: "authentik.png", widget: "authentik" },
   },
 
   "authentik-worker": {

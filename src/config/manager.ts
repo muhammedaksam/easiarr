@@ -10,6 +10,7 @@ import { join } from "node:path"
 import type { EasiarrConfig } from "./schema"
 import { DEFAULT_CONFIG } from "./schema"
 import { detectTimezone, detectUid, detectGid } from "./defaults"
+import { VersionInfo } from "../VersionInfo"
 
 const CONFIG_DIR_NAME = ".easiarr"
 const CONFIG_FILE_NAME = "config.json"
@@ -48,6 +49,26 @@ export async function configExists(): Promise<boolean> {
   return existsSync(getConfigPath())
 }
 
+/**
+ * Migrate config to current version
+ * Preserves user settings while adding new fields with defaults
+ */
+function migrateConfig(oldConfig: Partial<EasiarrConfig>): EasiarrConfig {
+  return {
+    // Start with defaults for new fields
+    ...DEFAULT_CONFIG,
+    // Preserve all user settings
+    ...oldConfig,
+    // Always update version to current
+    version: VersionInfo.version,
+    // Ensure required fields have values
+    umask: oldConfig.umask ?? "002",
+    apps: oldConfig.apps ?? [],
+    createdAt: oldConfig.createdAt ?? new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  } as EasiarrConfig
+}
+
 export async function loadConfig(): Promise<EasiarrConfig | null> {
   const configPath = getConfigPath()
 
@@ -57,7 +78,16 @@ export async function loadConfig(): Promise<EasiarrConfig | null> {
 
   try {
     const content = await readFile(configPath, "utf-8")
-    return JSON.parse(content) as EasiarrConfig
+    let config = JSON.parse(content) as EasiarrConfig
+
+    // Auto-migrate if version differs from current package version
+    if (config.version !== VersionInfo.version) {
+      config = migrateConfig(config)
+      // Save migrated config (creates backup first)
+      await saveConfig(config)
+    }
+
+    return config
   } catch (error) {
     console.error("Failed to load config:", error)
     return null

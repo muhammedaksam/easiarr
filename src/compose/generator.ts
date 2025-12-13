@@ -8,7 +8,7 @@ import type { EasiarrConfig, AppConfig, TraefikConfig, AppId } from "../config/s
 import { getComposePath } from "../config/manager"
 import { getApp } from "../apps/registry"
 import { generateServiceYaml } from "./templates"
-import { updateEnv } from "../utils/env"
+import { updateEnv, getLocalIp } from "../utils/env"
 
 export interface ComposeService {
   image: string
@@ -212,5 +212,6 @@ async function updateEnvFile(config: EasiarrConfig) {
     PUID: config.uid.toString(),
     PGID: config.gid.toString(),
     UMASK: config.umask,
+    LOCAL_DOCKER_IP: getLocalIp(),
   })
 }
