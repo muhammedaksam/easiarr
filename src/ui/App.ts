@@ -12,6 +12,8 @@ import { QuickSetup } from "./screens/QuickSetup"
 import { AppManager } from "./screens/AppManager"
 import { ContainerControl } from "./screens/ContainerControl"
 import { AdvancedSettings } from "./screens/AdvancedSettings"
+import { checkForUpdates } from "../utils/update-checker"
+import { UpdateNotification } from "./components/UpdateNotification"
 
 export type Screen = "main" | "quickSetup" | "appManager" | "containerControl" | "advancedSettings"
 
@@ -40,7 +42,19 @@ export class App {
     if (!this.config) {
       this.navigateTo("quickSetup")
     } else {
-      this.navigateTo("main")
+      // Check for updates before showing main menu
+      const updateInfo = await checkForUpdates()
+
+      if (updateInfo.updateAvailable) {
+        // Show update notification
+        const notification = new UpdateNotification(this.renderer, updateInfo, () => {
+          // After dismissing, show main menu
+          this.navigateTo("main")
+        })
+        this.renderer.root.add(notification)
+      } else {
+        this.navigateTo("main")
+      }
     }
 
     // Handle exit
