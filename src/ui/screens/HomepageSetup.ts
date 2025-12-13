@@ -140,8 +140,8 @@ export class HomepageSetup extends BoxRenderable {
     this.refreshContent()
   }
 
-  private previewServices(): void {
-    this.previewContent = generateServicesYaml(this.config)
+  private async previewServices(): Promise<void> {
+    this.previewContent = await generateServicesYaml(this.config)
     this.currentStep = "preview"
     this.refreshContent()
   }
