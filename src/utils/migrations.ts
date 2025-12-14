@@ -69,6 +69,18 @@ async function loadMigrations(): Promise<Migration[]> {
     debugLog("Migrations", `Failed to load migration: ${e}`)
   }
 
+  try {
+    const m1765707135 = await import("./migrations/1765707135_rename_easiarr_status")
+    migrations.push({
+      timestamp: "1765707135",
+      name: m1765707135.name,
+      up: m1765707135.up,
+      down: m1765707135.down,
+    })
+  } catch (e) {
+    debugLog("Migrations", `Failed to load migration: ${e}`)
+  }
+
   // Add future migrations here:
   // const m2 = await import("./migrations/1734xxxxxx_xxx")
   // migrations.push({ timestamp: "...", name: m2.name, up: m2.up })
