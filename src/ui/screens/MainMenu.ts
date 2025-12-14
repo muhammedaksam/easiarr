@@ -10,6 +10,7 @@ import type { EasiarrConfig } from "../../config/schema"
 import { createPageLayout } from "../components/PageLayout"
 import { saveCompose } from "../../compose"
 import { saveBookmarks } from "../../config/bookmarks-generator"
+import { openUrl } from "../../utils/browser"
 import { ApiKeyViewer } from "./ApiKeyViewer"
 import { AppConfigurator } from "./AppConfigurator"
 import { TRaSHProfileSetup } from "./TRaSHProfileSetup"
@@ -139,14 +140,34 @@ export class MainMenu {
         action: () => this.showScreen(JellyseerrSetup),
       })
     }
+    // Bookmark generation options
+    const generateAndOpenBookmarks = async (useLocalUrls: boolean) => {
+      await saveBookmarks(this.config, useLocalUrls)
+      // Open in browser if easiarr service is enabled
+      if (this.isAppEnabled("easiarr")) {
+        const port = this.config.apps.find((a) => a.id === "easiarr")?.port ?? 3010
+        await openUrl(`http://localhost:${port}/bookmarks.html`)
+      }
+    }
 
-    items.push({
-      name: "📑 Generate Bookmarks",
-      description: "Create browser-importable bookmarks file",
-      action: async () => {
-        await saveBookmarks(this.config)
-      },
-    })
+    if (this.config.traefik?.enabled) {
+      items.push({
+        name: "📑 Bookmarks (Local URLs)",
+        description: "Generate bookmarks using localhost addresses",
+        action: async () => generateAndOpenBookmarks(true),
+      })
+      items.push({
+        name: "📑 Bookmarks (Traefik URLs)",
+        description: `Generate bookmarks using ${this.config.traefik.domain} addresses`,
+        action: async () => generateAndOpenBookmarks(false),
+      })
+    } else {
+      items.push({
+        name: "📑 Generate Bookmarks",
+        description: "Create browser-importable bookmarks file",
+        action: async () => generateAndOpenBookmarks(true),
+      })
+    }
 
     items.push({
       name: "❌ Exit",

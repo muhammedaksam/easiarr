@@ -22,8 +22,8 @@ type CategoryBookmarks = Map<AppCategory, BookmarkEntry[]>
 /**
  * Get the URL for an app based on Traefik configuration
  */
-function getAppUrl(appId: string, port: number, config: EasiarrConfig): string {
-  if (config.traefik?.enabled && config.traefik.domain) {
+function getAppUrl(appId: string, port: number, config: EasiarrConfig, useLocalUrls: boolean): string {
+  if (!useLocalUrls && config.traefik?.enabled && config.traefik.domain) {
     return `https://${appId}.${config.traefik.domain}/`
   }
   return `http://localhost:${port}/`
@@ -32,7 +32,7 @@ function getAppUrl(appId: string, port: number, config: EasiarrConfig): string {
 /**
  * Generate bookmark entries grouped by category
  */
-function generateBookmarksByCategory(config: EasiarrConfig): CategoryBookmarks {
+function generateBookmarksByCategory(config: EasiarrConfig, useLocalUrls: boolean): CategoryBookmarks {
   const categoryBookmarks: CategoryBookmarks = new Map()
 
   for (const appConfig of config.apps) {
@@ -42,7 +42,7 @@ function generateBookmarksByCategory(config: EasiarrConfig): CategoryBookmarks {
     if (!appDef) continue
 
     const port = appConfig.port ?? appDef.defaultPort
-    const url = getAppUrl(appConfig.id, port, config)
+    const url = getAppUrl(appConfig.id, port, config, useLocalUrls)
 
     const entry: BookmarkEntry = {
       name: appDef.name,
@@ -63,8 +63,8 @@ function generateBookmarksByCategory(config: EasiarrConfig): CategoryBookmarks {
 /**
  * Generate Netscape-format HTML bookmarks
  */
-export function generateBookmarksHtml(config: EasiarrConfig): string {
-  const categoryBookmarks = generateBookmarksByCategory(config)
+export function generateBookmarksHtml(config: EasiarrConfig, useLocalUrls = false): string {
+  const categoryBookmarks = generateBookmarksByCategory(config, useLocalUrls)
 
   let html = `<!DOCTYPE NETSCAPE-Bookmark-file-1>
 <META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">
@@ -118,8 +118,8 @@ export function getBookmarksPath(): string {
 /**
  * Save bookmarks HTML file
  */
-export async function saveBookmarks(config: EasiarrConfig): Promise<string> {
-  const html = generateBookmarksHtml(config)
+export async function saveBookmarks(config: EasiarrConfig, useLocalUrls = false): Promise<string> {
+  const html = generateBookmarksHtml(config, useLocalUrls)
   const path = getBookmarksPath()
   await writeFile(path, html, "utf-8")
   return path

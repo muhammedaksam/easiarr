@@ -45,7 +45,7 @@ describe("Bookmarks Generator", () => {
   })
 
   test("uses localhost URLs without Traefik", () => {
-    const html = generateBookmarksHtml(mockConfig)
+    const html = generateBookmarksHtml(mockConfig, true)
     expect(html).toContain("http://localhost:7878/")
     expect(html).toContain("http://localhost:8989/")
   })
@@ -55,8 +55,18 @@ describe("Bookmarks Generator", () => {
       ...mockConfig,
       traefik: { enabled: true, domain: "example.com", entrypoint: "websecure", middlewares: [] },
     }
-    const html = generateBookmarksHtml(traefikConfig)
+    const html = generateBookmarksHtml(traefikConfig, false)
     expect(html).toContain("https://radarr.example.com/")
     expect(html).toContain("https://sonarr.example.com/")
+  })
+
+  test("uses localhost URLs when useLocalUrls is true even with Traefik", () => {
+    const traefikConfig: EasiarrConfig = {
+      ...mockConfig,
+      traefik: { enabled: true, domain: "example.com", entrypoint: "websecure", middlewares: [] },
+    }
+    const html = generateBookmarksHtml(traefikConfig, true)
+    expect(html).toContain("http://localhost:7878/")
+    expect(html).not.toContain("https://radarr.example.com/")
   })
 })
