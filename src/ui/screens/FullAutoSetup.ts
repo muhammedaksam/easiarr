@@ -503,10 +503,11 @@ export class FullAutoSetup extends BoxRenderable {
         const jellyfinDef = getApp("jellyfin")
         // Use internal port for container-to-container communication
         const internalPort = jellyfinDef?.internalPort || jellyfinDef?.defaultPort || 8096
-        const jellyfinHostname = `http://jellyfin:${internalPort}`
+        const jellyfinHost = "jellyfin"
 
         await client.runJellyfinSetup(
-          jellyfinHostname,
+          jellyfinHost,
+          internalPort,
           this.globalUsername,
           this.globalPassword,
           `${this.globalUsername}@local`

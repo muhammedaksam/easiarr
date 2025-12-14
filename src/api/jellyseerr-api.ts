@@ -223,6 +223,7 @@ export class JellyseerrClient {
     username: string,
     password: string,
     hostname: string,
+    port: number,
     email?: string
   ): Promise<JellyseerrUser> {
     return this.request<JellyseerrUser>("/auth/jellyfin", {
@@ -231,8 +232,8 @@ export class JellyseerrClient {
         username,
         password,
         hostname,
+        port,
         email: email || `${username}@local`,
-        serverType: 2, // Jellyfin/Emby
       }),
     })
   }
@@ -313,17 +314,20 @@ export class JellyseerrClient {
    */
   async runJellyfinSetup(
     jellyfinHostname: string,
+    port: number,
     username: string,
     password: string,
     email?: string
   ): Promise<string> {
     // Step 1: Authenticate FIRST (creates first admin if none exists)
     // This also establishes the session cookie for subsequent requests
-    await this.authenticateJellyfin(username, password, jellyfinHostname, email)
+    await this.authenticateJellyfin(username, password, jellyfinHostname, port, email)
 
     // Step 2: Update Jellyfin settings (now we have the session cookie)
+    // Construct full URL for settings (e.g. http://jellyfin:8096)
+    const fullUrl = `http://${jellyfinHostname}:${port}`
     await this.updateJellyfinSettings({
-      hostname: jellyfinHostname,
+      hostname: fullUrl,
       adminUser: username,
       adminPass: password,
     })

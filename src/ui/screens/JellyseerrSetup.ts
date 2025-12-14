@@ -197,13 +197,15 @@ export class JellyseerrSetup extends BoxRenderable {
         const jellyfinDef = getApp("jellyfin")
         // Use internal port for container-to-container communication (always 8096)
         const internalPort = jellyfinDef?.internalPort || jellyfinDef?.defaultPort || 8096
-        const jellyfinHostname = `http://jellyfin:${internalPort}`
-        debugLog("Jellyseerr", `Connecting to Jellyfin at ${jellyfinHostname}`)
+        const jellyfinHost = "jellyfin" // Hostname only for auth
+        const jellyfinFullUrl = `http://${jellyfinHost}:${internalPort}` // Full URL for settings
+        debugLog("Jellyseerr", `Connecting to Jellyfin at ${jellyfinFullUrl}`)
 
         // Step 2: Authenticate FIRST (creates admin user AND gets session cookie)
         this.results[1].status = "configuring"
         this.refreshContent()
-        await this.jellyseerrClient.authenticateJellyfin(username, password, jellyfinHostname)
+        // Auth endpoint constructs URL: http://{hostname}:{port}
+        await this.jellyseerrClient.authenticateJellyfin(username, password, jellyfinHost, internalPort)
         this.results[1].status = "success"
         this.results[1].message = `User: ${username}`
         this.refreshContent()
@@ -212,12 +214,12 @@ export class JellyseerrSetup extends BoxRenderable {
         this.results[2].status = "configuring"
         this.refreshContent()
         await this.jellyseerrClient.updateJellyfinSettings({
-          hostname: jellyfinHostname,
+          hostname: jellyfinFullUrl,
           adminUser: username,
           adminPass: password,
         })
         this.results[2].status = "success"
-        this.results[2].message = `Jellyfin @ ${jellyfinHostname}`
+        this.results[2].message = `Jellyfin @ ${jellyfinHost}`
         this.refreshContent()
       } else {
         // Plex/Emby - skip for now, needs token-based auth
