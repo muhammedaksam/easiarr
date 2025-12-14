@@ -7,7 +7,6 @@ import { BoxRenderable, CliRenderer, TextRenderable, KeyEvent } from "@opentui/c
 import { createPageLayout } from "../components/PageLayout"
 import { EasiarrConfig } from "../../config/schema"
 import { JellyseerrClient } from "../../api/jellyseerr-api"
-import { JellyfinClient } from "../../api/jellyfin-api"
 import { getApp } from "../../apps/registry"
 import { readEnvSync, writeEnvSync } from "../../utils/env"
 import { debugLog } from "../../utils/debug"
@@ -206,41 +205,9 @@ export class JellyseerrSetup extends BoxRenderable {
         debugLog("Jellyseerr", `Connecting to Jellyfin at ${jellyfinFullUrl}`)
 
         try {
-          // Pre-flight: Ensure Jellyfin user is admin (Self-healing)
-          try {
-            // Use localhost for pre-flight because we are running on the host
-            const jfClient = new JellyfinClient("localhost", internalPort)
-            const auth = await jfClient.authenticate(username, password)
-            if (auth.User?.Id) {
-              debugLog("Jellyfin", "Ensuring admin permissions via API override")
-              // Merge existing policy to avoid 400 Bad Request
-              await jfClient.updateUserPolicy(auth.User.Id, {
-                ...(auth.User.Policy || {}),
-                IsAdministrator: true,
-                IsHidden: false,
-              })
-
-              // Wait for Jellyfin to persist the policy change
-              debugLog("Jellyfin", "Waiting 2s for policy to persist...")
-              await new Promise((resolve) => setTimeout(resolve, 2000))
-
-              // Verify the update was applied
-              const verifiedUser = await jfClient.getUser(auth.User.Id)
-              if (verifiedUser.Policy?.IsAdministrator) {
-                debugLog("Jellyfin", "Admin status verified successfully")
-              } else {
-                debugLog("Jellyfin", "WARNING: Admin status verification failed")
-              }
-            }
-          } catch (jfError: unknown) {
-            const err = jfError instanceof Error ? jfError : new Error(String(jfError))
-            debugLog("Jellyfin", `Pre-flight permission fix failed (ignoring): ${err.message}`)
-          }
-
-          // Step 2: Authenticate FIRST (creates admin user AND gets session cookie)
+          // Step 2: Authenticate with Jellyseerr (creates admin user AND gets session cookie)
           this.results[1].status = "configuring"
           this.refreshContent()
-          // Auth endpoint constructs URL: http://{hostname}:{port}
           await this.jellyseerrClient.authenticateJellyfin(username, password, jellyfinHost, internalPort, userEmail)
           this.results[1].status = "success"
           this.results[1].message = `User: ${username}`
