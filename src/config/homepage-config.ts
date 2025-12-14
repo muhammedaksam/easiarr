@@ -10,7 +10,8 @@ import type { EasiarrConfig, AppCategory } from "./schema"
 import { APP_CATEGORIES } from "./schema"
 import { getApp } from "../apps/registry"
 import { CATEGORY_ORDER } from "../apps/categories"
-import { readEnvSync, getLocalIp } from "../utils/env"
+import { readEnvSync, getLocalIp, updateEnv } from "../utils/env"
+import { PortainerApiClient } from "../api/portainer-api"
 
 /**
  * Get the Homepage config directory path
@@ -95,8 +96,27 @@ export async function generateServicesYaml(config: EasiarrConfig): Promise<strin
       }
 
       if (appDef.id === "portainer") {
-        // Default to environment 1 (local)
-        service.widget.env = env["PORTAINER_ENV"] ?? "1"
+        // Try to auto-detect Portainer environment ID
+        // User can override with PORTAINER_ENV in .env file
+        if (env["PORTAINER_ENV"]) {
+          service.widget.env = env["PORTAINER_ENV"]
+        } else {
+          // Auto-detect from Portainer API
+          const portainerPort = appConfig.port ?? appDef.defaultPort
+          const portainerClient = new PortainerApiClient(localIp, portainerPort)
+          const apiKey = env["API_KEY_PORTAINER"]
+          if (apiKey) {
+            portainerClient.setApiKey(apiKey)
+          }
+          const localEnvId = await portainerClient.getLocalEnvironmentId()
+          const envIdStr = localEnvId?.toString() ?? "1"
+          service.widget.env = envIdStr
+
+          // Persist the detected env ID to .env for future use
+          if (localEnvId) {
+            await updateEnv({ PORTAINER_ENV: envIdStr })
+          }
+        }
       }
 
       // Add any custom widget fields
