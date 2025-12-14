@@ -81,6 +81,18 @@ async function loadMigrations(): Promise<Migration[]> {
     debugLog("Migrations", `Failed to load migration: ${e}`)
   }
 
+  try {
+    const m1765732722 = await import("./migrations/1765732722_remove_cloudflare_dns_api_token")
+    migrations.push({
+      timestamp: "1765732722",
+      name: m1765732722.name,
+      up: m1765732722.up,
+      down: m1765732722.down,
+    })
+  } catch (e) {
+    debugLog("Migrations", `Failed to load migration: ${e}`)
+  }
+
   // Add future migrations here:
   // const m2 = await import("./migrations/1734xxxxxx_xxx")
   // migrations.push({ timestamp: "...", name: m2.name, up: m2.up })

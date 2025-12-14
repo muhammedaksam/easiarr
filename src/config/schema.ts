@@ -65,6 +65,12 @@ export interface TraefikConfig {
   domain: string
   entrypoint: string
   middlewares: string[]
+  /** Basic auth using username/password */
+  basicAuth?: {
+    enabled: boolean
+    username: string
+    password: string
+  }
 }
 
 export interface AppConfig {
@@ -133,6 +139,7 @@ export type AppId =
   // Reverse Proxy
   | "traefik"
   | "traefik-certs-dumper"
+  | "cloudflared"
   | "crowdsec"
   // Network/VPN
   | "headscale"
@@ -176,6 +183,8 @@ export interface AppDefinition {
   defaultPort: number
   /** Internal container port if different from defaultPort */
   internalPort?: number
+  /** Additional port mappings (e.g., "8083:8080" for dashboard ports) */
+  secondaryPorts?: string[]
   image: string
   puid: number
   pgid: number
@@ -186,6 +195,8 @@ export interface AppDefinition {
   secrets?: AppSecret[]
   devices?: string[]
   cap_add?: string[]
+  /** Custom command to run (e.g., "tunnel run" for cloudflared) */
+  command?: string
   apiKeyMeta?: ApiKeyMeta
   rootFolder?: RootFolderMeta
   prowlarrCategoryIds?: number[]

@@ -21,6 +21,8 @@ import { MonitorDashboard } from "./MonitorDashboard"
 import { HomepageSetup } from "./HomepageSetup"
 import { JellyfinSetup } from "./JellyfinSetup"
 import { JellyseerrSetup } from "./JellyseerrSetup"
+import { SettingsScreen } from "./SettingsScreen"
+import { CloudflaredSetup } from "./CloudflaredSetup"
 
 type MenuItem = { name: string; description: string; action: () => void | Promise<void> }
 
@@ -56,6 +58,11 @@ export class MainMenu {
       name: "📦 Manage Apps",
       description: "Add, remove, or configure apps",
       action: () => this.app.navigateTo("appManager"),
+    })
+    items.push({
+      name: "⚙️  Settings",
+      description: "Edit Traefik, VPN, and system configuration",
+      action: () => this.showScreen(SettingsScreen),
     })
     items.push({
       name: "🐳 Container Control",
@@ -138,6 +145,13 @@ export class MainMenu {
         name: "🎥 Jellyseerr Setup",
         description: "Configure Jellyseerr with media server",
         action: () => this.showScreen(JellyseerrSetup),
+      })
+    }
+    if (this.isAppEnabled("cloudflared") || this.isAppEnabled("traefik")) {
+      items.push({
+        name: "☁️ Cloudflare Tunnel",
+        description: "Setup or configure Cloudflare Tunnel via API",
+        action: () => this.showScreen(CloudflaredSetup),
       })
     }
     // Bookmark generation options

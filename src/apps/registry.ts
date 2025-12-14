@@ -721,7 +721,8 @@ export const APPS: Record<AppId, AppDefinition> = {
     name: "Traefik",
     description: "Reverse proxy and load balancer",
     category: "infrastructure",
-    defaultPort: 8083,
+    defaultPort: 80,
+    internalPort: 80,
     image: "traefik:latest",
     puid: 0,
     pgid: 0,
@@ -730,13 +731,9 @@ export const APPS: Record<AppId, AppDefinition> = {
       `${root}/config/traefik/letsencrypt:/letsencrypt`,
       "/var/run/docker.sock:/var/run/docker.sock:ro",
     ],
+    // Dashboard exposed on 8083 (internal 8080) for Homepage widget
+    secondaryPorts: ["8083:8080"],
     secrets: [
-      {
-        name: "CLOUDFLARE_DNS_API_TOKEN",
-        description: "Cloudflare DNS API Token for Traefik",
-        required: false,
-        mask: true,
-      },
       {
         name: "CLOUDFLARE_DNS_ZONE",
         description: "Root Domain (e.g. example.com)",
@@ -744,6 +741,37 @@ export const APPS: Record<AppId, AppDefinition> = {
       },
     ],
     homepage: { icon: "traefik.png", widget: "traefik" },
+  },
+
+  cloudflared: {
+    id: "cloudflared",
+    name: "Cloudflared",
+    description: "Cloudflare Tunnel for secure external access without port forwarding",
+    category: "infrastructure",
+    defaultPort: 0, // No exposed port - tunnel is outbound only
+    image: "cloudflare/cloudflared:latest",
+    puid: 0,
+    pgid: 0,
+    volumes: () => [],
+    environment: {
+      TUNNEL_TOKEN: "${CLOUDFLARE_TUNNEL_TOKEN}",
+    },
+    command: "tunnel run",
+    dependsOn: ["traefik"],
+    secrets: [
+      {
+        name: "CLOUDFLARE_API_TOKEN",
+        description: "Cloudflare API Token (for automated tunnel setup via Menu)",
+        required: false,
+        mask: true,
+      },
+      {
+        name: "CLOUDFLARE_TUNNEL_TOKEN",
+        description: "Cloudflare Tunnel Token (auto-generated or from Zero Trust)",
+        required: true,
+        mask: true,
+      },
+    ],
   },
 
   "traefik-certs-dumper": {

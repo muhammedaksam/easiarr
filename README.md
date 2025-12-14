@@ -118,6 +118,7 @@ bun run start
 ### Infrastructure
 
 - **Traefik** - Reverse proxy and load balancer
+- **Cloudflared** - Cloudflare Tunnel for secure external access
 - **Traefik Certs Dumper** - Extracts certificates from Traefik
 - **CrowdSec** - Intrusion prevention system
 - **Headscale** - Open-source Tailscale control server
@@ -126,6 +127,29 @@ bun run start
 - **Authentik** - Identity provider and SSO
 - **PostgreSQL** - Database server
 - **Valkey** - Redis-compatible key-value store
+
+## Cloudflare Tunnel Setup
+
+Expose your services securely without port forwarding using Cloudflare Tunnel.
+
+### Automated Setup (Recommended)
+
+1. Create a Cloudflare API Token at [dash.cloudflare.com/profile/api-tokens](https://dash.cloudflare.com/profile/api-tokens) with:
+   - `Account:Account Settings:Read` (required)
+   - `Account:Cloudflare Tunnel:Edit`
+   - `Zone:DNS:Edit`
+   - `Account:Access: Apps and Policies:Edit` (optional - protects services with email login)
+
+2. Run easiarr → **Main Menu** → **☁️ Cloudflare Tunnel**
+
+3. Paste your API token and follow the wizard
+
+The wizard will automatically:
+
+- Create the tunnel
+- Add DNS records
+- Configure ingress rules
+- Optionally set up email authentication via Cloudflare Access
 
 ## Configuration
 

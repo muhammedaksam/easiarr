@@ -9,6 +9,7 @@ import { getComposePath } from "../config/manager"
 import { getApp } from "../apps/registry"
 import { generateServiceYaml } from "./templates"
 import { updateEnv, getLocalIp } from "../utils/env"
+import { saveTraefikConfig } from "./traefik-config"
 
 export interface ComposeService {
   image: string
@@ -22,6 +23,7 @@ export interface ComposeService {
   labels?: string[]
   devices?: string[]
   cap_add?: string[]
+  command?: string
 }
 
 export interface ComposeFile {
@@ -126,18 +128,31 @@ function buildService(appDef: ReturnType<typeof getApp>, appConfig: AppConfig, c
     Object.assign(environment, appConfig.customEnv)
   }
 
+  // Build ports array
+  let ports: string[] = []
+  if (appDef.id !== "plex" && port !== 0 && appDef.defaultPort !== 0) {
+    ports.push(`"${port}:${appDef.internalPort ?? appDef.defaultPort}"`)
+  }
+  // Add secondary ports (e.g., dashboard ports)
+  if (appDef.secondaryPorts) {
+    ports = ports.concat(appDef.secondaryPorts.map((p) => `"${p}"`))
+  }
+
   const service: ComposeService = {
     image: appDef.image,
     container_name: appDef.id,
     environment,
     volumes,
-    ports: appDef.id === "plex" ? [] : [`"${port}:${appDef.internalPort ?? appDef.defaultPort}"`],
+    ports,
     restart: "unless-stopped",
   }
 
   // Add devices/caps
   if (appDef.devices) service.devices = [...appDef.devices]
   if (appDef.cap_add) service.cap_add = [...appDef.cap_add]
+
+  // Add command (e.g., cloudflared)
+  if (appDef.command) service.command = appDef.command
 
   // Plex uses network_mode: host
   if (appDef.id === "plex") {
@@ -152,8 +167,13 @@ function buildService(appDef: ReturnType<typeof getApp>, appConfig: AppConfig, c
     }
   }
 
-  if (config.traefik?.enabled && appDef.id !== "traefik" && appDef.id !== "plex") {
-    service.labels = generateTraefikLabels(appDef.id, appDef.internalPort ?? appDef.defaultPort, config.traefik)
+  if (config.traefik?.enabled && appDef.id !== "plex" && appDef.id !== "cloudflared") {
+    if (appDef.id === "traefik") {
+      // Special labels for Traefik dashboard (accessible via traefik.domain on port 8080)
+      service.labels = generateTraefikLabels("traefik", 8080, config.traefik)
+    } else {
+      service.labels = generateTraefikLabels(appDef.id, appDef.internalPort ?? appDef.defaultPort, config.traefik)
+    }
   }
 
   return service
@@ -199,6 +219,9 @@ export async function saveCompose(config: EasiarrConfig): Promise<string> {
 
   // Update .env
   await updateEnvFile(config)
+
+  // Generate Traefik config files if Traefik is enabled
+  await saveTraefikConfig(config)
 
   return path
 }

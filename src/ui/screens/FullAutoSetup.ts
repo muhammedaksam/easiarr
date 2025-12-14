@@ -12,6 +12,9 @@ import { QBittorrentClient, type QBittorrentCategory } from "../../api/qbittorre
 import { PortainerApiClient } from "../../api/portainer-api"
 import { JellyfinClient } from "../../api/jellyfin-api"
 import { JellyseerrClient } from "../../api/jellyseerr-api"
+import { CloudflareApi, setupCloudflaredTunnel } from "../../api/cloudflare-api"
+import { saveConfig } from "../../config"
+import { saveCompose } from "../../compose"
 import { getApp } from "../../apps/registry"
 // import type { AppId } from "../../config/schema"
 import { getCategoriesForApps } from "../../utils/categories"
@@ -85,6 +88,7 @@ export class FullAutoSetup extends BoxRenderable {
       { name: "Portainer", status: "pending" },
       { name: "Jellyfin", status: "pending" },
       { name: "Jellyseerr", status: "pending" },
+      { name: "Cloudflare Tunnel", status: "pending" },
     ]
   }
 
@@ -138,6 +142,9 @@ export class FullAutoSetup extends BoxRenderable {
 
     // Step 8: Jellyseerr
     await this.setupJellyseerr()
+
+    // Step 9: Cloudflare Tunnel
+    await this.setupCloudflare()
 
     this.isRunning = false
     this.isDone = true
@@ -552,6 +559,71 @@ export class FullAutoSetup extends BoxRenderable {
       }
     } catch (e) {
       this.updateStep("Jellyseerr", "error", `${e}`)
+    }
+    this.refreshContent()
+  }
+
+  private async setupCloudflare(): Promise<void> {
+    this.updateStep("Cloudflare Tunnel", "running")
+    this.refreshContent()
+
+    const cloudflaredConfig = this.config.apps.find((a) => a.id === "cloudflared" && a.enabled)
+    if (!cloudflaredConfig) {
+      this.updateStep("Cloudflare Tunnel", "skipped", "Not enabled")
+      this.refreshContent()
+      return
+    }
+
+    const apiToken = this.env["CLOUDFLARE_API_TOKEN"]
+    if (!apiToken) {
+      this.updateStep("Cloudflare Tunnel", "skipped", "No CLOUDFLARE_API_TOKEN in .env")
+      this.refreshContent()
+      return
+    }
+
+    const domain = this.env["CLOUDFLARE_DNS_ZONE"] || this.config.traefik?.domain
+    if (!domain) {
+      this.updateStep("Cloudflare Tunnel", "skipped", "No domain configured")
+      this.refreshContent()
+      return
+    }
+
+    try {
+      // Create/update tunnel
+      const result = await setupCloudflaredTunnel(apiToken, domain, "easiarr")
+
+      // Save tunnel token to .env
+      await updateEnv({
+        CLOUDFLARE_TUNNEL_TOKEN: result.tunnelToken,
+        CLOUDFLARE_DNS_ZONE: domain,
+      })
+
+      // Update config
+      if (this.config.traefik) {
+        this.config.traefik.domain = domain
+        this.config.traefik.entrypoint = "web"
+      }
+      this.config.updatedAt = new Date().toISOString()
+      await saveConfig(this.config)
+      await saveCompose(this.config)
+
+      // Optional: Set up Cloudflare Access if email is available
+      // Check CLOUDFLARE_ACCESS_EMAIL first, then fall back to EMAIL_GLOBAL
+      const accessEmail = this.env["CLOUDFLARE_ACCESS_EMAIL"] || this.env["EMAIL_GLOBAL"]
+      if (accessEmail) {
+        try {
+          const api = new CloudflareApi(apiToken)
+          await api.setupAccessProtection(domain, [accessEmail], "easiarr")
+          this.updateStep("Cloudflare Tunnel", "success", `Tunnel + Access for ${accessEmail}`)
+        } catch {
+          // Access setup failed, but tunnel is still working
+          this.updateStep("Cloudflare Tunnel", "success", "Tunnel created (Access failed)")
+        }
+      } else {
+        this.updateStep("Cloudflare Tunnel", "success", "Tunnel created")
+      }
+    } catch (e) {
+      this.updateStep("Cloudflare Tunnel", "error", `${e}`)
     }
     this.refreshContent()
   }
