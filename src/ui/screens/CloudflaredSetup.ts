@@ -133,6 +133,12 @@ export class CloudflaredSetup extends BoxRenderable {
         fg: "#50fa7b",
       })
     )
+    content.add(
+      new TextRenderable(this.cliRenderer, {
+        content: "  • Account:Access: Apps and Policies:Edit (for email login)",
+        fg: "#50fa7b",
+      })
+    )
     content.add(new TextRenderable(this.cliRenderer, { content: " " }))
 
     content.add(
