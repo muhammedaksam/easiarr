@@ -21,6 +21,7 @@ import { MonitorDashboard } from "./MonitorDashboard"
 import { HomepageSetup } from "./HomepageSetup"
 import { JellyfinSetup } from "./JellyfinSetup"
 import { JellyseerrSetup } from "./JellyseerrSetup"
+import { SettingsScreen } from "./SettingsScreen"
 
 type MenuItem = { name: string; description: string; action: () => void | Promise<void> }
 
@@ -56,6 +57,11 @@ export class MainMenu {
       name: "📦 Manage Apps",
       description: "Add, remove, or configure apps",
       action: () => this.app.navigateTo("appManager"),
+    })
+    items.push({
+      name: "⚙️  Settings",
+      description: "Edit Traefik, VPN, and system configuration",
+      action: () => this.showScreen(SettingsScreen),
     })
     items.push({
       name: "🐳 Container Control",
