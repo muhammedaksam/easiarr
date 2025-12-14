@@ -199,13 +199,15 @@ export class JellyseerrSetup extends BoxRenderable {
         const internalPort = jellyfinDef?.internalPort || jellyfinDef?.defaultPort || 8096
         const jellyfinHost = "jellyfin" // Hostname only for auth
         const jellyfinFullUrl = `http://${jellyfinHost}:${internalPort}` // Full URL for settings
+        const userEmail = `${username}@example.com`
+
         debugLog("Jellyseerr", `Connecting to Jellyfin at ${jellyfinFullUrl}`)
 
         // Step 2: Authenticate FIRST (creates admin user AND gets session cookie)
         this.results[1].status = "configuring"
         this.refreshContent()
         // Auth endpoint constructs URL: http://{hostname}:{port}
-        await this.jellyseerrClient.authenticateJellyfin(username, password, jellyfinHost, internalPort)
+        await this.jellyseerrClient.authenticateJellyfin(username, password, jellyfinHost, internalPort, userEmail)
         this.results[1].status = "success"
         this.results[1].message = `User: ${username}`
         this.refreshContent()
