@@ -10,6 +10,7 @@ import type { EasiarrConfig, AppCategory } from "./schema"
 import { APP_CATEGORIES } from "./schema"
 import { CATEGORY_ORDER } from "../apps/categories"
 import { getApp } from "../apps/registry"
+import { readEnvSync } from "../utils/env"
 
 interface BookmarkEntry {
   name: string
@@ -26,8 +27,9 @@ function getAppUrl(appId: string, port: number, config: EasiarrConfig, useLocalU
   if (!useLocalUrls && config.traefik?.enabled && config.traefik.domain) {
     return `https://${appId}.${config.traefik.domain}/`
   }
-  // Use LOCAL_DOCKER_IP from environment if available, otherwise fallback to localhost
-  const host = process.env.LOCAL_DOCKER_IP || "localhost"
+  // Read LOCAL_DOCKER_IP from .env file, fallback to localhost
+  const env = readEnvSync()
+  const host = env.LOCAL_DOCKER_IP || "localhost"
   return `http://${host}:${port}/`
 }
 
