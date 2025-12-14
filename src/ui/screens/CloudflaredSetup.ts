@@ -646,7 +646,7 @@ export class CloudflaredSetup extends BoxRenderable {
       this.statusMessages.push("✓ docker-compose.yml regenerated")
       this.renderContent()
 
-      // Step 4: Optional Access setup
+      // Step 4: Optional Access setup OR Basic Auth
       if (this.accessEmail.trim()) {
         this.statusMessages.push("Creating Cloudflare Access...")
         this.renderContent()
@@ -657,6 +657,40 @@ export class CloudflaredSetup extends BoxRenderable {
         this.statusMessages.pop()
         this.statusMessages.push(`✓ Cloudflare Access created for: ${this.accessEmail}`)
         this.renderContent()
+      } else {
+        // No Cloudflare Access - enable basic auth with global credentials
+        const env = readEnvSync()
+        const username = env.USERNAME_GLOBAL
+        const password = env.PASSWORD_GLOBAL
+
+        if (username && password) {
+          this.statusMessages.push("Enabling basic auth protection...")
+          this.renderContent()
+
+          // Update traefik config with basic auth
+          if (this.config.traefik) {
+            this.config.traefik.basicAuth = {
+              enabled: true,
+              username,
+              password,
+            }
+            // Add basic-auth middleware
+            if (!this.config.traefik.middlewares.includes("basic-auth")) {
+              this.config.traefik.middlewares.push("basic-auth")
+            }
+          }
+
+          // Re-save config and compose
+          await saveConfig(this.config)
+          await saveCompose(this.config)
+
+          this.statusMessages.pop()
+          this.statusMessages.push(`✓ Basic auth enabled (username: ${username})`)
+          this.renderContent()
+        } else {
+          this.statusMessages.push("⚠️ No protection enabled (no email or GLOBAL_PASSWORD set)")
+          this.renderContent()
+        }
       }
 
       // Done!

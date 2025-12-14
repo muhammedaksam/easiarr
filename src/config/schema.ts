@@ -65,6 +65,12 @@ export interface TraefikConfig {
   domain: string
   entrypoint: string
   middlewares: string[]
+  /** Basic auth using username/password */
+  basicAuth?: {
+    enabled: boolean
+    username: string
+    password: string
+  }
 }
 
 export interface AppConfig {
