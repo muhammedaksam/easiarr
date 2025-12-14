@@ -131,7 +131,7 @@ function buildService(appDef: ReturnType<typeof getApp>, appConfig: AppConfig, c
     container_name: appDef.id,
     environment,
     volumes,
-    ports: appDef.id === "plex" ? [] : [`"${port}:${appDef.defaultPort}"`],
+    ports: appDef.id === "plex" ? [] : [`"${port}:${appDef.internalPort ?? appDef.defaultPort}"`],
     restart: "unless-stopped",
   }
 
@@ -152,9 +152,8 @@ function buildService(appDef: ReturnType<typeof getApp>, appConfig: AppConfig, c
     }
   }
 
-  // Add Traefik labels if enabled (skip for traefik itself and plex with host networking)
   if (config.traefik?.enabled && appDef.id !== "traefik" && appDef.id !== "plex") {
-    service.labels = generateTraefikLabels(appDef.id, appDef.defaultPort, config.traefik)
+    service.labels = generateTraefikLabels(appDef.id, appDef.internalPort ?? appDef.defaultPort, config.traefik)
   }
 
   return service
