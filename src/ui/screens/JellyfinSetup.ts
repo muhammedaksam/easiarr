@@ -184,8 +184,8 @@ export class JellyfinSetup extends BoxRenderable {
       this.results[2].status = "configuring"
       this.refreshContent()
       const env = readEnvSync()
-      const username = env["GLOBAL_USERNAME"] || "admin"
-      const password = env["GLOBAL_PASSWORD"] || "changeme123"
+      const username = env["USERNAME_GLOBAL"] || "admin"
+      const password = env["PASSWORD_GLOBAL"] || "Ch4ng3m3!1234securityReasons"
       await this.jellyfinClient.createAdminUser(username, password)
       this.results[2].status = "success"
       this.results[2].message = `User: ${username}`
@@ -236,8 +236,8 @@ export class JellyfinSetup extends BoxRenderable {
     try {
       // Authenticate first
       const env = readEnvSync()
-      const username = env["GLOBAL_USERNAME"] || "admin"
-      const password = env["GLOBAL_PASSWORD"] || "changeme123"
+      const username = env["USERNAME_GLOBAL"] || "admin"
+      const password = env["PASSWORD_GLOBAL"] || "Ch4ng3m3!1234securityReasons"
       await this.jellyfinClient.authenticate(username, password)
       this.results[0].status = "success"
       this.refreshContent()
@@ -292,8 +292,8 @@ export class JellyfinSetup extends BoxRenderable {
     try {
       // Authenticate first
       const env = readEnvSync()
-      const username = env["GLOBAL_USERNAME"] || "admin"
-      const password = env["GLOBAL_PASSWORD"] || "changeme123"
+      const username = env["USERNAME_GLOBAL"] || "admin"
+      const password = env["PASSWORD_GLOBAL"] || "Ch4ng3m3!1234securityReasons"
       await this.jellyfinClient.authenticate(username, password)
       this.results[0].status = "success"
       this.refreshContent()

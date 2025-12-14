@@ -84,7 +84,7 @@ export class AppConfigurator extends BoxRenderable {
   private loadSavedCredentials() {
     const env = readEnvSync()
     if (env.USERNAME_GLOBAL) this.globalUsername = env.USERNAME_GLOBAL
-    if (env.PASSWORD_GLOBAL) this.globalPassword = env.PASSWORD_GLOBAL
+    this.globalPassword = env.PASSWORD_GLOBAL || "Ch4ng3m3!1234securityReasons"
     if (env.PASSWORD_QBITTORRENT) this.qbPass = env.PASSWORD_QBITTORRENT
     if (env.API_KEY_SABNZBD) this.sabApiKey = env.API_KEY_SABNZBD
   }
