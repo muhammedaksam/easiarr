@@ -1,7 +1,26 @@
-import { describe, test, expect } from "bun:test"
+import { describe, test, expect, jest } from "@jest/globals"
+
+// Mock dependencies that have ESM-only imports (VersionInfo uses JSON import)
+jest.mock("../src/VersionInfo", () => ({
+  VersionInfo: {
+    version: "1.0.0-test",
+    name: "easiarr",
+    description: "Test",
+    author: "Test",
+  },
+  getVersion: () => "v1.0.0-test",
+}))
+
+jest.mock("../src/config/manager", () => ({
+  getComposePath: () => "/mock/path/docker-compose.yml",
+}))
+
+jest.mock("../src/utils/env", () => ({
+  readEnvSync: () => ({ LOCAL_DOCKER_IP: "localhost" }),
+}))
+
 import { generateBookmarksHtml } from "../src/config/bookmarks-generator"
 import type { EasiarrConfig } from "../src/config/schema"
-
 const mockConfig: EasiarrConfig = {
   version: "1.0.0",
   rootDir: "/data",
