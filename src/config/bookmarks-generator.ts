@@ -73,12 +73,12 @@ export function generateBookmarksHtml(config: EasiarrConfig, useLocalUrls = fals
 <TITLE>Bookmarks</TITLE>
 <H1>Bookmarks</H1>
 <DL><p>
-    <DT><H3 PERSONAL_TOOLBAR_FOLDER="true">Easiarr</H3>
+    <DT><H3 PERSONAL_TOOLBAR_FOLDER="true">easiarr</H3>
     <DL><p>
 `
 
   // Add external resources first
-  html += `        <DT><A HREF="https://github.com/muhammedaksam/easiarr/">GitHub | Easiarr Project Repo</A>\n`
+  html += `        <DT><A HREF="https://github.com/muhammedaksam/easiarr/">GitHub | easiarr Project Repo</A>\n`
   html += `        <DT><A HREF="https://trash-guides.info/">TRaSH Guides</A>\n`
 
   // Add apps grouped by category in defined order

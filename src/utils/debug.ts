@@ -1,5 +1,5 @@
 /**
- * Debug logging utility for Easiarr
+ * Debug logging utility for easiarr
  *
  * Enable debug logging via:
  * - CLI flag: easiarr --debug
@@ -25,7 +25,7 @@ const logFile = join(easiarrDir, "debug.log")
 export function initDebug(): void {
   if (!DEBUG_ENABLED) return
   try {
-    writeFileSync(logFile, `=== Easiarr Debug Log - ${new Date().toISOString()} ===\n`)
+    writeFileSync(logFile, `=== easiarr Debug Log - ${new Date().toISOString()} ===\n`)
   } catch {
     // Ignore
   }

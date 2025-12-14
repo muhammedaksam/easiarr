@@ -585,8 +585,8 @@ export const APPS: Record<AppId, AppDefinition> = {
 
   easiarr: {
     id: "easiarr",
-    name: "Easiarr",
-    description: "Exposes Easiarr config and bookmarks for Homepage dashboard",
+    name: "easiarr",
+    description: "Exposes easiarr config and bookmarks for Homepage dashboard",
     category: "utility",
     defaultPort: 3010,
     internalPort: 8080,

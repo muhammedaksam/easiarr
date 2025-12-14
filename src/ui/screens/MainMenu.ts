@@ -1,6 +1,6 @@
 /**
  * Main Menu Screen
- * Central navigation hub for Easiarr
+ * Central navigation hub for easiarr
  */
 
 import type { RenderContext, CliRenderer } from "@opentui/core"

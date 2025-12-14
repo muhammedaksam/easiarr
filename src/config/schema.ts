@@ -1,5 +1,5 @@
 /**
- * Easiarr Configuration Schema
+ * easiarr Configuration Schema
  * TypeScript interfaces for configuration management
  */
 
