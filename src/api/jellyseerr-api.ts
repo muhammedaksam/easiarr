@@ -1,9 +1,25 @@
 /**
  * Jellyseerr API Client
  * Handles setup wizard automation and service configuration
+ *
+ * Based on Jellyseerr source code analysis:
+ * - Auth endpoint: POST /api/v1/auth/jellyfin
+ * - Setup mode: requires hostname, port, serverType (2=Jellyfin, 3=Emby), useSsl
+ * - Login mode: only requires username and password (when server already configured)
  */
 
 import { debugLog } from "../utils/debug"
+
+// ==========================================
+// Enums (from Jellyseerr server/constants/server.ts)
+// ==========================================
+
+export enum MediaServerType {
+  PLEX = 1,
+  JELLYFIN = 2,
+  EMBY = 3,
+  NOT_CONFIGURED = 4,
+}
 
 // ==========================================
 // Types
@@ -18,7 +34,7 @@ export interface JellyseerrMainSettings {
   appLanguage: string
   applicationTitle: string
   applicationUrl: string
-  mediaServerType: number // 1 = Jellyfin, 2 = Plex, 3 = Emby
+  mediaServerType: number
   localLogin: boolean
   newPlexLogin: boolean
   defaultPermissions: number
@@ -26,11 +42,16 @@ export interface JellyseerrMainSettings {
 
 export interface JellyseerrJellyfinSettings {
   name?: string
-  hostname: string
+  ip?: string
+  hostname?: string
+  port?: number
+  useSsl?: boolean
+  urlBase?: string
   externalHostname?: string
   adminUser?: string
   adminPass?: string
-  serverID?: string
+  serverId?: string
+  apiKey?: string
   libraries?: JellyseerrLibrary[]
 }
 
@@ -44,6 +65,8 @@ export interface JellyseerrUser {
   id: number
   email: string
   username?: string
+  jellyfinUsername?: string
+  jellyfinUserId?: string
   userType: number
   permissions: number
   avatar?: string
@@ -98,7 +121,23 @@ export interface ServiceTestResult {
   rootFolders?: { id: number; path: string }[]
 }
 
-export type MediaServerType = "jellyfin" | "plex" | "emby"
+/** Auth request for initial setup (unconfigured server) */
+interface JellyfinSetupAuthRequest {
+  username: string
+  password: string
+  hostname: string
+  port: number
+  useSsl: boolean
+  urlBase: string
+  serverType: MediaServerType
+  email?: string
+}
+
+/** Auth request for login (already configured server) */
+interface JellyfinLoginRequest {
+  username: string
+  password: string
+}
 
 // ==========================================
 // Client
@@ -140,7 +179,7 @@ export class JellyseerrClient {
     if (!response.ok) {
       const text = await response.text()
       debugLog("Jellyseerr", `Error ${response.status}: ${text}`)
-      throw new Error(`Jellyseerr API error: ${response.status} ${response.statusText}`)
+      throw new Error(`Jellyseerr API error: ${response.status} - ${text}`)
     }
 
     const contentType = response.headers.get("content-type")
@@ -216,8 +255,17 @@ export class JellyseerrClient {
   // ==========================================
 
   /**
-   * Authenticate with Jellyfin credentials
-   * Creates admin user if this is the first login
+   * Authenticate with Jellyfin credentials.
+   *
+   * This method handles two scenarios:
+   * 1. Fresh setup: Sends full payload with hostname, port, serverType
+   * 2. Already configured: If setup payload fails, retries with just username/password
+   *
+   * @param username - Jellyfin username
+   * @param password - Jellyfin password
+   * @param hostname - Jellyfin hostname (container name or IP)
+   * @param port - Jellyfin port (default 8096)
+   * @param email - Optional email for the Jellyseerr user
    */
   async authenticateJellyfin(
     username: string,
@@ -226,19 +274,64 @@ export class JellyseerrClient {
     port: number,
     email?: string
   ): Promise<JellyseerrUser> {
-    return this.request<JellyseerrUser>("/auth/jellyfin", {
-      method: "POST",
-      body: JSON.stringify({
-        username,
-        password,
-        hostname,
-        port,
-        useSsl: false,
-        serverType: 2, // 1=Plex, 2=Jellyfin/Emby
-        urlBase: "",
-        email: email || `${username}@local`,
-      }),
-    })
+    // Attempt 1: Full setup payload (for fresh installs)
+    const setupPayload: JellyfinSetupAuthRequest = {
+      username,
+      password,
+      hostname,
+      port,
+      useSsl: false,
+      urlBase: "",
+      serverType: MediaServerType.JELLYFIN,
+      email: email || `${username}@local`,
+    }
+
+    debugLog(
+      "Jellyseerr",
+      `Auth attempt with setup payload: hostname=${hostname}, port=${port}, serverType=${MediaServerType.JELLYFIN}`
+    )
+
+    try {
+      return await this.request<JellyseerrUser>("/auth/jellyfin", {
+        method: "POST",
+        body: JSON.stringify(setupPayload),
+      })
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err)
+
+      // Check if server is already configured
+      if (message.includes("already configured") || message.includes("hostname already configured")) {
+        debugLog("Jellyseerr", "Server already configured, retrying with login-only payload")
+
+        // Attempt 2: Login-only payload (server already configured)
+        const loginPayload: JellyfinLoginRequest = {
+          username,
+          password,
+        }
+
+        return this.request<JellyseerrUser>("/auth/jellyfin", {
+          method: "POST",
+          body: JSON.stringify(loginPayload),
+        })
+      }
+
+      // Re-throw other errors with more context
+      if (message.includes("NO_ADMIN_USER") || message.includes("NotAdmin")) {
+        throw new Error(
+          `Jellyfin user "${username}" is not an administrator. Please ensure the user has admin permissions in Jellyfin.`
+        )
+      }
+
+      if (message.includes("InvalidCredentials") || message.includes("401")) {
+        throw new Error(`Invalid Jellyfin credentials for user "${username}".`)
+      }
+
+      if (message.includes("InvalidUrl") || message.includes("INVALID_URL")) {
+        throw new Error(`Cannot reach Jellyfin at ${hostname}:${port}. Check the hostname and port.`)
+      }
+
+      throw err
+    }
   }
 
   /**
@@ -322,12 +415,10 @@ export class JellyseerrClient {
     password: string,
     email?: string
   ): Promise<string> {
-    // Step 1: Authenticate FIRST (creates first admin if none exists)
-    // This also establishes the session cookie for subsequent requests
+    // Step 1: Authenticate (creates first admin if none exists)
     await this.authenticateJellyfin(username, password, jellyfinHostname, port, email)
 
-    // Step 2: Update Jellyfin settings (now we have the session cookie)
-    // Construct full URL for settings (e.g. http://jellyfin:8096)
+    // Step 2: Update Jellyfin settings with full URL
     const fullUrl = `http://${jellyfinHostname}:${port}`
     await this.updateJellyfinSettings({
       hostname: fullUrl,
@@ -359,7 +450,6 @@ export class JellyseerrClient {
     rootFolder: string
   ): Promise<JellyseerrRadarrSettings | null> {
     try {
-      // Test connection and get profiles
       const testResult = await this.testRadarr({
         hostname,
         port,
@@ -372,7 +462,6 @@ export class JellyseerrClient {
         return null
       }
 
-      // Use first profile as default
       const profile = testResult.profiles[0]
 
       return await this.addRadarr({
@@ -404,7 +493,6 @@ export class JellyseerrClient {
     rootFolder: string
   ): Promise<JellyseerrSonarrSettings | null> {
     try {
-      // Test connection and get profiles
       const testResult = await this.testSonarr({
         hostname,
         port,
@@ -417,7 +505,6 @@ export class JellyseerrClient {
         return null
       }
 
-      // Use first profile as default
       const profile = testResult.profiles[0]
 
       return await this.addSonarr({

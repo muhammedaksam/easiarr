@@ -212,13 +212,24 @@ export class JellyseerrSetup extends BoxRenderable {
             const auth = await jfClient.authenticate(username, password)
             if (auth.User?.Id) {
               debugLog("Jellyfin", "Ensuring admin permissions via API override")
-              // Also ensure IsHidden is false, as Jellyseerr might ignore hidden admins
-              // We must include all existing policy fields (like AuthenticationProviderId) to avoid 400 Bad Request
+              // Merge existing policy to avoid 400 Bad Request
               await jfClient.updateUserPolicy(auth.User.Id, {
                 ...(auth.User.Policy || {}),
                 IsAdministrator: true,
                 IsHidden: false,
               })
+
+              // Wait for Jellyfin to persist the policy change
+              debugLog("Jellyfin", "Waiting 2s for policy to persist...")
+              await new Promise((resolve) => setTimeout(resolve, 2000))
+
+              // Verify the update was applied
+              const verifiedUser = await jfClient.getUser(auth.User.Id)
+              if (verifiedUser.Policy?.IsAdministrator) {
+                debugLog("Jellyfin", "Admin status verified successfully")
+              } else {
+                debugLog("Jellyfin", "WARNING: Admin status verification failed")
+              }
             }
           } catch (jfError: unknown) {
             const err = jfError instanceof Error ? jfError : new Error(String(jfError))
