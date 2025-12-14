@@ -10,6 +10,7 @@ import { ArrApiClient, type AddRootFolderOptions } from "../../api/arr-api"
 import { ProwlarrClient, type ArrAppType } from "../../api/prowlarr-api"
 import { QBittorrentClient, type QBittorrentCategory } from "../../api/qbittorrent-api"
 import { PortainerApiClient } from "../../api/portainer-api"
+import { JellyfinClient } from "../../api/jellyfin-api"
 import { getApp } from "../../apps/registry"
 // import type { AppId } from "../../config/schema"
 import { getCategoriesForApps } from "../../utils/categories"
@@ -66,7 +67,7 @@ export class FullAutoSetup extends BoxRenderable {
 
     this.env = readEnvSync()
     this.globalUsername = this.env["USERNAME_GLOBAL"] || "admin"
-    this.globalPassword = this.env["PASSWORD_GLOBAL"] || ""
+    this.globalPassword = this.env["PASSWORD_GLOBAL"] || "Ch4ng3m3!1234securityReasons"
 
     this.initKeyHandler()
     this.initSteps()
@@ -81,6 +82,7 @@ export class FullAutoSetup extends BoxRenderable {
       { name: "FlareSolverr", status: "pending" },
       { name: "qBittorrent", status: "pending" },
       { name: "Portainer", status: "pending" },
+      { name: "Jellyfin", status: "pending" },
     ]
   }
 
@@ -128,6 +130,9 @@ export class FullAutoSetup extends BoxRenderable {
 
     // Step 6: Portainer
     await this.setupPortainer()
+
+    // Step 7: Jellyfin
+    await this.setupJellyfin()
 
     this.isRunning = false
     this.isDone = true
@@ -403,6 +408,46 @@ export class FullAutoSetup extends BoxRenderable {
       }
     } catch (e) {
       this.updateStep("Portainer", "error", `${e}`)
+    }
+    this.refreshContent()
+  }
+
+  private async setupJellyfin(): Promise<void> {
+    this.updateStep("Jellyfin", "running")
+    this.refreshContent()
+
+    const jellyfinConfig = this.config.apps.find((a) => a.id === "jellyfin" && a.enabled)
+    if (!jellyfinConfig) {
+      this.updateStep("Jellyfin", "skipped", "Not enabled")
+      this.refreshContent()
+      return
+    }
+
+    try {
+      const port = jellyfinConfig.port || 8096
+      const client = new JellyfinClient("localhost", port)
+
+      // Check if reachable
+      const healthy = await client.isHealthy()
+      if (!healthy) {
+        this.updateStep("Jellyfin", "skipped", "Not reachable yet")
+        this.refreshContent()
+        return
+      }
+
+      // Check if already set up
+      const isComplete = await client.isStartupComplete()
+      if (isComplete) {
+        this.updateStep("Jellyfin", "skipped", "Already configured")
+        this.refreshContent()
+        return
+      }
+
+      // Run setup wizard
+      await client.runSetupWizard(this.globalUsername, this.globalPassword)
+      this.updateStep("Jellyfin", "success", "Setup wizard completed")
+    } catch (e) {
+      this.updateStep("Jellyfin", "error", `${e}`)
     }
     this.refreshContent()
   }

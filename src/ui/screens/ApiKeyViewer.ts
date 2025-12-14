@@ -188,7 +188,7 @@ export class ApiKeyViewer extends BoxRenderable {
     }
 
     // Will attempt to initialize/login when saving
-    const globalPassword = env["PASSWORD_GLOBAL"]
+    const globalPassword = env["PASSWORD_GLOBAL"] || "Ch4ng3m3!1234securityReasons"
     if (!globalPassword) {
       this.keys.push({
         appId: "portainer",
@@ -439,7 +439,7 @@ export class ApiKeyViewer extends BoxRenderable {
   private async initializePortainer(_updates: Record<string, string>) {
     const env = readEnvSync()
     const globalUsername = env["USERNAME_GLOBAL"] || "admin"
-    const globalPassword = env["PASSWORD_GLOBAL"]
+    const globalPassword = env["PASSWORD_GLOBAL"] || "Ch4ng3m3!1234securityReasons"
 
     if (!globalPassword) return
 
