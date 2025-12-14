@@ -213,7 +213,9 @@ export class JellyseerrSetup extends BoxRenderable {
             if (auth.User?.Id) {
               debugLog("Jellyfin", "Ensuring admin permissions via API override")
               // Also ensure IsHidden is false, as Jellyseerr might ignore hidden admins
+              // We must include all existing policy fields (like AuthenticationProviderId) to avoid 400 Bad Request
               await jfClient.updateUserPolicy(auth.User.Id, {
+                ...(auth.User.Policy || {}),
                 IsAdministrator: true,
                 IsHidden: false,
               })
