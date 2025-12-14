@@ -226,6 +226,16 @@ export class JellyseerrClient {
     })
   }
 
+  /**
+   * Mark the setup wizard as complete.
+   * Must be called after configuring all settings.
+   */
+  async initialize(): Promise<{ initialized: boolean }> {
+    return this.request<{ initialized: boolean }>("/settings/initialize", {
+      method: "POST",
+    })
+  }
+
   // ==========================================
   // Jellyfin Configuration
   // ==========================================

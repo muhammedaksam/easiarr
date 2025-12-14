@@ -168,6 +168,7 @@ export class JellyseerrSetup extends BoxRenderable {
       { name: "Configure media server", status: "pending" },
       { name: "Sync libraries", status: "pending" },
       { name: "Save API key", status: "pending" },
+      { name: "Finalize setup", status: "pending" },
     ]
     this.refreshContent()
 
@@ -321,6 +322,19 @@ export class JellyseerrSetup extends BoxRenderable {
       } catch {
         this.results[4].status = "error"
         this.results[4].message = "Failed to get API key"
+      }
+      this.refreshContent()
+
+      // Step 6: Initialize (finalize setup wizard)
+      this.results[5].status = "configuring"
+      this.refreshContent()
+      try {
+        await this.jellyseerrClient.initialize()
+        this.results[5].status = "success"
+        this.results[5].message = "Setup complete"
+      } catch {
+        this.results[5].status = "error"
+        this.results[5].message = "Failed to finalize"
       }
       this.refreshContent()
     } catch (error) {
