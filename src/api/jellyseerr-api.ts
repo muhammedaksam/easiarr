@@ -233,6 +233,8 @@ export class JellyseerrClient {
         password,
         hostname,
         port,
+        useSsl: false,
+        serverType: 2, // 1=Plex, 2=Jellyfin/Emby
         urlBase: "",
         email: email || `${username}@local`,
       }),
