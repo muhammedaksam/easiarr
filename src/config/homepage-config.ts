@@ -86,6 +86,19 @@ export async function generateServicesYaml(config: EasiarrConfig): Promise<strin
         service.widget.key = apiKey
       }
 
+      // Add widget-specific credentials from env
+      if (appDef.id === "qbittorrent") {
+        const username = env["USERNAME_QBITTORRENT"]
+        const password = env["PASSWORD_QBITTORRENT"]
+        if (username) service.widget.username = username
+        if (password) service.widget.password = password
+      }
+
+      if (appDef.id === "portainer") {
+        // Default to environment 1 (local)
+        service.widget.env = env["PORTAINER_ENV"] ?? "1"
+      }
+
       // Add any custom widget fields
       if (appDef.homepage.widgetFields) {
         Object.assign(service.widget, appDef.homepage.widgetFields)
