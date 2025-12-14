@@ -64,9 +64,20 @@ export interface PortainerApiKeyResponse {
 export class PortainerApiClient {
   private baseUrl: string
   private jwtToken: string | null = null
+  private apiKey: string | null = null
 
   constructor(host: string, port: number) {
     this.baseUrl = `http://${host}:${port}`
+  }
+
+  /**
+   * Set API key for authentication (alternative to JWT login)
+   * @param apiKey - The Portainer API key (e.g., ptr_xxx)
+   */
+  setApiKey(key: string): void {
+    if (key) {
+      this.apiKey = key
+    }
   }
 
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
@@ -76,8 +87,10 @@ export class PortainerApiClient {
       ...(options.headers as Record<string, string>),
     }
 
-    // Add JWT token if authenticated
-    if (this.jwtToken) {
+    // Add authentication - prefer API key, fallback to JWT
+    if (this.apiKey) {
+      headers["X-API-Key"] = this.apiKey
+    } else if (this.jwtToken) {
       headers["Authorization"] = `Bearer ${this.jwtToken}`
     }
 
@@ -238,6 +251,40 @@ export class PortainerApiClient {
    */
   async getEndpoints(): Promise<PortainerEndpoint[]> {
     return this.request<PortainerEndpoint[]>("/endpoints")
+  }
+
+  /**
+   * Get the local Docker socket environment ID.
+   * Finds the first endpoint that uses unix:///var/run/docker.sock or is named "local".
+   * @returns The environment ID or null if not found
+   */
+  async getLocalEnvironmentId(): Promise<number | null> {
+    try {
+      const endpoints = await this.getEndpoints()
+
+      // First, try to find one using Docker socket
+      const socketEndpoint = endpoints.find(
+        (e) => e.URL === "unix:///var/run/docker.sock" || e.URL.includes("docker.sock")
+      )
+      if (socketEndpoint) {
+        return socketEndpoint.Id
+      }
+
+      // Fallback: find one named "local"
+      const localEndpoint = endpoints.find((e) => e.Name.toLowerCase() === "local")
+      if (localEndpoint) {
+        return localEndpoint.Id
+      }
+
+      // Last resort: return the first endpoint if any exist
+      if (endpoints.length > 0) {
+        return endpoints[0].Id
+      }
+
+      return null
+    } catch {
+      return null
+    }
   }
 
   /**
