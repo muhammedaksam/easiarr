@@ -17,7 +17,7 @@ export interface StartupConfiguration {
 
 export interface StartupUser {
   Name: string
-  Password: string
+  Pw: string
 }
 
 export interface StartupRemoteAccess {
@@ -157,7 +157,7 @@ export class JellyfinClient {
    * Create the initial admin user
    */
   async createAdminUser(name: string, password: string): Promise<void> {
-    const user: StartupUser = { Name: name, Password: password }
+    const user: StartupUser = { Name: name, Pw: password }
     await this.request("/Startup/User", {
       method: "POST",
       body: JSON.stringify(user),
