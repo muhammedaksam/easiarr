@@ -591,7 +591,7 @@ export const APPS: Record<AppId, AppDefinition> = {
     image: "halverneus/static-file-server:latest",
     puid: 0,
     pgid: 0,
-    volumes: (root) => [`${root}:/web:ro`],
+    volumes: () => ["${HOME}/.easiarr/config.json:/web/config.json:ro"],
     environment: {
       FOLDER: "/web",
       CORS: "true",
@@ -600,7 +600,7 @@ export const APPS: Record<AppId, AppDefinition> = {
       icon: "mdi-docker",
       widget: "customapi",
       widgetFields: {
-        url: "http://easiarr-status:8080/.easiarr/config.json",
+        url: "http://easiarr-status:8080/config.json",
         mappings: JSON.stringify([{ field: "version", label: "Installed" }]),
       },
     },
