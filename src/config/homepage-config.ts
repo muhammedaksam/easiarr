@@ -158,6 +158,8 @@ export async function generateServicesYaml(config: EasiarrConfig): Promise<strin
   yaml += `        widget:\n`
   yaml += `          type: customapi\n`
   yaml += `          url: https://api.github.com/repos/muhammedaksam/easiarr/releases/latest\n`
+  yaml += `          headers:\n`
+  yaml += `            User-Agent: easiarr-homepage-widget\n`
   yaml += `          refreshInterval: 86400000\n` // 24 hours
   yaml += `          mappings:\n`
   yaml += `            - field: tag_name\n`
