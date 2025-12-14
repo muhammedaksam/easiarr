@@ -154,9 +154,21 @@ export class JellyfinClient {
   }
 
   /**
-   * Create the initial admin user
+   * Get the first user (initializes user in database)
+   */
+  async getFirstUser(): Promise<{ Name: string; Password: string }> {
+    return this.request<{ Name: string; Password: string }>("/Startup/FirstUser")
+  }
+
+  /**
+   * Create/update the initial admin user
+   * Must call getFirstUser first to initialize the user
    */
   async createAdminUser(name: string, password: string): Promise<void> {
+    // First, get the initial user (this initializes the user in the database)
+    await this.getFirstUser()
+
+    // Then update with our credentials
     const user: StartupUser = { Name: name, Pw: password }
     await this.request("/Startup/User", {
       method: "POST",
