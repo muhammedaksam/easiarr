@@ -167,8 +167,13 @@ function buildService(appDef: ReturnType<typeof getApp>, appConfig: AppConfig, c
     }
   }
 
-  if (config.traefik?.enabled && appDef.id !== "traefik" && appDef.id !== "plex" && appDef.id !== "cloudflared") {
-    service.labels = generateTraefikLabels(appDef.id, appDef.internalPort ?? appDef.defaultPort, config.traefik)
+  if (config.traefik?.enabled && appDef.id !== "plex" && appDef.id !== "cloudflared") {
+    if (appDef.id === "traefik") {
+      // Special labels for Traefik dashboard (accessible via traefik.domain on port 8080)
+      service.labels = generateTraefikLabels("traefik", 8080, config.traefik)
+    } else {
+      service.labels = generateTraefikLabels(appDef.id, appDef.internalPort ?? appDef.defaultPort, config.traefik)
+    }
   }
 
   return service

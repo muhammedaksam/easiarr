@@ -118,6 +118,7 @@ bun run start
 ### Infrastructure
 
 - **Traefik** - Reverse proxy and load balancer
+- **Cloudflared** - Cloudflare Tunnel for secure external access
 - **Traefik Certs Dumper** - Extracts certificates from Traefik
 - **CrowdSec** - Intrusion prevention system
 - **Headscale** - Open-source Tailscale control server
@@ -126,6 +127,53 @@ bun run start
 - **Authentik** - Identity provider and SSO
 - **PostgreSQL** - Database server
 - **Valkey** - Redis-compatible key-value store
+
+## Cloudflare Tunnel Setup
+
+Expose your services securely without port forwarding using Cloudflare Tunnel:
+
+### 1. Create a Tunnel
+
+1. Go to [Cloudflare Zero Trust](https://one.dash.cloudflare.com/) → Networks → Tunnels
+2. Create a tunnel, name it (e.g., "easiarr")
+3. Copy the tunnel token
+
+### 2. Enable Cloudflared in easiarr
+
+1. Run easiarr and go to **Manage Apps**
+2. Enable **Cloudflared** and **Traefik**
+3. In Secrets, paste your `CLOUDFLARE_TUNNEL_TOKEN`
+4. Set `CLOUDFLARE_DNS_ZONE` to your domain (e.g., `example.com`)
+
+### 3. Configure the Tunnel
+
+In Cloudflare Zero Trust → Tunnels → Your Tunnel → Public Hostname:
+
+| Subdomain | Domain        | Service             |
+| --------- | ------------- | ------------------- |
+| `*`       | `example.com` | `http://traefik:80` |
+
+### 4. Add DNS Record
+
+In Cloudflare DNS, add a CNAME:
+
+| Type  | Name | Target                         |
+| ----- | ---- | ------------------------------ |
+| CNAME | `*`  | `<tunnel-id>.cfargotunnel.com` |
+
+### 5. Settings
+
+Go to **Settings** in easiarr to configure:
+
+- **Traefik Entrypoint**: Set to `web` (for Cloudflare Tunnel)
+- **Domain**: Your domain (e.g., `example.com`)
+
+### 6. Secure with Cloudflare Access (Recommended)
+
+1. Zero Trust → Access → Applications → Add Application
+2. Hostname: `*.example.com`
+3. Add policy: Allow your email address
+4. Now all services require authentication!
 
 ## Configuration
 
