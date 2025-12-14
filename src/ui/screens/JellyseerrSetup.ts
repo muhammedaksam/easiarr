@@ -7,6 +7,7 @@ import { BoxRenderable, CliRenderer, TextRenderable, KeyEvent } from "@opentui/c
 import { createPageLayout } from "../components/PageLayout"
 import { EasiarrConfig } from "../../config/schema"
 import { JellyseerrClient } from "../../api/jellyseerr-api"
+import { JellyfinClient } from "../../api/jellyfin-api"
 import { getApp } from "../../apps/registry"
 import { readEnvSync, writeEnvSync } from "../../utils/env"
 import { debugLog } from "../../utils/debug"
@@ -204,6 +205,19 @@ export class JellyseerrSetup extends BoxRenderable {
         debugLog("Jellyseerr", `Connecting to Jellyfin at ${jellyfinFullUrl}`)
 
         try {
+          // Pre-flight: Ensure Jellyfin user is admin (Self-healing)
+          try {
+            const jfClient = new JellyfinClient(jellyfinHost, internalPort)
+            const auth = await jfClient.authenticate(username, password)
+            if (auth.User?.Id) {
+              debugLog("Jellyfin", "Ensuring admin permissions via API override")
+              await jfClient.updateUserPolicy(auth.User.Id, { IsAdministrator: true })
+            }
+          } catch (jfError: unknown) {
+            const err = jfError instanceof Error ? jfError : new Error(String(jfError))
+            debugLog("Jellyfin", `Pre-flight permission fix failed (ignoring): ${err.message}`)
+          }
+
           // Step 2: Authenticate FIRST (creates admin user AND gets session cookie)
           this.results[1].status = "configuring"
           this.refreshContent()
