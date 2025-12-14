@@ -155,12 +155,13 @@ export class MainMenu {
       })
     }
     // Bookmark generation options
-    const generateAndOpenBookmarks = async (useLocalUrls: boolean) => {
-      await saveBookmarks(this.config, useLocalUrls)
+    const generateAndOpenBookmarks = async (type: "local" | "remote") => {
+      await saveBookmarks(this.config, type)
       // Open in browser if easiarr service is enabled
       if (this.isAppEnabled("easiarr")) {
         const port = this.config.apps.find((a) => a.id === "easiarr")?.port ?? 3010
-        await openUrl(`http://localhost:${port}/bookmarks.html`)
+        const filename = type === "remote" ? "bookmarks-remote.html" : "bookmarks-local.html"
+        await openUrl(`http://localhost:${port}/${filename}`)
       }
     }
 
@@ -168,18 +169,18 @@ export class MainMenu {
       items.push({
         name: "📑 Bookmarks (Local URLs)",
         description: "Generate bookmarks using localhost addresses",
-        action: async () => generateAndOpenBookmarks(true),
+        action: async () => generateAndOpenBookmarks("local"),
       })
       items.push({
         name: "📑 Bookmarks (Traefik URLs)",
         description: `Generate bookmarks using ${this.config.traefik.domain} addresses`,
-        action: async () => generateAndOpenBookmarks(false),
+        action: async () => generateAndOpenBookmarks("remote"),
       })
     } else {
       items.push({
         name: "📑 Generate Bookmarks",
         description: "Create browser-importable bookmarks file",
-        action: async () => generateAndOpenBookmarks(true),
+        action: async () => generateAndOpenBookmarks("local"),
       })
     }
 
