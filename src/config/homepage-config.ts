@@ -112,7 +112,7 @@ export async function generateServicesYaml(config: EasiarrConfig): Promise<strin
   yaml += `      description: Your current version\n`
   yaml += `      widget:\n`
   yaml += `        type: customapi\n`
-  yaml += `        url: http://easiarr-status:8080/.easiarr/config.json\n`
+  yaml += `        url: http://easiarr-status:8080/config.json\n`
   yaml += `        refreshInterval: 3600000\n` // 1 hour
   yaml += `        mappings:\n`
   yaml += `          - field: version\n`
@@ -170,7 +170,22 @@ export async function generateServicesYaml(config: EasiarrConfig): Promise<strin
         // Add any other widget fields
         for (const [key, value] of Object.entries(service.widget)) {
           if (key !== "type" && key !== "url" && key !== "key") {
-            yaml += `        ${key}: ${value}\n`
+            // Handle mappings array specially
+            if (key === "mappings") {
+              const mappings = typeof value === "string" ? JSON.parse(value) : value
+              if (Array.isArray(mappings)) {
+                yaml += `        mappings:\n`
+                for (const mapping of mappings) {
+                  yaml += `          - field: ${mapping.field}\n`
+                  yaml += `            label: ${mapping.label}\n`
+                  if (mapping.format) {
+                    yaml += `            format: ${mapping.format}\n`
+                  }
+                }
+              }
+            } else {
+              yaml += `        ${key}: ${value}\n`
+            }
           }
         }
       }
