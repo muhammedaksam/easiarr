@@ -595,7 +595,8 @@ export const APPS: Record<AppId, AppDefinition> = {
     pgid: 0,
     volumes: () => [
       "${HOME}/.easiarr/config.json:/web/config.json:ro",
-      "${HOME}/.easiarr/bookmarks.html:/web/bookmarks.html:ro",
+      "${HOME}/.easiarr/bookmarks-local.html:/web/bookmarks-local.html:ro",
+      "${HOME}/.easiarr/bookmarks-remote.html:/web/bookmarks-remote.html:ro",
     ],
     environment: {
       FOLDER: "/web",
