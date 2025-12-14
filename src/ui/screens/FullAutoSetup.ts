@@ -608,7 +608,8 @@ export class FullAutoSetup extends BoxRenderable {
       await saveCompose(this.config)
 
       // Optional: Set up Cloudflare Access if email is available
-      const accessEmail = this.env["CLOUDFLARE_ACCESS_EMAIL"]
+      // Check CLOUDFLARE_ACCESS_EMAIL first, then fall back to EMAIL_GLOBAL
+      const accessEmail = this.env["CLOUDFLARE_ACCESS_EMAIL"] || this.env["EMAIL_GLOBAL"]
       if (accessEmail) {
         try {
           const api = new CloudflareApi(apiToken)

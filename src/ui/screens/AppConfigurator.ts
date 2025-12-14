@@ -40,6 +40,7 @@ export class AppConfigurator extends BoxRenderable {
   // Global *arr credentials
   private globalUsername = "admin"
   private globalPassword = ""
+  private globalEmail = ""
   private overrideExisting = false
 
   // Download client credentials
@@ -85,6 +86,7 @@ export class AppConfigurator extends BoxRenderable {
     const env = readEnvSync()
     if (env.USERNAME_GLOBAL) this.globalUsername = env.USERNAME_GLOBAL
     this.globalPassword = env.PASSWORD_GLOBAL || "Ch4ng3m3!1234securityReasons"
+    if (env.EMAIL_GLOBAL) this.globalEmail = env.EMAIL_GLOBAL
     if (env.PASSWORD_QBITTORRENT) this.qbPass = env.PASSWORD_QBITTORRENT
     if (env.API_KEY_SABNZBD) this.sabApiKey = env.API_KEY_SABNZBD
   }
@@ -138,6 +140,19 @@ export class AppConfigurator extends BoxRenderable {
 
     content.add(new BoxRenderable(this.cliRenderer, { width: 1, height: 1 })) // Spacer
 
+    // Email input (for Cloudflare Access, notifications, etc.)
+    content.add(new TextRenderable(this.cliRenderer, { content: "Email (optional):", fg: "#aaaaaa" }))
+    const emailInput = new InputRenderable(this.cliRenderer, {
+      id: "global-email-input",
+      width: 40,
+      placeholder: "you@example.com",
+      value: this.globalEmail,
+      focusedBackgroundColor: "#1a1a1a",
+    })
+    content.add(emailInput)
+
+    content.add(new BoxRenderable(this.cliRenderer, { width: 1, height: 1 })) // Spacer
+
     // Override toggle
     const overrideText = new TextRenderable(this.cliRenderer, {
       id: "override-toggle",
@@ -160,13 +175,17 @@ export class AppConfigurator extends BoxRenderable {
         overrideText.content = `[O] Override existing: ${this.overrideExisting ? "Yes" : "No"}`
         overrideText.fg = this.overrideExisting ? "#50fa7b" : "#6272a4"
       } else if (key.name === "tab") {
-        // Cycle focus: username -> password -> no focus (shortcuts work) -> username
+        // Cycle focus: username -> password -> email -> no focus (shortcuts work) -> username
         if (focusedInput === userInput) {
           userInput.blur()
           passInput.focus()
           focusedInput = passInput
         } else if (focusedInput === passInput) {
           passInput.blur()
+          emailInput.focus()
+          focusedInput = emailInput
+        } else if (focusedInput === emailInput) {
+          emailInput.blur()
           focusedInput = null // No focus state - shortcuts available
         } else {
           // No input focused, go back to username
@@ -178,6 +197,7 @@ export class AppConfigurator extends BoxRenderable {
         this.cliRenderer.keyInput.off("keypress", this.keyHandler)
         userInput.blur()
         passInput.blur()
+        emailInput.blur()
         focusedInput = null
         this.currentStep = "configure"
         this.runConfiguration()
@@ -185,10 +205,12 @@ export class AppConfigurator extends BoxRenderable {
         // Save and continue
         this.globalUsername = userInput.value || "admin"
         this.globalPassword = passInput.value
+        this.globalEmail = emailInput.value
 
         this.cliRenderer.keyInput.off("keypress", this.keyHandler)
         userInput.blur()
         passInput.blur()
+        emailInput.blur()
         focusedInput = null
 
         // Save credentials to .env
@@ -206,6 +228,7 @@ export class AppConfigurator extends BoxRenderable {
       const updates: Record<string, string> = {}
       if (this.globalUsername) updates.USERNAME_GLOBAL = this.globalUsername
       if (this.globalPassword) updates.PASSWORD_GLOBAL = this.globalPassword
+      if (this.globalEmail) updates.EMAIL_GLOBAL = this.globalEmail
       await updateEnv(updates)
     } catch {
       // Ignore errors - not critical
