@@ -756,7 +756,9 @@ export const APPS: Record<AppId, AppDefinition> = {
     puid: 0,
     pgid: 0,
     volumes: () => [],
-    environment: {},
+    environment: {
+      TUNNEL_TOKEN: "${CLOUDFLARE_TUNNEL_TOKEN}",
+    },
     command: "tunnel run",
     dependsOn: ["traefik"],
     secrets: [
