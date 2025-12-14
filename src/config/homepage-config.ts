@@ -107,31 +107,31 @@ export async function generateServicesYaml(config: EasiarrConfig): Promise<strin
   yaml += `- Easiarr:\n`
   // Installed version from local easiarr-status container
   yaml += `    - Installed:\n`
-  yaml += `      href: https://github.com/muhammedaksam/easiarr\n`
-  yaml += `      icon: mdi-docker\n`
-  yaml += `      description: Your current version\n`
-  yaml += `      widget:\n`
-  yaml += `        type: customapi\n`
-  yaml += `        url: http://easiarr-status:8080/config.json\n`
-  yaml += `        refreshInterval: 3600000\n` // 1 hour
-  yaml += `        mappings:\n`
-  yaml += `          - field: version\n`
-  yaml += `            label: Version\n`
+  yaml += `        href: https://github.com/muhammedaksam/easiarr\n`
+  yaml += `        icon: mdi-docker\n`
+  yaml += `        description: Your current version\n`
+  yaml += `        widget:\n`
+  yaml += `          type: customapi\n`
+  yaml += `          url: http://easiarr-status:8080/config.json\n`
+  yaml += `          refreshInterval: 3600000\n` // 1 hour
+  yaml += `          mappings:\n`
+  yaml += `            - field: version\n`
+  yaml += `              label: Version\n`
   // Latest version from GitHub API
   yaml += `    - Latest:\n`
-  yaml += `      href: https://github.com/muhammedaksam/easiarr/releases\n`
-  yaml += `      icon: mdi-github\n`
-  yaml += `      description: Check for updates\n`
-  yaml += `      widget:\n`
-  yaml += `        type: customapi\n`
-  yaml += `        url: https://api.github.com/repos/muhammedaksam/easiarr/releases/latest\n`
-  yaml += `        refreshInterval: 86400000\n` // 24 hours
-  yaml += `        mappings:\n`
-  yaml += `          - field: tag_name\n`
-  yaml += `            label: Version\n`
-  yaml += `          - field: published_at\n`
-  yaml += `            label: Released\n`
-  yaml += `            format: relativeDate\n`
+  yaml += `        href: https://github.com/muhammedaksam/easiarr/releases\n`
+  yaml += `        icon: mdi-github\n`
+  yaml += `        description: Check for updates\n`
+  yaml += `        widget:\n`
+  yaml += `          type: customapi\n`
+  yaml += `          url: https://api.github.com/repos/muhammedaksam/easiarr/releases/latest\n`
+  yaml += `          refreshInterval: 86400000\n` // 24 hours
+  yaml += `          mappings:\n`
+  yaml += `            - field: tag_name\n`
+  yaml += `              label: Version\n`
+  yaml += `            - field: published_at\n`
+  yaml += `              label: Released\n`
+  yaml += `              format: relativeDate\n`
   yaml += `\n`
 
   // Use CATEGORY_ORDER for consistent ordering
@@ -144,27 +144,27 @@ export async function generateServicesYaml(config: EasiarrConfig): Promise<strin
 
     for (const { name, service } of services) {
       yaml += `    - ${name}:\n`
-      yaml += `      href: ${service.href}\n`
+      yaml += `        href: ${service.href}\n`
 
       if (service.icon) {
-        yaml += `      icon: ${service.icon}\n`
+        yaml += `        icon: ${service.icon}\n`
       }
 
       if (service.description) {
-        yaml += `      description: ${service.description}\n`
+        yaml += `        description: ${service.description}\n`
       }
 
       if (service.ping) {
-        yaml += `      ping: ${service.ping}\n`
+        yaml += `        ping: ${service.ping}\n`
       }
 
       if (service.widget) {
-        yaml += `      widget:\n`
-        yaml += `        type: ${service.widget.type}\n`
-        yaml += `        url: ${service.widget.url}\n`
+        yaml += `        widget:\n`
+        yaml += `          type: ${service.widget.type}\n`
+        yaml += `          url: ${service.widget.url}\n`
 
         if (service.widget.key) {
-          yaml += `        key: ${service.widget.key}\n`
+          yaml += `          key: ${service.widget.key}\n`
         }
 
         // Add any other widget fields
@@ -174,17 +174,17 @@ export async function generateServicesYaml(config: EasiarrConfig): Promise<strin
             if (key === "mappings") {
               const mappings = typeof value === "string" ? JSON.parse(value) : value
               if (Array.isArray(mappings)) {
-                yaml += `        mappings:\n`
+                yaml += `          mappings:\n`
                 for (const mapping of mappings) {
-                  yaml += `          - field: ${mapping.field}\n`
-                  yaml += `            label: ${mapping.label}\n`
+                  yaml += `            - field: ${mapping.field}\n`
+                  yaml += `              label: ${mapping.label}\n`
                   if (mapping.format) {
-                    yaml += `            format: ${mapping.format}\n`
+                    yaml += `              format: ${mapping.format}\n`
                   }
                 }
               }
             } else {
-              yaml += `        ${key}: ${value}\n`
+              yaml += `          ${key}: ${value}\n`
             }
           }
         }
