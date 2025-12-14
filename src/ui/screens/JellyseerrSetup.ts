@@ -194,9 +194,11 @@ export class JellyseerrSetup extends BoxRenderable {
       const password = env["PASSWORD_GLOBAL"] || "Ch4ng3m3!1234securityReasons"
 
       if (this.mediaServerType === "jellyfin") {
-        const jellyfinConfig = this.config.apps.find((a) => a.id === "jellyfin")
-        const jellyfinPort = jellyfinConfig?.port || 8096
-        const jellyfinHostname = `http://jellyfin:${jellyfinPort}`
+        const jellyfinDef = getApp("jellyfin")
+        // Use internal port for container-to-container communication (always 8096)
+        const internalPort = jellyfinDef?.internalPort || jellyfinDef?.defaultPort || 8096
+        const jellyfinHostname = `http://jellyfin:${internalPort}`
+        debugLog("Jellyseerr", `Connecting to Jellyfin at ${jellyfinHostname}`)
 
         // Step 2: Authenticate FIRST (creates admin user AND gets session cookie)
         this.results[1].status = "configuring"
