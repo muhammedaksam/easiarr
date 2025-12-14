@@ -451,7 +451,7 @@ export const APPS: Record<AppId, AppDefinition> = {
     volumes: (root) => [`${root}/config/homepage:/app/config`, "/var/run/docker.sock:/var/run/docker.sock"],
     environment: {
       HOMEPAGE_ALLOWED_HOSTS:
-        "homepage,homepage.${CLOUDFLARE_DNS_ZONE},${CLOUDFLARE_DNS_ZONE},localhost,${LOCAL_DOCKER_IP}",
+        "homepage,homepage.${CLOUDFLARE_DNS_ZONE},${CLOUDFLARE_DNS_ZONE},localhost,${LOCAL_DOCKER_IP},easiarr-status,easiarr-status:3009,${LOCAL_DOCKER_IP}:3009",
     },
   },
 
