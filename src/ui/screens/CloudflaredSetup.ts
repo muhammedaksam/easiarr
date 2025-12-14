@@ -167,6 +167,10 @@ export class CloudflaredSetup extends BoxRenderable {
       placeholder: "Paste your API token here",
       value: this.apiToken,
     })
+    tokenInput.onPaste = (v) => {
+      this.apiToken = v.text.replace(/[\r\n]/g, "")
+      tokenInput.value = this.apiToken
+    }
     tokenInput.on(InputRenderableEvents.CHANGE, (v) => (this.apiToken = v))
     tokenRow.add(tokenInput)
     content.add(tokenRow)
@@ -177,7 +181,7 @@ export class CloudflaredSetup extends BoxRenderable {
     const nav = new SelectRenderable(this.cliRenderer, {
       id: "cf-token-nav",
       width: "100%",
-      height: 3,
+      height: 6,
       options: [
         { name: "➡️  Continue", description: "Verify token and continue" },
         { name: "✕ Cancel", description: "Return to main menu" },
@@ -269,6 +273,10 @@ export class CloudflaredSetup extends BoxRenderable {
       placeholder: "example.com",
       value: this.domain,
     })
+    domainInput.onPaste = (v) => {
+      this.domain = v.text.replace(/[\r\n]/g, "")
+      domainInput.value = this.domain
+    }
     domainInput.on(InputRenderableEvents.CHANGE, (v) => (this.domain = v))
     domainRow.add(domainInput)
     content.add(domainRow)
@@ -293,6 +301,10 @@ export class CloudflaredSetup extends BoxRenderable {
       placeholder: "easiarr",
       value: this.tunnelName,
     })
+    nameInput.onPaste = (v) => {
+      this.tunnelName = v.text.replace(/[\r\n]/g, "")
+      nameInput.value = this.tunnelName
+    }
     nameInput.on(InputRenderableEvents.CHANGE, (v) => (this.tunnelName = v))
     nameRow.add(nameInput)
     content.add(nameRow)
@@ -332,6 +344,10 @@ export class CloudflaredSetup extends BoxRenderable {
       placeholder: "your@email.com (leave blank to skip)",
       value: this.accessEmail,
     })
+    emailInput.onPaste = (v) => {
+      this.accessEmail = v.text.replace(/[\r\n]/g, "")
+      emailInput.value = this.accessEmail
+    }
     emailInput.on(InputRenderableEvents.CHANGE, (v) => (this.accessEmail = v))
     emailRow.add(emailInput)
     content.add(emailRow)
@@ -342,7 +358,7 @@ export class CloudflaredSetup extends BoxRenderable {
     const nav = new SelectRenderable(this.cliRenderer, {
       id: "cf-domain-nav",
       width: "100%",
-      height: 4,
+      height: 8,
       options: [
         { name: "◀ Back", description: "Go back to API token" },
         { name: "➡️  Continue", description: "Review and confirm" },
@@ -365,14 +381,22 @@ export class CloudflaredSetup extends BoxRenderable {
     })
 
     content.add(nav)
-    domainInput.focus()
+
+    // Focus management - cycle through inputs with Tab
+    const focusables = [domainInput, nameInput, emailInput, nav]
+    let focusIndex = 0
+    focusables[focusIndex].focus()
 
     this.keyHandler = (key: KeyEvent) => {
       if (key.name === "escape") {
         this.step = "api_token"
         this.renderContent()
       } else if (key.name === "tab") {
-        nav.focus()
+        // Blur current
+        focusables[focusIndex].blur()
+        // Move to next
+        focusIndex = (focusIndex + 1) % focusables.length
+        focusables[focusIndex].focus()
       }
     }
     this.cliRenderer.keyInput.on("keypress", this.keyHandler)
@@ -452,7 +476,7 @@ export class CloudflaredSetup extends BoxRenderable {
     const nav = new SelectRenderable(this.cliRenderer, {
       id: "cf-confirm-nav",
       width: "100%",
-      height: 4,
+      height: 8,
       options: [
         { name: "◀ Back", description: "Go back to domain settings" },
         { name: "🚀 Setup Tunnel", description: "Create tunnel and configure DNS" },
@@ -573,7 +597,7 @@ export class CloudflaredSetup extends BoxRenderable {
     const nav = new SelectRenderable(this.cliRenderer, {
       id: "cf-done-nav",
       width: "100%",
-      height: 2,
+      height: 4,
       options: [{ name: "✓ Done", description: "Return to main menu" }],
     })
 
