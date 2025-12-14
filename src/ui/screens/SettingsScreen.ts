@@ -313,39 +313,61 @@ export class SettingsScreen extends BoxRenderable {
           fg: "#ff6666",
         })
       )
-      this.setupSectionNav(content, "traefik", "system")
-      return
+      content.add(new TextRenderable(this.cliRenderer, { content: " " }))
     }
 
+    // Current mode display
+    const modeLabels: Record<VpnMode, string> = {
+      full: "🛡️ Full VPN",
+      mini: "⚡ Mini VPN",
+      none: "❌ No VPN Routing",
+    }
+    content.add(
+      new TextRenderable(this.cliRenderer, {
+        content: `Current mode: ${modeLabels[this.vpnMode]}`,
+        fg: "#50fa7b",
+      })
+    )
+    content.add(new TextRenderable(this.cliRenderer, { content: " " }))
+
+    // Combined menu with VPN options + navigation
     const menu = new SelectRenderable(this.cliRenderer, {
       id: "settings-vpn-menu",
       width: "100%",
-      height: 6,
+      height: 8,
       options: [
         { name: "🛡️  Full VPN", description: "Route Downloaders, Indexers, and Media Servers through VPN" },
         { name: "⚡ Mini VPN", description: "Route ONLY Downloaders through VPN (Recommended)" },
         { name: "❌ No VPN Routing", description: "Run container but don't route traffic" },
+        { name: "◀ Previous: Traefik", description: "Go to Traefik settings" },
+        { name: "➡️  Next: System", description: "Go to System settings" },
+        { name: "💾 Save Changes", description: "Save and regenerate docker-compose.yml" },
+        { name: "✕ Back", description: "Return to main menu" },
       ],
     })
 
-    // Pre-select current mode
     const modes: VpnMode[] = ["full", "mini", "none"]
-    const currentIndex = modes.indexOf(this.vpnMode)
-    if (currentIndex >= 0) {
-      // SelectRenderable doesn't support pre-selection, user will have to select
-    }
 
-    menu.on(SelectRenderableEvents.ITEM_SELECTED, (index) => {
-      this.vpnMode = modes[index]
-      // Move to next section
-      this.activeSection = "system"
-      this.renderContent()
+    menu.on(SelectRenderableEvents.ITEM_SELECTED, async (index) => {
+      if (index < 3) {
+        // VPN mode selection
+        this.vpnMode = modes[index]
+        this.renderContent() // Re-render to show selection
+      } else if (index === 3) {
+        this.activeSection = "traefik"
+        this.renderContent()
+      } else if (index === 4) {
+        this.activeSection = "system"
+        this.renderContent()
+      } else if (index === 5) {
+        await this.save()
+      } else {
+        this.cleanup()
+        this.onBack()
+      }
     })
 
     content.add(menu)
-    content.add(new TextRenderable(this.cliRenderer, { content: " " }))
-
-    this.setupSectionNav(content, "traefik", "system")
     menu.focus()
 
     this.keyHandler = (key: KeyEvent) => {
@@ -354,7 +376,7 @@ export class SettingsScreen extends BoxRenderable {
         this.onBack()
       }
     }
-    ;(this.cliRenderer as CliRenderer).keyInput.on("keypress", this.keyHandler)
+    this.cliRenderer.keyInput.on("keypress", this.keyHandler)
   }
 
   private renderSystemSection(content: BoxRenderable): void {
