@@ -408,6 +408,7 @@ export const APPS: Record<AppId, AppDefinition> = {
       parser: "json",
       selector: "main.apiKey",
     },
+    homepage: { icon: "jellyseerr.png", widget: "jellyseerr" },
   },
 
   // === DASHBOARDS ===
