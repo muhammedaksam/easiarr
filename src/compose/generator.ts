@@ -9,6 +9,7 @@ import { getComposePath } from "../config/manager"
 import { getApp } from "../apps/registry"
 import { generateServiceYaml } from "./templates"
 import { updateEnv, getLocalIp } from "../utils/env"
+import { saveTraefikConfig } from "./traefik-config"
 
 export interface ComposeService {
   image: string
@@ -206,6 +207,9 @@ export async function saveCompose(config: EasiarrConfig): Promise<string> {
 
   // Update .env
   await updateEnvFile(config)
+
+  // Generate Traefik config files if Traefik is enabled
+  await saveTraefikConfig(config)
 
   return path
 }
