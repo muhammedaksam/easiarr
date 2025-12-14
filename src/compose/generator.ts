@@ -132,7 +132,10 @@ function buildService(appDef: ReturnType<typeof getApp>, appConfig: AppConfig, c
     container_name: appDef.id,
     environment,
     volumes,
-    ports: appDef.id === "plex" ? [] : [`"${port}:${appDef.internalPort ?? appDef.defaultPort}"`],
+    ports:
+      appDef.id === "plex" || port === 0 || appDef.defaultPort === 0
+        ? []
+        : [`"${port}:${appDef.internalPort ?? appDef.defaultPort}"`],
     restart: "unless-stopped",
   }
 
