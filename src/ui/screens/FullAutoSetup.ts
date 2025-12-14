@@ -7,6 +7,7 @@ import { BoxRenderable, CliRenderer, TextRenderable, KeyEvent } from "@opentui/c
 import { createPageLayout } from "../components/PageLayout"
 import type { EasiarrConfig } from "../../config/schema"
 import { ArrApiClient, type AddRootFolderOptions } from "../../api/arr-api"
+import { BazarrApiClient } from "../../api/bazarr-api"
 import { ProwlarrClient, type ArrAppType } from "../../api/prowlarr-api"
 import { QBittorrentClient, type QBittorrentCategory } from "../../api/qbittorrent-api"
 import { PortainerApiClient } from "../../api/portainer-api"
@@ -201,6 +202,7 @@ export class FullAutoSetup extends BoxRenderable {
     }
 
     try {
+      // Setup *arr apps (Radarr, Sonarr, Lidarr, etc.) with form auth
       const arrApps = this.config.apps.filter((a) => {
         const def = getApp(a.id)
         return a.enabled && (def?.rootFolder || a.id === "prowlarr")
@@ -221,6 +223,24 @@ export class FullAutoSetup extends BoxRenderable {
           await client.updateHostConfig(this.globalUsername, this.globalPassword, false)
         } catch {
           // Skip individual failures
+        }
+      }
+
+      // Setup Bazarr form authentication (it has a different API than *arr apps)
+      const bazarrConfig = this.config.apps.find((a) => a.id === "bazarr" && a.enabled)
+      if (bazarrConfig) {
+        const bazarrApiKey = this.env["API_KEY_BAZARR"]
+        if (bazarrApiKey) {
+          const bazarrDef = getApp("bazarr")
+          const bazarrPort = bazarrConfig.port || bazarrDef?.defaultPort || 6767
+          const bazarrClient = new BazarrApiClient("localhost", bazarrPort)
+          bazarrClient.setApiKey(bazarrApiKey)
+
+          try {
+            await bazarrClient.enableFormAuth(this.globalUsername, this.globalPassword, false)
+          } catch {
+            // Skip Bazarr auth failure - non-critical
+          }
         }
       }
 
