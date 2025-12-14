@@ -22,6 +22,7 @@ import { HomepageSetup } from "./HomepageSetup"
 import { JellyfinSetup } from "./JellyfinSetup"
 import { JellyseerrSetup } from "./JellyseerrSetup"
 import { SettingsScreen } from "./SettingsScreen"
+import { CloudflaredSetup } from "./CloudflaredSetup"
 
 type MenuItem = { name: string; description: string; action: () => void | Promise<void> }
 
@@ -144,6 +145,13 @@ export class MainMenu {
         name: "🎥 Jellyseerr Setup",
         description: "Configure Jellyseerr with media server",
         action: () => this.showScreen(JellyseerrSetup),
+      })
+    }
+    if (this.isAppEnabled("cloudflared") || this.isAppEnabled("traefik")) {
+      items.push({
+        name: "☁️ Cloudflare Tunnel",
+        description: "Setup or configure Cloudflare Tunnel via API",
+        action: () => this.showScreen(CloudflaredSetup),
       })
     }
     // Bookmark generation options

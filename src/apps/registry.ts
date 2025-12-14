@@ -735,12 +735,6 @@ export const APPS: Record<AppId, AppDefinition> = {
     secondaryPorts: ["8083:8080"],
     secrets: [
       {
-        name: "CLOUDFLARE_DNS_API_TOKEN",
-        description: "Cloudflare DNS API Token for Traefik",
-        required: false,
-        mask: true,
-      },
-      {
         name: "CLOUDFLARE_DNS_ZONE",
         description: "Root Domain (e.g. example.com)",
         required: true,
@@ -766,8 +760,14 @@ export const APPS: Record<AppId, AppDefinition> = {
     dependsOn: ["traefik"],
     secrets: [
       {
+        name: "CLOUDFLARE_API_TOKEN",
+        description: "Cloudflare API Token (for automated tunnel setup via Menu)",
+        required: false,
+        mask: true,
+      },
+      {
         name: "CLOUDFLARE_TUNNEL_TOKEN",
-        description: "Cloudflare Tunnel Token (from Zero Trust dashboard)",
+        description: "Cloudflare Tunnel Token (auto-generated or from Zero Trust)",
         required: true,
         mask: true,
       },
