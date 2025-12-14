@@ -292,19 +292,16 @@ export class CloudflareApi {
     }
 
     // Create email-based allow policy
+    // Each email needs to be a separate include rule
     const response = await this.request<{ id: string }>(
       "POST",
       `/accounts/${accountId}/access/apps/${appId}/policies`,
       {
         name: policyName,
         decision: "allow",
-        include: [
-          {
-            email: {
-              email: allowedEmails,
-            },
-          },
-        ],
+        include: allowedEmails.map((email) => ({
+          email: { email },
+        })),
         precedence: 1,
       }
     )
