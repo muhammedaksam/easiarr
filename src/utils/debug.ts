@@ -35,7 +35,7 @@ export function initDebug(): void {
  * Sanitize sensitive fields from log messages
  * Redacts passwords, tokens, API keys, secrets, and credentials
  */
-function sanitizeMessage(message: string): string {
+export function sanitizeMessage(message: string): string {
   // Match common sensitive field names in JSON format
   // Covers: passwords, tokens, API keys, secrets, credentials, auth data
   return message.replace(

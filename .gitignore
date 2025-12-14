@@ -23,3 +23,6 @@ yarn-error.log*
 
 # Config files generated at runtime
 .easiarr/
+
+# Test coverage
+coverage/
