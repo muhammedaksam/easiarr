@@ -1,5 +1,5 @@
 /**
- * Easiarr Configuration Schema
+ * easiarr Configuration Schema
  * TypeScript interfaces for configuration management
  */
 
@@ -120,7 +120,7 @@ export type AppId =
   | "guacamole"
   | "guacd"
   | "ddns-updater"
-  | "easiarr-status"
+  | "easiarr"
   // VPN
   | "gluetun"
   // Monitoring & Infra

@@ -1,6 +1,6 @@
 /**
  * Docker Compose Generator
- * Generates docker-compose.yml from Easiarr configuration
+ * Generates docker-compose.yml from easiarr configuration
  */
 
 import { writeFile } from "node:fs/promises"

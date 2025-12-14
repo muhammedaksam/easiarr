@@ -136,7 +136,7 @@ export class JellyfinClient {
       "Content-Type": "application/json",
       // Jellyfin requires client identification
       "X-Emby-Authorization":
-        'MediaBrowser Client="Easiarr", Device="Server", DeviceId="easiarr-setup", Version="1.0.0"' +
+        'MediaBrowser Client="easiarr", Device="Server", DeviceId="easiarr-setup", Version="1.0.0"' +
         (this.accessToken ? `, Token="${this.accessToken}"` : ""),
       ...((options.headers as Record<string, string>) || {}),
     }

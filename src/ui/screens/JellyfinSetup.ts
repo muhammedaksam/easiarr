@@ -301,7 +301,7 @@ export class JellyfinSetup extends BoxRenderable {
       // Generate API key
       this.results[1].status = "configuring"
       this.refreshContent()
-      const apiKey = await this.jellyfinClient.createApiKey("Easiarr")
+      const apiKey = await this.jellyfinClient.createApiKey("easiarr")
       if (!apiKey) {
         throw new Error("Failed to create API key")
       }
