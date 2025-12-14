@@ -17,6 +17,7 @@ import { QBittorrentSetup } from "./QBittorrentSetup"
 import { FullAutoSetup } from "./FullAutoSetup"
 import { MonitorDashboard } from "./MonitorDashboard"
 import { HomepageSetup } from "./HomepageSetup"
+import { JellyfinSetup } from "./JellyfinSetup"
 
 export class MainMenu {
   private renderer: RenderContext
@@ -134,6 +135,10 @@ export class MainMenu {
           name: "🏠 Homepage Setup",
           description: "Generate Homepage dashboard config",
         },
+        {
+          name: "🎬 Jellyfin Setup",
+          description: "Run Jellyfin setup wizard via API",
+        },
         { name: "❌ Exit", description: "Close easiarr" },
       ],
     })
@@ -243,7 +248,18 @@ export class MainMenu {
           this.container.add(homepageSetup)
           break
         }
-        case 12:
+        case 12: {
+          // Jellyfin Setup
+          this.menu.blur()
+          this.page.visible = false
+          const jellyfinSetup = new JellyfinSetup(this.renderer as CliRenderer, this.config, () => {
+            this.page.visible = true
+            this.menu.focus()
+          })
+          this.container.add(jellyfinSetup)
+          break
+        }
+        case 13:
           process.exit(0)
           break
       }

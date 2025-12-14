@@ -86,7 +86,7 @@ export class AppConfigurator extends BoxRenderable {
     if (env.USERNAME_GLOBAL) this.globalUsername = env.USERNAME_GLOBAL
     if (env.PASSWORD_GLOBAL) this.globalPassword = env.PASSWORD_GLOBAL
     if (env.PASSWORD_QBITTORRENT) this.qbPass = env.PASSWORD_QBITTORRENT
-    if (env.SABNZBD_API_KEY) this.sabApiKey = env.SABNZBD_API_KEY
+    if (env.API_KEY_SABNZBD) this.sabApiKey = env.API_KEY_SABNZBD
   }
 
   private renderCredentialsPrompt() {
@@ -612,7 +612,7 @@ export class AppConfigurator extends BoxRenderable {
       if (type === "qbittorrent" && this.qbPass) {
         updates.PASSWORD_QBITTORRENT = this.qbPass
       } else if (type === "sabnzbd" && this.sabApiKey) {
-        updates.SABNZBD_API_KEY = this.sabApiKey
+        updates.API_KEY_SABNZBD = this.sabApiKey
       }
       await updateEnv(updates)
     } catch {
