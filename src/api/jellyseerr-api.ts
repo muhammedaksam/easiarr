@@ -317,15 +317,16 @@ export class JellyseerrClient {
     password: string,
     email?: string
   ): Promise<string> {
-    // Step 1: Configure Jellyfin connection
+    // Step 1: Authenticate FIRST (creates first admin if none exists)
+    // This also establishes the session cookie for subsequent requests
+    await this.authenticateJellyfin(username, password, jellyfinHostname, email)
+
+    // Step 2: Update Jellyfin settings (now we have the session cookie)
     await this.updateJellyfinSettings({
       hostname: jellyfinHostname,
       adminUser: username,
       adminPass: password,
     })
-
-    // Step 2: Authenticate (creates first admin if none exists)
-    await this.authenticateJellyfin(username, password, jellyfinHostname, email)
 
     // Step 3: Sync libraries
     const libraries = await this.syncJellyfinLibraries()

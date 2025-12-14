@@ -163,8 +163,8 @@ export class JellyseerrSetup extends BoxRenderable {
     this.currentStep = "running"
     this.results = [
       { name: "Check status", status: "configuring" },
-      { name: "Configure media server", status: "pending" },
       { name: "Authenticate", status: "pending" },
+      { name: "Configure media server", status: "pending" },
       { name: "Sync libraries", status: "pending" },
       { name: "Save API key", status: "pending" },
     ]
@@ -193,37 +193,36 @@ export class JellyseerrSetup extends BoxRenderable {
       const username = env["USERNAME_GLOBAL"] || "admin"
       const password = env["PASSWORD_GLOBAL"] || "Ch4ng3m3!1234securityReasons"
 
-      // Step 2: Configure media server
-      this.results[1].status = "configuring"
-      this.refreshContent()
-
       if (this.mediaServerType === "jellyfin") {
         const jellyfinConfig = this.config.apps.find((a) => a.id === "jellyfin")
         const jellyfinPort = jellyfinConfig?.port || 8096
         const jellyfinHostname = `http://jellyfin:${jellyfinPort}`
 
+        // Step 2: Authenticate FIRST (creates admin user AND gets session cookie)
+        this.results[1].status = "configuring"
+        this.refreshContent()
+        await this.jellyseerrClient.authenticateJellyfin(username, password, jellyfinHostname)
+        this.results[1].status = "success"
+        this.results[1].message = `User: ${username}`
+        this.refreshContent()
+
+        // Step 3: Configure media server (now we have the session cookie)
+        this.results[2].status = "configuring"
+        this.refreshContent()
         await this.jellyseerrClient.updateJellyfinSettings({
           hostname: jellyfinHostname,
           adminUser: username,
           adminPass: password,
         })
-        this.results[1].status = "success"
-        this.results[1].message = `Jellyfin @ ${jellyfinHostname}`
-        this.refreshContent()
-
-        // Step 3: Authenticate
-        this.results[2].status = "configuring"
-        this.refreshContent()
-        await this.jellyseerrClient.authenticateJellyfin(username, password, jellyfinHostname)
         this.results[2].status = "success"
-        this.results[2].message = `User: ${username}`
+        this.results[2].message = `Jellyfin @ ${jellyfinHostname}`
         this.refreshContent()
       } else {
         // Plex/Emby - skip for now, needs token-based auth
         this.results[1].status = "skipped"
-        this.results[1].message = `${this.mediaServerType} requires manual setup`
+        this.results[1].message = "Token auth needed"
         this.results[2].status = "skipped"
-        this.results[2].message = "Token auth needed"
+        this.results[2].message = `${this.mediaServerType} requires manual setup`
         this.refreshContent()
       }
 
