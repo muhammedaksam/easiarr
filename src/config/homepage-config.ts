@@ -138,14 +138,14 @@ export async function generateServicesYaml(config: EasiarrConfig): Promise<strin
 
   // Add Easiarr info section with two widgets - one for installed, one for latest
   yaml += `- Easiarr:\n`
-  // Installed version from local easiarr-status container
+  // Installed version from local easiarr container
   yaml += `    - Installed:\n`
   yaml += `        href: https://github.com/muhammedaksam/easiarr\n`
   yaml += `        icon: mdi-docker\n`
   yaml += `        description: Your current version\n`
   yaml += `        widget:\n`
   yaml += `          type: customapi\n`
-  yaml += `          url: http://easiarr-status:8080/config.json\n`
+  yaml += `          url: http://easiarr:8080/config.json\n`
   yaml += `          refreshInterval: 3600000\n` // 1 hour
   yaml += `          mappings:\n`
   yaml += `            - field: version\n`

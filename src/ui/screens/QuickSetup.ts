@@ -41,7 +41,7 @@ export class QuickSetup {
     "jellyseerr",
     "flaresolverr",
     "homepage",
-    "easiarr-status",
+    "easiarr",
   ])
 
   private rootDir: string = `${homedir()}/media`
