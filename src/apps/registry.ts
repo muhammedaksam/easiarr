@@ -444,14 +444,15 @@ export const APPS: Record<AppId, AppDefinition> = {
     name: "Homepage",
     description: "Highly customizable application dashboard",
     category: "dashboard",
-    defaultPort: 3000,
+    defaultPort: 3009,
+    internalPort: 3000,
     image: "ghcr.io/gethomepage/homepage:latest",
     puid: 0,
     pgid: 0,
     volumes: (root) => [`${root}/config/homepage:/app/config`, "/var/run/docker.sock:/var/run/docker.sock"],
     environment: {
       HOMEPAGE_ALLOWED_HOSTS:
-        "homepage,homepage.${CLOUDFLARE_DNS_ZONE},${CLOUDFLARE_DNS_ZONE},localhost,${LOCAL_DOCKER_IP},easiarr-status,easiarr-status:3009,${LOCAL_DOCKER_IP}:3009",
+        "homepage,homepage.${CLOUDFLARE_DNS_ZONE},${CLOUDFLARE_DNS_ZONE},localhost,${LOCAL_DOCKER_IP},${LOCAL_DOCKER_IP}:3009",
     },
   },
 
@@ -585,21 +586,21 @@ export const APPS: Record<AppId, AppDefinition> = {
     name: "Easiarr Status",
     description: "Exposes Easiarr version for Homepage dashboard",
     category: "utility",
-    defaultPort: 3009,
+    defaultPort: 3010,
+    internalPort: 8080,
     image: "halverneus/static-file-server:latest",
     puid: 0,
     pgid: 0,
-    volumes: (root) => [`${root}/.easiarr:/web:ro`],
+    volumes: (root) => [`${root}:/web:ro`],
     environment: {
       FOLDER: "/web",
-      PORT: "3009",
       CORS: "true",
     },
     homepage: {
       icon: "mdi-docker",
       widget: "customapi",
       widgetFields: {
-        url: "http://easiarr-status:3009/config.json",
+        url: "http://easiarr-status:8080/.easiarr/config.json",
         mappings: JSON.stringify([{ field: "version", label: "Installed" }]),
       },
     },

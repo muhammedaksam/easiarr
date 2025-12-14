@@ -174,6 +174,8 @@ export interface AppDefinition {
   description: string
   category: AppCategory
   defaultPort: number
+  /** Internal container port if different from defaultPort */
+  internalPort?: number
   image: string
   puid: number
   pgid: number
