@@ -293,6 +293,7 @@ export class CloudflareApi {
 
     // Create email-based allow policy
     // Each email needs to be a separate include rule
+    // Use next available precedence (existing count + 1)
     const response = await this.request<{ id: string }>(
       "POST",
       `/accounts/${accountId}/access/apps/${appId}/policies`,
@@ -302,7 +303,7 @@ export class CloudflareApi {
         include: allowedEmails.map((email) => ({
           email: { email },
         })),
-        precedence: 1,
+        precedence: existing.result.length + 1,
       }
     )
 
