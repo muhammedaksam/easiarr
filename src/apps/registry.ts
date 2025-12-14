@@ -397,7 +397,7 @@ export const APPS: Record<AppId, AppDefinition> = {
     name: "Jellyseerr",
     description: "Request management for Jellyfin",
     category: "request",
-    defaultPort: 5056,
+    defaultPort: 5055,
     image: "fallenbagel/jellyseerr:latest",
     puid: 13012,
     pgid: 13000,

@@ -3,7 +3,7 @@
  * Shared functions for reading/writing .env files
  */
 
-import { existsSync, readFileSync } from "node:fs"
+import { existsSync, readFileSync, writeFileSync } from "node:fs"
 import { writeFile, readFile } from "node:fs/promises"
 import { networkInterfaces } from "node:os"
 import { getComposePath } from "../config/manager"
@@ -80,6 +80,22 @@ export function readEnvSync(): Record<string, string> {
   } catch {
     return {}
   }
+}
+
+/**
+ * Write to .env file synchronously, merging with existing values
+ * Preserves existing keys not in the updates object
+ */
+export function writeEnvSync(updates: Record<string, string>): void {
+  const envPath = getEnvPath()
+  const current = readEnvSync()
+
+  // Merge updates into current
+  const merged = { ...current, ...updates }
+
+  // Write back
+  const content = serializeEnv(merged)
+  writeFileSync(envPath, content, "utf-8")
 }
 
 /**
