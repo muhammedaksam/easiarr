@@ -81,7 +81,6 @@ async function loadMigrations(): Promise<Migration[]> {
     debugLog("Migrations", `Failed to load migration: ${e}`)
   }
 
-  
   try {
     const m1765732722 = await import("./migrations/1765732722_remove_cloudflare_dns_api_token")
     migrations.push({
