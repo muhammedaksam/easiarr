@@ -233,6 +233,7 @@ export class JellyseerrClient {
         password,
         hostname,
         port,
+        urlBase: "",
         email: email || `${username}@local`,
       }),
     })
