@@ -199,30 +199,53 @@ export class JellyseerrSetup extends BoxRenderable {
         const internalPort = jellyfinDef?.internalPort || jellyfinDef?.defaultPort || 8096
         const jellyfinHost = "jellyfin" // Hostname only for auth
         const jellyfinFullUrl = `http://${jellyfinHost}:${internalPort}` // Full URL for settings
-        const userEmail = `${username}@example.com`
+        const userEmail = `${username}@easiarr.local`
 
         debugLog("Jellyseerr", `Connecting to Jellyfin at ${jellyfinFullUrl}`)
 
-        // Step 2: Authenticate FIRST (creates admin user AND gets session cookie)
-        this.results[1].status = "configuring"
-        this.refreshContent()
-        // Auth endpoint constructs URL: http://{hostname}:{port}
-        await this.jellyseerrClient.authenticateJellyfin(username, password, jellyfinHost, internalPort, userEmail)
-        this.results[1].status = "success"
-        this.results[1].message = `User: ${username}`
-        this.refreshContent()
+        try {
+          // Step 2: Authenticate FIRST (creates admin user AND gets session cookie)
+          this.results[1].status = "configuring"
+          this.refreshContent()
+          // Auth endpoint constructs URL: http://{hostname}:{port}
+          await this.jellyseerrClient.authenticateJellyfin(username, password, jellyfinHost, internalPort, userEmail)
+          this.results[1].status = "success"
+          this.results[1].message = `User: ${username}`
+          this.refreshContent()
 
-        // Step 3: Configure media server (now we have the session cookie)
-        this.results[2].status = "configuring"
-        this.refreshContent()
-        await this.jellyseerrClient.updateJellyfinSettings({
-          hostname: jellyfinFullUrl,
-          adminUser: username,
-          adminPass: password,
-        })
-        this.results[2].status = "success"
-        this.results[2].message = `Jellyfin @ ${jellyfinHost}`
-        this.refreshContent()
+          // Step 3: Configure media server (now we have the session cookie)
+          this.results[2].status = "configuring"
+          this.refreshContent()
+          await this.jellyseerrClient.updateJellyfinSettings({
+            hostname: jellyfinFullUrl,
+            adminUser: username,
+            adminPass: password,
+          })
+          this.results[2].status = "success"
+          this.results[2].message = `Jellyfin @ ${jellyfinHost}`
+          this.refreshContent()
+        } catch (error: unknown) {
+          const err = error instanceof Error ? error : new Error(String(error))
+          debugLog("Jellyseerr", `Auth failed: ${err.message}`)
+          this.results[1].status = "error"
+          this.results[1].message = "Auth Failed"
+
+          if (err.message.includes("NO_ADMIN_USER")) {
+            this.results[2].message = "Jellyfin user not Admin"
+            this.results[2].status = "error"
+            // Wait for user to read the message
+            await new Promise((resolve) => setTimeout(resolve, 8000))
+          } else if (err.message.includes("401")) {
+            this.results[2].message = "Invalid Credentials"
+            this.results[2].status = "error"
+            await new Promise((resolve) => setTimeout(resolve, 8000))
+          } else {
+            this.results[2].message = "Connection Error"
+            this.results[2].status = "error"
+            await new Promise((resolve) => setTimeout(resolve, 5000))
+          }
+          throw err // Re-throw to stop the wizard
+        }
       } else {
         // Plex/Emby - skip for now, needs token-based auth
         this.results[1].status = "skipped"
