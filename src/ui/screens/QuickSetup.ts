@@ -1,6 +1,6 @@
 /**
  * Quick Setup Wizard
- * First-time setup flow for Easiarr
+ * First-time setup flow for easiarr
  */
 import { homedir } from "node:os"
 
@@ -41,7 +41,7 @@ export class QuickSetup {
     "jellyseerr",
     "flaresolverr",
     "homepage",
-    "easiarr-status",
+    "easiarr",
   ])
 
   private rootDir: string = `${homedir()}/media`
@@ -208,7 +208,7 @@ export class QuickSetup {
       selectedBackgroundColor: "#3a4a6e",
       options: [
         { name: "▶ Start Setup", description: "Begin the configuration wizard" },
-        { name: "📖 About", description: "Learn more about Easiarr" },
+        { name: "📖 About", description: "Learn more about easiarr" },
         { name: "✕ Exit", description: "Quit the application" },
       ],
     })

@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 /**
- * Easiarr Entry Point
+ * easiarr Entry Point
  * TUI tool for generating docker-compose files for the *arr ecosystem
  *
  * Usage:
