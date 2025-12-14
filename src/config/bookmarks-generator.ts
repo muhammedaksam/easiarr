@@ -26,7 +26,9 @@ function getAppUrl(appId: string, port: number, config: EasiarrConfig, useLocalU
   if (!useLocalUrls && config.traefik?.enabled && config.traefik.domain) {
     return `https://${appId}.${config.traefik.domain}/`
   }
-  return `http://localhost:${port}/`
+  // Use LOCAL_DOCKER_IP from environment if available, otherwise fallback to localhost
+  const host = process.env.LOCAL_DOCKER_IP || "localhost"
+  return `http://${host}:${port}/`
 }
 
 /**
@@ -73,13 +75,11 @@ export function generateBookmarksHtml(config: EasiarrConfig, useLocalUrls = fals
 <DL><p>
     <DT><H3 PERSONAL_TOOLBAR_FOLDER="true">Easiarr</H3>
     <DL><p>
-        <DT><H3>Easiarr Applications</H3>
-        <DL><p>
 `
 
   // Add external resources first
-  html += `            <DT><A HREF="https://github.com/muhammedaksam/easiarr/">GitHub | Easiarr Project Repo</A>\n`
-  html += `            <DT><A HREF="https://trash-guides.info/">TRaSH Guides</A>\n`
+  html += `        <DT><A HREF="https://github.com/muhammedaksam/easiarr/">GitHub | Easiarr Project Repo</A>\n`
+  html += `        <DT><A HREF="https://trash-guides.info/">TRaSH Guides</A>\n`
 
   // Add apps grouped by category in defined order
   for (const { id: categoryId } of CATEGORY_ORDER) {
@@ -89,19 +89,18 @@ export function generateBookmarksHtml(config: EasiarrConfig, useLocalUrls = fals
     const categoryName = APP_CATEGORIES[categoryId]
 
     // Add category header as a folder
-    html += `            <DT><H3>${categoryName}</H3>\n`
-    html += `            <DL><p>\n`
+    html += `        <DT><H3>${categoryName}</H3>\n`
+    html += `        <DL><p>\n`
 
     for (const bookmark of bookmarks) {
-      html += `                <DT><A HREF="${bookmark.url}">${bookmark.name} | ${bookmark.description}</A>\n`
+      html += `            <DT><A HREF="${bookmark.url}">${bookmark.name} | ${bookmark.description}</A>\n`
     }
 
-    html += `            </DL><p>\n`
+    html += `        </DL><p>\n`
   }
 
   // Close the structure
-  html += `        </DL><p>
-    </DL><p>
+  html += `    </DL><p>
 </DL><p>
 `
 
