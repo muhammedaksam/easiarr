@@ -207,11 +207,16 @@ export class JellyseerrSetup extends BoxRenderable {
         try {
           // Pre-flight: Ensure Jellyfin user is admin (Self-healing)
           try {
-            const jfClient = new JellyfinClient(jellyfinHost, internalPort)
+            // Use localhost for pre-flight because we are running on the host
+            const jfClient = new JellyfinClient("localhost", internalPort)
             const auth = await jfClient.authenticate(username, password)
             if (auth.User?.Id) {
               debugLog("Jellyfin", "Ensuring admin permissions via API override")
-              await jfClient.updateUserPolicy(auth.User.Id, { IsAdministrator: true })
+              // Also ensure IsHidden is false, as Jellyseerr might ignore hidden admins
+              await jfClient.updateUserPolicy(auth.User.Id, {
+                IsAdministrator: true,
+                IsHidden: false,
+              })
             }
           } catch (jfError: unknown) {
             const err = jfError instanceof Error ? jfError : new Error(String(jfError))
