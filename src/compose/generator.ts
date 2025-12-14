@@ -128,15 +128,22 @@ function buildService(appDef: ReturnType<typeof getApp>, appConfig: AppConfig, c
     Object.assign(environment, appConfig.customEnv)
   }
 
+  // Build ports array
+  let ports: string[] = []
+  if (appDef.id !== "plex" && port !== 0 && appDef.defaultPort !== 0) {
+    ports.push(`"${port}:${appDef.internalPort ?? appDef.defaultPort}"`)
+  }
+  // Add secondary ports (e.g., dashboard ports)
+  if (appDef.secondaryPorts) {
+    ports = ports.concat(appDef.secondaryPorts.map((p) => `"${p}"`))
+  }
+
   const service: ComposeService = {
     image: appDef.image,
     container_name: appDef.id,
     environment,
     volumes,
-    ports:
-      appDef.id === "plex" || port === 0 || appDef.defaultPort === 0
-        ? []
-        : [`"${port}:${appDef.internalPort ?? appDef.defaultPort}"`],
+    ports,
     restart: "unless-stopped",
   }
 

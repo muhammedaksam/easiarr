@@ -177,6 +177,8 @@ export interface AppDefinition {
   defaultPort: number
   /** Internal container port if different from defaultPort */
   internalPort?: number
+  /** Additional port mappings (e.g., "8083:8080" for dashboard ports) */
+  secondaryPorts?: string[]
   image: string
   puid: number
   pgid: number

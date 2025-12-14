@@ -731,6 +731,8 @@ export const APPS: Record<AppId, AppDefinition> = {
       `${root}/config/traefik/letsencrypt:/letsencrypt`,
       "/var/run/docker.sock:/var/run/docker.sock:ro",
     ],
+    // Dashboard exposed on 8083 (internal 8080) for Homepage widget
+    secondaryPorts: ["8083:8080"],
     secrets: [
       {
         name: "CLOUDFLARE_DNS_API_TOKEN",
