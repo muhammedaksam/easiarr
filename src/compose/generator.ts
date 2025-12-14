@@ -160,7 +160,7 @@ function buildService(appDef: ReturnType<typeof getApp>, appConfig: AppConfig, c
     }
   }
 
-  if (config.traefik?.enabled && appDef.id !== "traefik" && appDef.id !== "plex") {
+  if (config.traefik?.enabled && appDef.id !== "traefik" && appDef.id !== "plex" && appDef.id !== "cloudflared") {
     service.labels = generateTraefikLabels(appDef.id, appDef.internalPort ?? appDef.defaultPort, config.traefik)
   }
 
