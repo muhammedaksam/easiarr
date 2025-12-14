@@ -79,7 +79,10 @@ export class CloudflareApi {
 
     const response = await this.request<{ id: string }[]>("GET", "/accounts")
     if (response.result.length === 0) {
-      throw new Error("No Cloudflare accounts found for this API token")
+      throw new Error(
+        "No Cloudflare accounts found. Your API token is missing the 'Account Settings:Read' permission. " +
+          "Please edit your token in the Cloudflare dashboard and add: Account → Account Settings → Read"
+      )
     }
 
     this.accountId = response.result[0].id

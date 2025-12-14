@@ -135,9 +135,10 @@ Expose your services securely without port forwarding using Cloudflare Tunnel.
 ### Automated Setup (Recommended)
 
 1. Create a Cloudflare API Token at [dash.cloudflare.com/profile/api-tokens](https://dash.cloudflare.com/profile/api-tokens) with:
+   - `Account:Account Settings:Read` (required)
    - `Account:Cloudflare Tunnel:Edit`
    - `Zone:DNS:Edit`
-   - `Account:Access: Apps and Policies:Edit` (recommended - protects services with email login)
+   - `Account:Access: Apps and Policies:Edit` (optional - protects services with email login)
 
 2. Run easiarr → **Main Menu** → **☁️ Cloudflare Tunnel**
 

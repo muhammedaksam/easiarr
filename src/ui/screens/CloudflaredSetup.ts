@@ -123,6 +123,12 @@ export class CloudflaredSetup extends BoxRenderable {
     )
     content.add(
       new TextRenderable(this.cliRenderer, {
+        content: "  • Account:Account Settings:Read (required)",
+        fg: "#50fa7b",
+      })
+    )
+    content.add(
+      new TextRenderable(this.cliRenderer, {
         content: "  • Account:Cloudflare Tunnel:Edit",
         fg: "#50fa7b",
       })
@@ -135,8 +141,8 @@ export class CloudflaredSetup extends BoxRenderable {
     )
     content.add(
       new TextRenderable(this.cliRenderer, {
-        content: "  • Account:Access: Apps and Policies:Edit (for email login)",
-        fg: "#50fa7b",
+        content: "  • Account:Access: Apps and Policies:Edit (optional)",
+        fg: "#888888",
       })
     )
     content.add(new TextRenderable(this.cliRenderer, { content: " " }))
