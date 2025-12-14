@@ -10,6 +10,11 @@ export function generateServiceYaml(name: string, service: ComposeService): stri
   yaml += `    image: ${service.image}\n`
   yaml += `    container_name: ${service.container_name}\n`
 
+  // Command (for cloudflared etc.)
+  if (service.command) {
+    yaml += `    command: ${service.command}\n`
+  }
+
   // Network mode (for Plex)
   if (service.network_mode) {
     yaml += `    network_mode: ${service.network_mode}\n`

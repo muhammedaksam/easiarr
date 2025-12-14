@@ -56,7 +56,7 @@ export class QuickSetup {
   // Traefik config
   private traefikEnabled: boolean = false
   private traefikDomain: string = "CLOUDFLARE_DNS_ZONE"
-  private traefikEntrypoint: string = "websecure"
+  private traefikEntrypoint: string = "web"
   private traefikMiddlewares: string[] = []
 
   constructor(renderer: CliRenderer, container: BoxRenderable, app: App) {
@@ -732,7 +732,7 @@ export class QuickSetup {
     content.add(
       new TextRenderable(this.renderer, {
         id: "traefik-entrypoint-label",
-        content: "Entrypoint (e.g., websecure, secureweb):",
+        content: "Entrypoint (e.g., web, websecure):",
         fg: "#aaaaaa",
       })
     )
@@ -740,7 +740,7 @@ export class QuickSetup {
     const entrypointInput = new InputRenderable(this.renderer, {
       id: "traefik-entrypoint-input",
       width: "100%",
-      placeholder: "websecure",
+      placeholder: "web",
       backgroundColor: "#2a2a3e",
       textColor: "#ffffff",
       focusedBackgroundColor: "#3a3a4e",
@@ -798,7 +798,7 @@ export class QuickSetup {
       // Save traefik config
       this.traefikEnabled = true
       this.traefikDomain = domainInput.value || "${CLOUDFLARE_DNS_ZONE}"
-      this.traefikEntrypoint = entrypointInput.value || "websecure"
+      this.traefikEntrypoint = entrypointInput.value || "web"
       this.traefikMiddlewares = middlewareInput.value
         ? middlewareInput.value
             .split(",")

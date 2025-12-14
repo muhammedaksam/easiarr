@@ -22,6 +22,7 @@ export interface ComposeService {
   labels?: string[]
   devices?: string[]
   cap_add?: string[]
+  command?: string
 }
 
 export interface ComposeFile {
@@ -138,6 +139,9 @@ function buildService(appDef: ReturnType<typeof getApp>, appConfig: AppConfig, c
   // Add devices/caps
   if (appDef.devices) service.devices = [...appDef.devices]
   if (appDef.cap_add) service.cap_add = [...appDef.cap_add]
+
+  // Add command (e.g., cloudflared)
+  if (appDef.command) service.command = appDef.command
 
   // Plex uses network_mode: host
   if (appDef.id === "plex") {

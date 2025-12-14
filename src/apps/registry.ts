@@ -746,6 +746,29 @@ export const APPS: Record<AppId, AppDefinition> = {
     homepage: { icon: "traefik.png", widget: "traefik" },
   },
 
+  cloudflared: {
+    id: "cloudflared",
+    name: "Cloudflared",
+    description: "Cloudflare Tunnel for secure external access without port forwarding",
+    category: "infrastructure",
+    defaultPort: 0, // No exposed port - tunnel is outbound only
+    image: "cloudflare/cloudflared:latest",
+    puid: 0,
+    pgid: 0,
+    volumes: () => [],
+    environment: {},
+    command: "tunnel run",
+    dependsOn: ["traefik"],
+    secrets: [
+      {
+        name: "CLOUDFLARE_TUNNEL_TOKEN",
+        description: "Cloudflare Tunnel Token (from Zero Trust dashboard)",
+        required: true,
+        mask: true,
+      },
+    ],
+  },
+
   "traefik-certs-dumper": {
     id: "traefik-certs-dumper",
     name: "Traefik Certs Dumper",

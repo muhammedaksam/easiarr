@@ -162,7 +162,7 @@ export class AppManager {
         this.config.traefik = {
           enabled: true,
           domain: "${CLOUDFLARE_DNS_ZONE}",
-          entrypoint: "websecure",
+          entrypoint: "web",
           middlewares: [],
         }
       } else if (!enabled && this.config.traefik?.enabled) {

@@ -133,6 +133,7 @@ export type AppId =
   // Reverse Proxy
   | "traefik"
   | "traefik-certs-dumper"
+  | "cloudflared"
   | "crowdsec"
   // Network/VPN
   | "headscale"
@@ -186,6 +187,8 @@ export interface AppDefinition {
   secrets?: AppSecret[]
   devices?: string[]
   cap_add?: string[]
+  /** Custom command to run (e.g., "tunnel run" for cloudflared) */
+  command?: string
   apiKeyMeta?: ApiKeyMeta
   rootFolder?: RootFolderMeta
   prowlarrCategoryIds?: number[]
