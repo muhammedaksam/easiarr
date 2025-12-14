@@ -1,0 +1,3 @@
+[submodule "easiarr.wiki"]
+	path = easiarr.wiki
+	url = git@github.com:muhammedaksam/easiarr.wiki.git
