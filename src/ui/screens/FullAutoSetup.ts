@@ -11,6 +11,7 @@ import { ProwlarrClient, type ArrAppType } from "../../api/prowlarr-api"
 import { QBittorrentClient, type QBittorrentCategory } from "../../api/qbittorrent-api"
 import { PortainerApiClient } from "../../api/portainer-api"
 import { JellyfinClient } from "../../api/jellyfin-api"
+import { JellyseerrClient } from "../../api/jellyseerr-api"
 import { getApp } from "../../apps/registry"
 // import type { AppId } from "../../config/schema"
 import { getCategoriesForApps } from "../../utils/categories"
@@ -83,6 +84,7 @@ export class FullAutoSetup extends BoxRenderable {
       { name: "qBittorrent", status: "pending" },
       { name: "Portainer", status: "pending" },
       { name: "Jellyfin", status: "pending" },
+      { name: "Jellyseerr", status: "pending" },
     ]
   }
 
@@ -133,6 +135,9 @@ export class FullAutoSetup extends BoxRenderable {
 
     // Step 7: Jellyfin
     await this.setupJellyfin()
+
+    // Step 8: Jellyseerr
+    await this.setupJellyseerr()
 
     this.isRunning = false
     this.isDone = true
@@ -448,6 +453,105 @@ export class FullAutoSetup extends BoxRenderable {
       this.updateStep("Jellyfin", "success", "Setup wizard completed")
     } catch (e) {
       this.updateStep("Jellyfin", "error", `${e}`)
+    }
+    this.refreshContent()
+  }
+
+  private async setupJellyseerr(): Promise<void> {
+    this.updateStep("Jellyseerr", "running")
+    this.refreshContent()
+
+    const jellyseerrConfig = this.config.apps.find((a) => a.id === "jellyseerr" && a.enabled)
+    if (!jellyseerrConfig) {
+      this.updateStep("Jellyseerr", "skipped", "Not enabled")
+      this.refreshContent()
+      return
+    }
+
+    // Check if a media server is enabled
+    const jellyfinConfig = this.config.apps.find((a) => a.id === "jellyfin" && a.enabled)
+    const plexConfig = this.config.apps.find((a) => a.id === "plex" && a.enabled)
+
+    if (!jellyfinConfig && !plexConfig) {
+      this.updateStep("Jellyseerr", "skipped", "No media server enabled")
+      this.refreshContent()
+      return
+    }
+
+    try {
+      const port = jellyseerrConfig.port || 5055
+      const client = new JellyseerrClient("localhost", port)
+
+      // Check if reachable
+      const healthy = await client.isHealthy()
+      if (!healthy) {
+        this.updateStep("Jellyseerr", "skipped", "Not reachable yet")
+        this.refreshContent()
+        return
+      }
+
+      // Check if already initialized
+      const isInit = await client.isInitialized()
+      if (isInit) {
+        this.updateStep("Jellyseerr", "skipped", "Already configured")
+        this.refreshContent()
+        return
+      }
+
+      // Configure with Jellyfin (primary support)
+      if (jellyfinConfig) {
+        const jellyfinDef = getApp("jellyfin")
+        // Use internal port for container-to-container communication
+        const internalPort = jellyfinDef?.internalPort || jellyfinDef?.defaultPort || 8096
+        const jellyfinHost = "jellyfin"
+
+        await client.runJellyfinSetup(
+          jellyfinHost,
+          internalPort,
+          this.globalUsername,
+          this.globalPassword,
+          `${this.globalUsername}@local`
+        )
+
+        // Configure Radarr if enabled
+        const radarrConfig = this.config.apps.find((a) => a.id === "radarr" && a.enabled)
+        if (radarrConfig) {
+          const radarrApiKey = this.env["API_KEY_RADARR"]
+          if (radarrApiKey) {
+            const radarrDef = getApp("radarr")
+            const radarrPort = radarrConfig.port || radarrDef?.defaultPort || 7878
+            await client.configureRadarr(
+              "radarr",
+              radarrPort,
+              radarrApiKey,
+              radarrDef?.rootFolder?.path || "/data/media/movies"
+            )
+          }
+        }
+
+        // Configure Sonarr if enabled
+        const sonarrConfig = this.config.apps.find((a) => a.id === "sonarr" && a.enabled)
+        if (sonarrConfig) {
+          const sonarrApiKey = this.env["API_KEY_SONARR"]
+          if (sonarrApiKey) {
+            const sonarrDef = getApp("sonarr")
+            const sonarrPort = sonarrConfig.port || sonarrDef?.defaultPort || 8989
+            await client.configureSonarr(
+              "sonarr",
+              sonarrPort,
+              sonarrApiKey,
+              sonarrDef?.rootFolder?.path || "/data/media/tv"
+            )
+          }
+        }
+
+        this.updateStep("Jellyseerr", "success", "Configured with Jellyfin")
+      } else {
+        // Plex requires token-based auth - mark as needing manual setup
+        this.updateStep("Jellyseerr", "skipped", "Plex requires manual setup")
+      }
+    } catch (e) {
+      this.updateStep("Jellyseerr", "error", `${e}`)
     }
     this.refreshContent()
   }

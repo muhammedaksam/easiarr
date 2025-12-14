@@ -66,13 +66,34 @@ export interface SystemInfo {
   StartupWizardCompleted: boolean
 }
 
+// ==========================================
+// User Types
+// ==========================================
+
+export interface UserPolicy {
+  IsAdministrator: boolean
+  IsHidden: boolean
+  IsDisabled: boolean
+  EnableRemoteAccess: boolean
+  AuthenticationProviderId?: string
+  PasswordResetProviderId?: string
+  [key: string]: unknown // Allow other properties
+}
+
+export interface UserDto {
+  Id: string
+  Name?: string
+  ServerId?: string
+  HasPassword: boolean
+  LastLoginDate?: string
+  Policy?: UserPolicy
+  [key: string]: unknown // Allow other properties
+}
+
 export interface AuthResult {
   AccessToken: string
   ServerId: string
-  User: {
-    Id: string
-    Name: string
-  }
+  User: UserDto
 }
 
 // ==========================================
@@ -80,6 +101,27 @@ export interface AuthResult {
 // ==========================================
 
 export class JellyfinClient {
+  // ==========================================
+  // User Management
+  // ==========================================
+
+  /**
+   * Get a user's details
+   */
+  async getUser(userId: string): Promise<UserDto> {
+    return this.request<UserDto>(`/Users/${userId}`)
+  }
+
+  /**
+   * Update a user's policy (permissions)
+   */
+  async updateUserPolicy(userId: string, policy: Partial<UserPolicy>): Promise<void> {
+    await this.request(`/Users/${userId}/Policy`, {
+      method: "POST",
+      body: JSON.stringify(policy),
+    })
+  }
+
   private baseUrl: string
   private accessToken?: string
 
