@@ -17,7 +17,7 @@ export interface StartupConfiguration {
 
 export interface StartupUser {
   Name: string
-  Pw: string
+  Password: string
 }
 
 export interface StartupRemoteAccess {
@@ -169,7 +169,7 @@ export class JellyfinClient {
     await this.getFirstUser()
 
     // Then update with our credentials
-    const user: StartupUser = { Name: name, Pw: password }
+    const user: StartupUser = { Name: name, Password: password }
     await this.request("/Startup/User", {
       method: "POST",
       body: JSON.stringify(user),
