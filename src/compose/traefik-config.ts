@@ -90,35 +90,49 @@ export async function saveTraefikConfig(config: EasiarrConfig): Promise<void> {
   const traefikConfigDir = join(config.rootDir, "config", "traefik")
   const letsencryptDir = join(traefikConfigDir, "letsencrypt")
 
-  // Create directories if they don't exist
-  if (!existsSync(traefikConfigDir)) {
-    await mkdir(traefikConfigDir, { recursive: true })
-  }
-  if (!existsSync(letsencryptDir)) {
-    await mkdir(letsencryptDir, { recursive: true })
-  }
+  try {
+    // Create directories if they don't exist
+    if (!existsSync(traefikConfigDir)) {
+      await mkdir(traefikConfigDir, { recursive: true })
+    }
+    if (!existsSync(letsencryptDir)) {
+      await mkdir(letsencryptDir, { recursive: true })
+    }
 
-  // Generate and save static config (traefik.yml)
-  const staticConfig = generateTraefikStaticConfig()
-  const staticPath = join(traefikConfigDir, "traefik.yml")
+    // Generate and save static config (traefik.yml)
+    const staticConfig = generateTraefikStaticConfig()
+    const staticPath = join(traefikConfigDir, "traefik.yml")
 
-  // Only write if file doesn't exist (don't overwrite user customizations)
-  if (!existsSync(staticPath)) {
-    await writeFile(staticPath, staticConfig, "utf-8")
-  }
+    // Only write if file doesn't exist (don't overwrite user customizations)
+    if (!existsSync(staticPath)) {
+      await writeFile(staticPath, staticConfig, "utf-8")
+    }
 
-  // Generate and save dynamic config (dynamic.yml)
-  const dynamicConfig = generateTraefikDynamicConfig(config.traefik?.middlewares ?? [])
-  const dynamicPath = join(traefikConfigDir, "dynamic.yml")
+    // Generate and save dynamic config (dynamic.yml)
+    const dynamicConfig = generateTraefikDynamicConfig(config.traefik?.middlewares ?? [])
+    const dynamicPath = join(traefikConfigDir, "dynamic.yml")
 
-  // Only write if file doesn't exist (don't overwrite user customizations)
-  if (!existsSync(dynamicPath)) {
-    await writeFile(dynamicPath, dynamicConfig, "utf-8")
-  }
+    // Only write if file doesn't exist (don't overwrite user customizations)
+    if (!existsSync(dynamicPath)) {
+      await writeFile(dynamicPath, dynamicConfig, "utf-8")
+    }
 
-  // Create acme.json with correct permissions if it doesn't exist
-  const acmePath = join(letsencryptDir, "acme.json")
-  if (!existsSync(acmePath)) {
-    await writeFile(acmePath, "{}", { mode: 0o600 })
+    // Create acme.json with correct permissions if it doesn't exist
+    const acmePath = join(letsencryptDir, "acme.json")
+    if (!existsSync(acmePath)) {
+      await writeFile(acmePath, "{}", { mode: 0o600 })
+    }
+  } catch (error) {
+    // Permission denied - directory owned by root from Docker
+    // User needs to manually create configs or fix permissions
+    const err = error as NodeJS.ErrnoException
+    if (err.code === "EACCES") {
+      console.warn(
+        `[WARN] Cannot write Traefik config files (permission denied). ` +
+          `Fix with: sudo chown -R $(id -u):$(id -g) ${traefikConfigDir}`
+      )
+    } else {
+      throw error
+    }
   }
 }
