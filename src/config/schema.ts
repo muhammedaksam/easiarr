@@ -120,7 +120,7 @@ export type AppId =
   | "guacamole"
   | "guacd"
   | "ddns-updater"
-  | "easiarr-status"
+  | "easiarr"
   // VPN
   | "gluetun"
   // Monitoring & Infra

@@ -9,6 +9,7 @@ import type { App } from "../App"
 import type { EasiarrConfig } from "../../config/schema"
 import { createPageLayout } from "../components/PageLayout"
 import { saveCompose } from "../../compose"
+import { saveBookmarks } from "../../config/bookmarks-generator"
 import { ApiKeyViewer } from "./ApiKeyViewer"
 import { AppConfigurator } from "./AppConfigurator"
 import { TRaSHProfileSetup } from "./TRaSHProfileSetup"
@@ -138,6 +139,14 @@ export class MainMenu {
         action: () => this.showScreen(JellyseerrSetup),
       })
     }
+
+    items.push({
+      name: "📑 Generate Bookmarks",
+      description: "Create browser-importable bookmarks file",
+      action: async () => {
+        await saveBookmarks(this.config)
+      },
+    })
 
     items.push({
       name: "❌ Exit",

@@ -583,17 +583,20 @@ export const APPS: Record<AppId, AppDefinition> = {
     volumes: (root) => [`${root}/config/ddns-updater:/data`],
   },
 
-  "easiarr-status": {
-    id: "easiarr-status",
-    name: "Easiarr Status",
-    description: "Exposes Easiarr version for Homepage dashboard",
+  easiarr: {
+    id: "easiarr",
+    name: "Easiarr",
+    description: "Exposes Easiarr config and bookmarks for Homepage dashboard",
     category: "utility",
     defaultPort: 3010,
     internalPort: 8080,
     image: "halverneus/static-file-server:latest",
     puid: 0,
     pgid: 0,
-    volumes: () => ["${HOME}/.easiarr/config.json:/web/config.json:ro"],
+    volumes: () => [
+      "${HOME}/.easiarr/config.json:/web/config.json:ro",
+      "${HOME}/.easiarr/bookmarks.html:/web/bookmarks.html:ro",
+    ],
     environment: {
       FOLDER: "/web",
       CORS: "true",
@@ -602,7 +605,7 @@ export const APPS: Record<AppId, AppDefinition> = {
       icon: "mdi-docker",
       widget: "customapi",
       widgetFields: {
-        url: "http://easiarr-status:8080/config.json",
+        url: "http://easiarr:8080/config.json",
         mappings: JSON.stringify([{ field: "version", label: "Installed" }]),
       },
     },
