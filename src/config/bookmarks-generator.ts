@@ -111,17 +111,39 @@ export function generateBookmarksHtml(config: EasiarrConfig, useLocalUrls = fals
 
 /**
  * Get the path to the bookmarks file
+ * @param type - 'local' for local URLs, 'remote' for Traefik URLs
  */
-export function getBookmarksPath(): string {
-  return join(homedir(), ".easiarr", "bookmarks.html")
+export function getBookmarksPath(type: "local" | "remote" = "local"): string {
+  const filename = type === "remote" ? "bookmarks-remote.html" : "bookmarks-local.html"
+  return join(homedir(), ".easiarr", filename)
 }
 
 /**
  * Save bookmarks HTML file
+ * @param type - 'local' for local URLs, 'remote' for Traefik URLs
  */
-export async function saveBookmarks(config: EasiarrConfig, useLocalUrls = false): Promise<string> {
+export async function saveBookmarks(config: EasiarrConfig, type: "local" | "remote" = "local"): Promise<string> {
+  const useLocalUrls = type === "local"
   const html = generateBookmarksHtml(config, useLocalUrls)
-  const path = getBookmarksPath()
+  const path = getBookmarksPath(type)
   await writeFile(path, html, "utf-8")
   return path
+}
+
+/**
+ * Save all bookmarks files
+ * Always saves local bookmarks, and remote bookmarks only if Traefik is enabled
+ */
+export async function saveAllBookmarks(config: EasiarrConfig): Promise<string[]> {
+  const paths: string[] = []
+
+  // Always save local bookmarks
+  paths.push(await saveBookmarks(config, "local"))
+
+  // Save remote bookmarks only if Traefik is enabled with a domain
+  if (config.traefik?.enabled && config.traefik.domain) {
+    paths.push(await saveBookmarks(config, "remote"))
+  }
+
+  return paths
 }
