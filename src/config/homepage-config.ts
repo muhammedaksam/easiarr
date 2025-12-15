@@ -128,6 +128,11 @@ export async function generateServicesYaml(config: EasiarrConfig): Promise<strin
           if (password) service.widget.password = password
         }
 
+        // Traefik widget needs the dashboard/API port (8083), not the proxy port (80)
+        if (appDef.id === "traefik") {
+          service.widget.url = `http://${localIp}:8083`
+        }
+
         if (appDef.id === "portainer") {
           // Try to auto-detect Portainer environment ID
           // User can override with PORTAINER_ENV in .env file
