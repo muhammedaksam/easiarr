@@ -341,8 +341,11 @@ export async function setupCloudflaredTunnel(
   apiToken: string,
   domain: string,
   tunnelName = "easiarr"
-): Promise<{ tunnelToken: string; tunnelId: string }> {
+): Promise<{ tunnelToken: string; tunnelId: string; accountId: string }> {
   const api = new CloudflareApi(apiToken)
+
+  // Get account ID first (needed for Homepage widget)
+  const accountId = await api.getAccountId()
 
   // 1. Check if tunnel already exists
   let tunnel = await api.getTunnelByName(tunnelName)
@@ -374,5 +377,6 @@ export async function setupCloudflaredTunnel(
   return {
     tunnelToken,
     tunnelId: tunnel.id,
+    accountId,
   }
 }

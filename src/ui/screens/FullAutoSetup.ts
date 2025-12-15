@@ -785,10 +785,16 @@ export class FullAutoSetup extends BoxRenderable {
       // Create/update tunnel
       const result = await setupCloudflaredTunnel(apiToken, domain, "easiarr")
 
-      // Save tunnel token to .env
+      // Save tunnel token and IDs to .env (IDs needed for Homepage widget)
       await updateEnv({
         CLOUDFLARE_TUNNEL_TOKEN: result.tunnelToken,
+        CLOUDFLARE_TUNNEL_ID: result.tunnelId,
+        CLOUDFLARE_ACCOUNT_ID: result.accountId,
         CLOUDFLARE_DNS_ZONE: domain,
+      })
+      Object.assign(this.env, {
+        CLOUDFLARE_TUNNEL_ID: result.tunnelId,
+        CLOUDFLARE_ACCOUNT_ID: result.accountId,
       })
 
       // Update config

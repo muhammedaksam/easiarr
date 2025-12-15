@@ -648,6 +648,8 @@ export class CloudflaredSetup extends BoxRenderable {
       await updateEnv({
         CLOUDFLARE_API_TOKEN: this.apiToken,
         CLOUDFLARE_TUNNEL_TOKEN: result.tunnelToken,
+        CLOUDFLARE_TUNNEL_ID: result.tunnelId,
+        CLOUDFLARE_ACCOUNT_ID: result.accountId,
         CLOUDFLARE_DNS_ZONE: this.domain,
       })
 
