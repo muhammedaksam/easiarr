@@ -6,7 +6,7 @@
 import { writeFile, mkdir } from "node:fs/promises"
 import { existsSync } from "node:fs"
 import { join } from "node:path"
-import { createHash } from "node:crypto"
+import { hashSync } from "bcrypt"
 import type { EasiarrConfig } from "../config/schema"
 import { debugLog } from "../utils/debug"
 
@@ -98,11 +98,15 @@ http:
 
 /**
  * Generate htpasswd-compatible hash for basic auth
- * Uses SHA1 hash in htpasswd format: {SHA}base64(sha1(password))
+ * Uses bcrypt for secure password hashing (Traefik supports bcrypt format)
+ * Format: $2b$... (bcrypt hash compatible with htpasswd)
  */
 function generateHtpasswdHash(password: string): string {
-  const sha1Hash = createHash("sha1").update(password).digest("base64")
-  return `{SHA}${sha1Hash}`
+  // Use bcrypt with cost factor 10 (standard security level)
+  const hash = hashSync(password, 10)
+  // Traefik expects bcrypt hashes with $2y$ prefix (PHP-compatible)
+  // Node's bcrypt uses $2b$, which Traefik also accepts
+  return hash
 }
 
 /**

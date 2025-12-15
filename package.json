@@ -52,6 +52,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
+    "@types/bcrypt": "^6.0.0",
     "@types/bun": "latest",
     "@types/jest": "^30.0.0",
     "@types/node": "^25.0.0",
@@ -67,6 +68,7 @@
   },
   "dependencies": {
     "@opentui/core": "^0.1.60",
+    "bcrypt": "^6.0.0",
     "yaml": "^2.8.2"
   },
   "engines": {
