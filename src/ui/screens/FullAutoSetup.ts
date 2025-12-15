@@ -16,6 +16,7 @@ import { JellyseerrClient } from "../../api/jellyseerr-api"
 import { CloudflareApi, setupCloudflaredTunnel } from "../../api/cloudflare-api"
 import { PlexApiClient } from "../../api/plex-api"
 import { UptimeKumaClient } from "../../api/uptime-kuma-api"
+import { GrafanaClient } from "../../api/grafana-api"
 import { saveConfig } from "../../config"
 import { saveCompose } from "../../compose"
 import { getApp } from "../../apps/registry"
@@ -93,6 +94,7 @@ export class FullAutoSetup extends BoxRenderable {
       { name: "Jellyseerr", status: "pending" },
       { name: "Plex", status: "pending" },
       { name: "Uptime Kuma", status: "pending" },
+      { name: "Grafana", status: "pending" },
       { name: "Cloudflare Tunnel", status: "pending" },
     ]
   }
@@ -154,7 +156,10 @@ export class FullAutoSetup extends BoxRenderable {
     // Step 10: Uptime Kuma
     await this.setupUptimeKuma()
 
-    // Step 11: Cloudflare Tunnel
+    // Step 11: Grafana
+    await this.setupGrafana()
+
+    // Step 12: Cloudflare Tunnel
     await this.setupCloudflare()
 
     this.isRunning = false
@@ -718,6 +723,53 @@ export class FullAutoSetup extends BoxRenderable {
       }
     } catch (e) {
       this.updateStep("Uptime Kuma", "error", `${e}`)
+    }
+    this.refreshContent()
+  }
+
+  private async setupGrafana(): Promise<void> {
+    this.updateStep("Grafana", "running")
+    this.refreshContent()
+
+    const grafanaConfig = this.config.apps.find((a) => a.id === "grafana" && a.enabled)
+    if (!grafanaConfig) {
+      this.updateStep("Grafana", "skipped", "Not enabled")
+      this.refreshContent()
+      return
+    }
+
+    try {
+      const port = grafanaConfig.port || 3001
+      const client = new GrafanaClient("localhost", port)
+
+      // Check if reachable
+      const healthy = await client.isHealthy()
+      if (!healthy) {
+        this.updateStep("Grafana", "skipped", "Not reachable yet")
+        this.refreshContent()
+        return
+      }
+
+      // Run auto-setup
+      const result = await client.setup({
+        username: this.globalUsername,
+        password: this.globalPassword,
+        env: this.env,
+      })
+
+      if (result.success) {
+        // Save any env updates (e.g., API key)
+        if (result.envUpdates) {
+          await updateEnv(result.envUpdates)
+          // Update local env cache
+          Object.assign(this.env, result.envUpdates)
+        }
+        this.updateStep("Grafana", "success", result.message)
+      } else {
+        this.updateStep("Grafana", "skipped", result.message)
+      }
+    } catch (e) {
+      this.updateStep("Grafana", "error", `${e}`)
     }
     this.refreshContent()
   }
