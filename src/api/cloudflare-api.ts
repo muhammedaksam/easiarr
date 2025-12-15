@@ -2,6 +2,8 @@
  * Cloudflare API client for tunnel and DNS management
  */
 
+import { debugLog } from "../utils/debug"
+
 const CLOUDFLARE_API_BASE = "https://api.cloudflare.com/client/v4"
 
 interface CloudflareResponse<T> {
@@ -49,9 +51,15 @@ export class CloudflareApi {
 
   constructor(apiToken: string) {
     this.apiToken = apiToken
+    debugLog("CloudflareAPI", "Client initialized")
   }
 
   private async request<T>(method: string, endpoint: string, body?: unknown): Promise<CloudflareResponse<T>> {
+    debugLog("CloudflareAPI", `${method} ${endpoint}`)
+    if (body) {
+      debugLog("CloudflareAPI", `Request body: ${JSON.stringify(body)}`)
+    }
+
     const response = await fetch(`${CLOUDFLARE_API_BASE}${endpoint}`, {
       method,
       headers: {
@@ -65,9 +73,11 @@ export class CloudflareApi {
 
     if (!data.success) {
       const errors = data.errors.map((e) => e.message).join(", ")
+      debugLog("CloudflareAPI", `Error: ${errors}`)
       throw new Error(`Cloudflare API error: ${errors}`)
     }
 
+    debugLog("CloudflareAPI", `Response success: ${data.success}`)
     return data
   }
 

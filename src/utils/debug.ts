@@ -32,13 +32,28 @@ export function initDebug(): void {
 }
 
 /**
+ * Sanitize sensitive fields from log messages
+ * Redacts passwords, tokens, API keys, secrets, and credentials
+ */
+export function sanitizeMessage(message: string): string {
+  // Match common sensitive field names in JSON format
+  // Covers: passwords, tokens, API keys, secrets, credentials, auth data
+  return message.replace(
+    /"(password|passwordConfirmation|Password|Pw|passwd|pass|apiKey|api_key|ApiKey|API_KEY|token|accessToken|access_token|refreshToken|refresh_token|bearerToken|jwtToken|jwt|secret|secretKey|secret_key|privateKey|private_key|credential|auth|authorization|authToken|client_secret|clientSecret|WIREGUARD_PRIVATE_KEY|TUNNEL_TOKEN|USERNAME_VPN|PASSWORD_VPN)":\s*"[^"]*"/gi,
+    '"$1":"[REDACTED]"'
+  )
+}
+
+/**
  * Log a debug message to debug.log file if debug mode is enabled
+ * Automatically sanitizes sensitive data (passwords, tokens, etc.)
  */
 export function debugLog(category: string, message: string): void {
   if (!DEBUG_ENABLED) return
 
   const timestamp = new Date().toISOString()
-  const line = `[${timestamp}] [${category}] ${message}\n`
+  const sanitizedMessage = sanitizeMessage(message)
+  const line = `[${timestamp}] [${category}] ${sanitizedMessage}\n`
   try {
     appendFileSync(logFile, line)
   } catch {

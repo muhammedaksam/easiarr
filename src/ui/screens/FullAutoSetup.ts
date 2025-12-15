@@ -7,6 +7,7 @@ import { BoxRenderable, CliRenderer, TextRenderable, KeyEvent } from "@opentui/c
 import { createPageLayout } from "../components/PageLayout"
 import type { EasiarrConfig } from "../../config/schema"
 import { ArrApiClient, type AddRootFolderOptions } from "../../api/arr-api"
+import { BazarrApiClient } from "../../api/bazarr-api"
 import { ProwlarrClient, type ArrAppType } from "../../api/prowlarr-api"
 import { QBittorrentClient, type QBittorrentCategory } from "../../api/qbittorrent-api"
 import { PortainerApiClient } from "../../api/portainer-api"
@@ -201,6 +202,7 @@ export class FullAutoSetup extends BoxRenderable {
     }
 
     try {
+      // Setup *arr apps (Radarr, Sonarr, Lidarr, etc.) with form auth
       const arrApps = this.config.apps.filter((a) => {
         const def = getApp(a.id)
         return a.enabled && (def?.rootFolder || a.id === "prowlarr")
@@ -221,6 +223,56 @@ export class FullAutoSetup extends BoxRenderable {
           await client.updateHostConfig(this.globalUsername, this.globalPassword, false)
         } catch {
           // Skip individual failures
+        }
+      }
+
+      // Setup Bazarr form authentication and Radarr/Sonarr connections
+      const bazarrConfig = this.config.apps.find((a) => a.id === "bazarr" && a.enabled)
+      if (bazarrConfig) {
+        const bazarrApiKey = this.env["API_KEY_BAZARR"]
+        if (bazarrApiKey) {
+          const bazarrDef = getApp("bazarr")
+          const bazarrPort = bazarrConfig.port || bazarrDef?.defaultPort || 6767
+          const bazarrClient = new BazarrApiClient("localhost", bazarrPort)
+          bazarrClient.setApiKey(bazarrApiKey)
+
+          try {
+            // Enable form auth
+            await bazarrClient.enableFormAuth(this.globalUsername, this.globalPassword, false)
+          } catch {
+            // Skip Bazarr auth failure - non-critical
+            debugLog("FullAutoSetup", "Bazarr form auth failed, continuing...")
+          }
+
+          // Configure Radarr connection if Radarr is enabled
+          // Use container name 'radarr' since Bazarr runs in Docker
+          const radarrConfig = this.config.apps.find((a) => a.id === "radarr" && a.enabled)
+          const radarrApiKey = this.env["API_KEY_RADARR"]
+          if (radarrConfig && radarrApiKey) {
+            try {
+              const radarrDef = getApp("radarr")
+              const radarrPort = radarrConfig.port || radarrDef?.defaultPort || 7878
+              await bazarrClient.configureRadarr("radarr", radarrPort, radarrApiKey)
+              debugLog("FullAutoSetup", "Bazarr -> Radarr connection configured")
+            } catch {
+              debugLog("FullAutoSetup", "Failed to configure Bazarr -> Radarr connection")
+            }
+          }
+
+          // Configure Sonarr connection if Sonarr is enabled
+          // Use container name 'sonarr' since Bazarr runs in Docker
+          const sonarrConfig = this.config.apps.find((a) => a.id === "sonarr" && a.enabled)
+          const sonarrApiKey = this.env["API_KEY_SONARR"]
+          if (sonarrConfig && sonarrApiKey) {
+            try {
+              const sonarrDef = getApp("sonarr")
+              const sonarrPort = sonarrConfig.port || sonarrDef?.defaultPort || 8989
+              await bazarrClient.configureSonarr("sonarr", sonarrPort, sonarrApiKey)
+              debugLog("FullAutoSetup", "Bazarr -> Sonarr connection configured")
+            } catch {
+              debugLog("FullAutoSetup", "Failed to configure Bazarr -> Sonarr connection")
+            }
+          }
         }
       }
 

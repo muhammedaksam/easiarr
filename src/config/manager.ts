@@ -11,6 +11,7 @@ import type { EasiarrConfig } from "./schema"
 import { DEFAULT_CONFIG } from "./schema"
 import { detectTimezone, detectUid, detectGid } from "./defaults"
 import { VersionInfo } from "../VersionInfo"
+import { debugLog } from "../utils/debug"
 
 const CONFIG_DIR_NAME = ".easiarr"
 const CONFIG_FILE_NAME = "config.json"
@@ -71,17 +72,21 @@ function migrateConfig(oldConfig: Partial<EasiarrConfig>): EasiarrConfig {
 
 export async function loadConfig(): Promise<EasiarrConfig | null> {
   const configPath = getConfigPath()
+  debugLog("Config", `Loading config from ${configPath}`)
 
   if (!existsSync(configPath)) {
+    debugLog("Config", "Config file not found")
     return null
   }
 
   try {
     const content = await readFile(configPath, "utf-8")
     let config = JSON.parse(content) as EasiarrConfig
+    debugLog("Config", `Loaded config version ${config.version}`)
 
     // Auto-migrate if version differs from current package version
     if (config.version !== VersionInfo.version) {
+      debugLog("Config", `Migrating config from ${config.version} to ${VersionInfo.version}`)
       config = migrateConfig(config)
       // Save migrated config (creates backup first)
       await saveConfig(config)
@@ -89,6 +94,7 @@ export async function loadConfig(): Promise<EasiarrConfig | null> {
 
     return config
   } catch (error) {
+    debugLog("Config", `Failed to load config: ${error}`)
     console.error("Failed to load config:", error)
     return null
   }
@@ -98,6 +104,7 @@ export async function saveConfig(config: EasiarrConfig): Promise<void> {
   await ensureConfigDir()
 
   const configPath = getConfigPath()
+  debugLog("Config", `Saving config to ${configPath}`)
 
   // Create backup if config already exists
   if (existsSync(configPath)) {
@@ -108,6 +115,7 @@ export async function saveConfig(config: EasiarrConfig): Promise<void> {
   config.updatedAt = new Date().toISOString()
 
   await writeFile(configPath, JSON.stringify(config, null, 2), "utf-8")
+  debugLog("Config", `Config saved (${config.apps.length} apps)`)
 }
 
 export async function backupConfig(): Promise<void> {
@@ -122,6 +130,7 @@ export async function backupConfig(): Promise<void> {
   const backupPath = join(backupDir, `config-${timestamp}.json`)
 
   await copyFile(configPath, backupPath)
+  debugLog("Config", `Backup created: ${backupPath}`)
 }
 
 export function createDefaultConfig(rootDir: string): EasiarrConfig {

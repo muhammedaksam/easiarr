@@ -10,7 +10,7 @@
 
 > ⚠️ **Work In Progress** - This project is in early experimental development. Features may be incomplete, unstable, or change without notice.
 
-TUI tool for generating docker-compose files for the \*arr media ecosystem with 41 apps, TRaSH Guides best practices, VPN routing, and Traefik reverse proxy support.
+TUI tool for generating docker-compose files for the \*arr media ecosystem with 47 apps, TRaSH Guides best practices, VPN routing, and Traefik reverse proxy support.
 
 A terminal-based wizard that helps you set up Radarr, Sonarr, Prowlarr, and other \*arr applications with Docker Compose, following best practices from [TRaSH Guides](https://trash-guides.info/).
 
@@ -52,7 +52,7 @@ bun run start
 - [Bun](https://bun.sh/) >= 1.0
 - [Docker](https://www.docker.com/) with Docker Compose v2
 
-## Supported Applications (41 apps across 10 categories)
+## Supported Applications (47 apps across 10 categories)
 
 ### Media Management (Servarr)
 

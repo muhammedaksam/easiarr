@@ -10,6 +10,7 @@ import { getApp } from "../apps/registry"
 import { generateServiceYaml } from "./templates"
 import { updateEnv, getLocalIp } from "../utils/env"
 import { saveTraefikConfig } from "./traefik-config"
+import { debugLog } from "../utils/debug"
 
 export interface ComposeService {
   image: string
@@ -31,6 +32,7 @@ export interface ComposeFile {
 }
 
 export function generateCompose(config: EasiarrConfig): string {
+  debugLog("ComposeGenerator", `Generating compose for ${config.apps.filter((a) => a.enabled).length} enabled apps`)
   const services: Record<string, ComposeService> = {}
 
   // Track ports to move to Gluetun
@@ -45,6 +47,7 @@ export function generateCompose(config: EasiarrConfig): string {
     const appDef = getApp(appConfig.id)
     if (!appDef) continue
 
+    debugLog("ComposeGenerator", `Building service: ${appConfig.id}`)
     const service = buildService(appDef, appConfig, config)
     services[appConfig.id] = service
   }
