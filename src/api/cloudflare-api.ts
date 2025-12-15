@@ -367,16 +367,60 @@ export class CloudflareApi {
   }
 
   /**
-   * Create Access application with email policy
+   * Create bypass policy for an Access app (e.g., for home IP)
+   */
+  async createBypassPolicy(appId: string, bypassIp: string, policyName = "Bypass Home IP"): Promise<{ id: string }> {
+    const accountId = await this.getAccountId()
+
+    // Check if policy already exists
+    const existing = await this.request<Array<{ id: string; name: string }>>(
+      "GET",
+      `/accounts/${accountId}/access/apps/${appId}/policies`
+    )
+
+    const existingPolicy = existing.result.find((p) => p.name === policyName)
+    if (existingPolicy) {
+      return { id: existingPolicy.id }
+    }
+
+    // Create IP-based bypass policy
+    const response = await this.request<{ id: string }>(
+      "POST",
+      `/accounts/${accountId}/access/apps/${appId}/policies`,
+      {
+        name: policyName,
+        decision: "bypass",
+        include: [
+          {
+            ip: { ip: bypassIp },
+          },
+        ],
+        precedence: existing.result.length + 1,
+      }
+    )
+
+    return response.result
+  }
+
+  /**
+   * Create Access application with email policy and optional IP bypass
    */
   async setupAccessProtection(
     domain: string,
     allowedEmails: string[],
-    appName = "easiarr"
-  ): Promise<{ appId: string; policyId: string }> {
+    appName = "easiarr",
+    bypassIp?: string
+  ): Promise<{ appId: string; policyId: string; bypassPolicyId?: string }> {
     const app = await this.createAccessApplication(domain, appName)
     const policy = await this.createAccessPolicy(app.id, allowedEmails)
-    return { appId: app.id, policyId: policy.id }
+
+    let bypassPolicyId: string | undefined
+    if (bypassIp) {
+      const bypassPolicy = await this.createBypassPolicy(app.id, bypassIp, "easiarr-bypass-home-ip")
+      bypassPolicyId = bypassPolicy.id
+    }
+
+    return { appId: app.id, policyId: policy.id, bypassPolicyId }
   }
 
   // ==================== WARP Device Enrollment API ====================

@@ -833,10 +833,37 @@ export class CloudflaredSetup extends BoxRenderable {
         this.renderContent()
 
         const api = new CloudflareApi(this.apiToken)
-        await api.setupAccessProtection(this.domain, [this.accessEmail.trim()], "easiarr")
+
+        // Auto-detect public IP for bypass policy
+        let publicIp: string | undefined
+        try {
+          // Try Cloudflare trace (most reliable)
+          const res = await fetch("https://1.1.1.1/cdn-cgi/trace")
+          const text = await res.text()
+          const match = text.match(/ip=(.+)/)
+          if (match && match[1]) {
+            publicIp = `${match[1].trim()}/32`
+          } else {
+            // Fallback to ifconfig.me
+            const res2 = await fetch("https://ifconfig.me/ip")
+            const ip = await res2.text()
+            if (ip.trim()) {
+              publicIp = `${ip.trim()}/32`
+            }
+          }
+        } catch {
+          // Ignore - IP bypass is optional
+        }
+
+        await api.setupAccessProtection(this.domain, [this.accessEmail.trim()], "easiarr", publicIp)
 
         this.statusMessages.pop()
-        this.statusMessages.push(`✓ Cloudflare Access created for: ${this.accessEmail}`)
+        if (publicIp) {
+          this.statusMessages.push(`✓ Cloudflare Access created for: ${this.accessEmail}`)
+          this.statusMessages.push(`✓ Bypass policy added for home IP: ${publicIp}`)
+        } else {
+          this.statusMessages.push(`✓ Cloudflare Access created for: ${this.accessEmail}`)
+        }
         this.renderContent()
       } else {
         // No Cloudflare Access - enable basic auth with global credentials
