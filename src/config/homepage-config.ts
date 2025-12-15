@@ -56,7 +56,11 @@ export async function generateServicesYaml(config: EasiarrConfig): Promise<strin
     if (appDef.id === "homepage") continue
 
     const port = appConfig.port ?? appDef.defaultPort
+    const internalPort = appDef.internalPort ?? port
+    // External URL for user browser access (href, ping)
     const baseUrl = `http://${localIp}:${port}`
+    // Internal Docker URL for container-to-container API calls (widgets)
+    const dockerUrl = `http://${appDef.id}:${internalPort}`
 
     const service: HomepageService = {
       href: baseUrl,
@@ -103,7 +107,7 @@ export async function generateServicesYaml(config: EasiarrConfig): Promise<strin
         if (headscaleKey) {
           service.widget = {
             type: widgetType,
-            url: baseUrl,
+            url: dockerUrl,
             key: headscaleKey,
           }
         }
@@ -113,7 +117,7 @@ export async function generateServicesYaml(config: EasiarrConfig): Promise<strin
       else if (apiKey || ["qbittorrent", "gluetun", "traefik"].includes(appDef.id)) {
         service.widget = {
           type: widgetType,
-          url: baseUrl,
+          url: dockerUrl,
         }
 
         if (apiKey) {
@@ -128,9 +132,9 @@ export async function generateServicesYaml(config: EasiarrConfig): Promise<strin
           if (password) service.widget.password = password
         }
 
-        // Traefik widget needs the dashboard/API port (8083), not the proxy port (80)
+        // Traefik widget needs the dashboard/API port (8080 internal)
         if (appDef.id === "traefik") {
-          service.widget.url = `http://${localIp}:8083`
+          service.widget.url = `http://traefik:8080`
         }
 
         if (appDef.id === "portainer") {
