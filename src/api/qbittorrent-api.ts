@@ -5,6 +5,7 @@
  */
 
 import { debugLog } from "../utils/debug"
+import type { IAutoSetupClient, AutoSetupOptions, AutoSetupResult } from "./auto-setup-types"
 
 export interface QBittorrentPreferences {
   save_path?: string
@@ -20,7 +21,7 @@ export interface QBittorrentCategory {
   savePath: string
 }
 
-export class QBittorrentClient {
+export class QBittorrentClient implements IAutoSetupClient {
   private baseUrl: string
   private username: string
   private password: string
@@ -221,5 +222,60 @@ export class QBittorrentClient {
       }
     }
     debugLog("qBittorrent", "TRaSH configuration complete")
+  }
+
+  /**
+   * Check if qBittorrent is reachable
+   */
+  async isHealthy(): Promise<boolean> {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/v2/app/version`)
+      return response.ok || response.status === 403 // 403 means running but not logged in
+    } catch {
+      return false
+    }
+  }
+
+  /**
+   * Check if already configured (can login)
+   */
+  async isInitialized(): Promise<boolean> {
+    // qBittorrent is always "initialized" - the question is whether we can login
+    return this.isConnected()
+  }
+
+  /**
+   * Run the auto-setup process for qBittorrent
+   */
+  async setup(options: AutoSetupOptions): Promise<AutoSetupResult> {
+    const { username, password } = options
+
+    try {
+      // Check if reachable
+      const healthy = await this.isHealthy()
+      if (!healthy) {
+        return { success: false, message: "qBittorrent not reachable" }
+      }
+
+      // Update credentials and try to login
+      this.username = username
+      this.password = password
+
+      const loggedIn = await this.login()
+      if (!loggedIn) {
+        return { success: false, message: "Login failed - check credentials" }
+      }
+
+      // Configure TRaSH-compliant settings
+      await this.configureTRaSHCompliant([], { user: username, pass: password })
+
+      return {
+        success: true,
+        message: "Configured with TRaSH-compliant settings",
+        data: { trashCompliant: true },
+      }
+    } catch (error) {
+      return { success: false, message: `${error}` }
+    }
   }
 }

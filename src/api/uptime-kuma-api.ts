@@ -329,7 +329,11 @@ export class UptimeKumaClient implements IAutoSetupClient {
       }
 
       this.disconnect()
-      return { success: true, message: initialized ? "Logged in" : "Admin created" }
+      return {
+        success: true,
+        message: initialized ? "Logged in" : "Admin created",
+        data: { adminCreated: !initialized },
+      }
     } catch (error) {
       this.disconnect()
       return { success: false, message: `${error}` }

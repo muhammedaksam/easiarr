@@ -30,7 +30,7 @@ interface HomepageService {
   ping?: string
   widget?: {
     type: string
-    url: string
+    url?: string // Optional - cloudflared doesn't need url
     key?: string
     [key: string]: unknown
   }
@@ -117,6 +117,20 @@ export async function generateServicesYaml(config: EasiarrConfig): Promise<strin
             await updateEnv({ PORTAINER_ENV: envIdStr })
           }
         }
+      }
+
+      // Cloudflared widget requires accountid, tunnelid, and API token
+      if (appDef.id === "cloudflared") {
+        const accountId = env["CLOUDFLARE_ACCOUNT_ID"]
+        const tunnelId = env["CLOUDFLARE_TUNNEL_ID"]
+        const apiToken = env["CLOUDFLARE_API_TOKEN"]
+
+        if (accountId) service.widget.accountid = accountId
+        if (tunnelId) service.widget.tunnelid = tunnelId
+        if (apiToken) service.widget.key = apiToken
+
+        // Remove url since cloudflared widget doesn't need it
+        delete service.widget.url
       }
 
       // Add any custom widget fields

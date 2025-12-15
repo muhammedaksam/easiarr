@@ -5,6 +5,7 @@
 
 import { debugLog } from "../utils/debug"
 import { ensureMinPasswordLength } from "../utils/password"
+import type { IAutoSetupClient, AutoSetupOptions, AutoSetupResult } from "./auto-setup-types"
 
 // Portainer requires minimum 12 character password
 export const PORTAINER_MIN_PASSWORD_LENGTH = 12
@@ -61,7 +62,7 @@ export interface PortainerApiKeyResponse {
 /**
  * Portainer API Client
  */
-export class PortainerApiClient {
+export class PortainerApiClient implements IAutoSetupClient {
   private baseUrl: string
   private jwtToken: string | null = null
   private apiKey: string | null = null
@@ -345,6 +346,83 @@ export class PortainerApiClient {
     return this.request<PortainerContainerStats>(
       `/endpoints/${endpointId}/docker/containers/${containerId}/stats?stream=false`
     )
+  }
+
+  /**
+   * Check if already configured (has admin user)
+   */
+  async isInitialized(): Promise<boolean> {
+    return !(await this.needsInitialization())
+  }
+
+  /**
+   * Run the auto-setup process for Portainer
+   */
+  async setup(options: AutoSetupOptions): Promise<AutoSetupResult> {
+    const { username, password } = options
+
+    try {
+      // Check if reachable
+      const healthy = await this.isHealthy()
+      if (!healthy) {
+        return { success: false, message: "Portainer not reachable" }
+      }
+
+      // Check if needs initialization
+      const needsInit = await this.needsInitialization()
+
+      let actualPassword = ensureMinPasswordLength(password, PORTAINER_MIN_PASSWORD_LENGTH)
+      let passwordPadded = actualPassword !== password
+      let apiKey: string | undefined
+
+      if (needsInit) {
+        // Initialize admin user
+        const result = await this.initializeAdmin(username, password)
+        if (result) {
+          actualPassword = result.actualPassword
+          passwordPadded = result.passwordWasPadded
+        }
+
+        // Generate API key
+        try {
+          apiKey = await this.generateApiKey(actualPassword)
+        } catch {
+          // API key generation may fail, that's OK
+        }
+      } else {
+        // Login with existing credentials
+        try {
+          await this.login(username, actualPassword)
+        } catch {
+          return { success: false, message: "Login failed - check credentials" }
+        }
+      }
+
+      // Get environment ID
+      const envId = await this.getLocalEnvironmentId()
+
+      return {
+        success: true,
+        message: needsInit
+          ? passwordPadded
+            ? `Admin created (password padded to ${PORTAINER_MIN_PASSWORD_LENGTH} chars)`
+            : "Admin created"
+          : "Logged in",
+        data: {
+          adminCreated: needsInit,
+          passwordPadded,
+          apiKey,
+          environmentId: envId,
+        },
+        envUpdates: {
+          ...(apiKey ? { API_KEY_PORTAINER: apiKey } : {}),
+          ...(envId ? { PORTAINER_ENV: String(envId) } : {}),
+          ...(passwordPadded ? { PASSWORD_PORTAINER: actualPassword } : {}),
+        },
+      }
+    } catch (error) {
+      return { success: false, message: `${error}` }
+    }
   }
 }
 

@@ -29,6 +29,8 @@ export interface AutoSetupResult {
   message?: string
   /** Data to persist (e.g., API keys, tokens) */
   envUpdates?: Record<string, string>
+  /** Additional result data (e.g., API keys, generated credentials) */
+  data?: Record<string, unknown>
 }
 
 /**
@@ -55,4 +57,6 @@ export interface AutoSetupOptions {
   password: string
   /** Environment variables available */
   env: Record<string, string>
+  /** Plex authentication token (for Plex-dependent services) */
+  plexToken?: string
 }
