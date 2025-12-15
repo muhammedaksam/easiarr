@@ -423,22 +423,26 @@ export class FullAutoSetup extends BoxRenderable {
       }
 
       const client = new QBittorrentClient(host, port, user, pass)
-      const loggedIn = await client.login()
 
-      if (!loggedIn) {
-        this.updateStep("qBittorrent", "error", "Login failed")
-        this.refreshContent()
-        return
+      const result = await client.setup({
+        username: user,
+        password: pass,
+        env: this.env,
+      })
+
+      if (result.success) {
+        // Configure categories after basic setup
+        const enabledApps = this.config.apps.filter((a) => a.enabled).map((a) => a.id)
+        const categories: QBittorrentCategory[] = getCategoriesForApps(enabledApps).map((cat) => ({
+          name: cat.name,
+          savePath: `/data/torrents/${cat.name}`,
+        }))
+
+        await client.configureTRaSHCompliant(categories, { user, pass })
+        this.updateStep("qBittorrent", "success", result.message)
+      } else {
+        this.updateStep("qBittorrent", "error", result.message)
       }
-
-      const enabledApps = this.config.apps.filter((a) => a.enabled).map((a) => a.id)
-      const categories: QBittorrentCategory[] = getCategoriesForApps(enabledApps).map((cat) => ({
-        name: cat.name,
-        savePath: `/data/torrents/${cat.name}`,
-      }))
-
-      await client.configureTRaSHCompliant(categories, { user, pass })
-      this.updateStep("qBittorrent", "success")
     } catch (e) {
       this.updateStep("qBittorrent", "error", `${e}`)
     }
@@ -466,48 +470,20 @@ export class FullAutoSetup extends BoxRenderable {
       const port = portainerConfig.port || 9000
       const client = new PortainerApiClient("localhost", port)
 
-      // Check if we can reach Portainer
-      const healthy = await client.isHealthy()
-      if (!healthy) {
-        this.updateStep("Portainer", "skipped", "Not reachable yet")
-        this.refreshContent()
-        return
-      }
+      const result = await client.setup({
+        username: this.globalUsername,
+        password: this.globalPassword,
+        env: this.env,
+      })
 
-      // Initialize admin user (auto-pads password if needed)
-      const result = await client.initializeAdmin(this.globalUsername, this.globalPassword)
-
-      if (result) {
-        // Generate API key and save to .env
-        const apiKey = await client.generateApiKey(result.actualPassword, "easiarr-api-key")
-
-        const envUpdates: Record<string, string> = {
-          API_KEY_PORTAINER: apiKey,
+      if (result.success) {
+        if (result.envUpdates) {
+          await updateEnv(result.envUpdates)
+          Object.assign(this.env, result.envUpdates)
         }
-
-        // Save password if it was padded (different from global)
-        if (result.passwordWasPadded) {
-          envUpdates.PASSWORD_PORTAINER = result.actualPassword
-        }
-
-        await updateEnv(envUpdates)
-        this.updateStep("Portainer", "success", "Admin + API key created")
+        this.updateStep("Portainer", "success", result.message)
       } else {
-        // Already initialized, try to login and get API key if we don't have one
-        if (!this.env["API_KEY_PORTAINER"]) {
-          try {
-            // Use saved Portainer password if available (may have been padded)
-            const portainerPassword = this.env["PASSWORD_PORTAINER"] || this.globalPassword
-            await client.login(this.globalUsername, portainerPassword)
-            const apiKey = await client.generateApiKey(portainerPassword, "easiarr-api-key")
-            await updateEnv({ API_KEY_PORTAINER: apiKey })
-            this.updateStep("Portainer", "success", "API key generated")
-          } catch {
-            this.updateStep("Portainer", "skipped", "Already initialized")
-          }
-        } else {
-          this.updateStep("Portainer", "skipped", "Already configured")
-        }
+        this.updateStep("Portainer", "skipped", result.message)
       }
     } catch (e) {
       this.updateStep("Portainer", "error", `${e}`)
@@ -530,25 +506,21 @@ export class FullAutoSetup extends BoxRenderable {
       const port = jellyfinConfig.port || 8096
       const client = new JellyfinClient("localhost", port)
 
-      // Check if reachable
-      const healthy = await client.isHealthy()
-      if (!healthy) {
-        this.updateStep("Jellyfin", "skipped", "Not reachable yet")
-        this.refreshContent()
-        return
-      }
+      const result = await client.setup({
+        username: this.globalUsername,
+        password: this.globalPassword,
+        env: this.env,
+      })
 
-      // Check if already set up
-      const isComplete = await client.isStartupComplete()
-      if (isComplete) {
-        this.updateStep("Jellyfin", "skipped", "Already configured")
-        this.refreshContent()
-        return
+      if (result.success) {
+        if (result.envUpdates) {
+          await updateEnv(result.envUpdates)
+          Object.assign(this.env, result.envUpdates)
+        }
+        this.updateStep("Jellyfin", "success", result.message)
+      } else {
+        this.updateStep("Jellyfin", "skipped", result.message)
       }
-
-      // Run setup wizard
-      await client.runSetupWizard(this.globalUsername, this.globalPassword)
-      this.updateStep("Jellyfin", "success", "Setup wizard completed")
     } catch (e) {
       this.updateStep("Jellyfin", "error", `${e}`)
     }
@@ -576,77 +548,63 @@ export class FullAutoSetup extends BoxRenderable {
       return
     }
 
+    // Jellyseerr only supports Jellyfin automation (Plex requires manual setup)
+    if (!jellyfinConfig) {
+      this.updateStep("Jellyseerr", "skipped", "Plex requires manual setup")
+      this.refreshContent()
+      return
+    }
+
     try {
       const port = jellyseerrConfig.port || 5055
       const client = new JellyseerrClient("localhost", port)
 
-      // Check if reachable
-      const healthy = await client.isHealthy()
-      if (!healthy) {
-        this.updateStep("Jellyseerr", "skipped", "Not reachable yet")
-        this.refreshContent()
-        return
-      }
+      const result = await client.setup({
+        username: this.globalUsername,
+        password: this.globalPassword,
+        env: this.env,
+      })
 
-      // Check if already initialized
-      const isInit = await client.isInitialized()
-      if (isInit) {
-        this.updateStep("Jellyseerr", "skipped", "Already configured")
-        this.refreshContent()
-        return
-      }
+      if (result.success) {
+        if (result.envUpdates) {
+          await updateEnv(result.envUpdates)
+          Object.assign(this.env, result.envUpdates)
+        }
 
-      // Configure with Jellyfin (primary support)
-      if (jellyfinConfig) {
-        const jellyfinDef = getApp("jellyfin")
-        // Use internal port for container-to-container communication
-        const internalPort = jellyfinDef?.internalPort || jellyfinDef?.defaultPort || 8096
-        const jellyfinHost = "jellyfin"
-
-        await client.runJellyfinSetup(
-          jellyfinHost,
-          internalPort,
-          this.globalUsername,
-          this.globalPassword,
-          `${this.globalUsername}@local`
-        )
-
-        // Configure Radarr if enabled
+        // Configure Radarr/Sonarr connections after base setup
         const radarrConfig = this.config.apps.find((a) => a.id === "radarr" && a.enabled)
-        if (radarrConfig) {
-          const radarrApiKey = this.env["API_KEY_RADARR"]
-          if (radarrApiKey) {
+        if (radarrConfig && this.env["API_KEY_RADARR"]) {
+          try {
             const radarrDef = getApp("radarr")
-            const radarrPort = radarrConfig.port || radarrDef?.defaultPort || 7878
             await client.configureRadarr(
               "radarr",
-              radarrPort,
-              radarrApiKey,
+              radarrConfig.port || radarrDef?.defaultPort || 7878,
+              this.env["API_KEY_RADARR"],
               radarrDef?.rootFolder?.path || "/data/media/movies"
             )
+          } catch {
+            /* Radarr config failed */
           }
         }
 
-        // Configure Sonarr if enabled
         const sonarrConfig = this.config.apps.find((a) => a.id === "sonarr" && a.enabled)
-        if (sonarrConfig) {
-          const sonarrApiKey = this.env["API_KEY_SONARR"]
-          if (sonarrApiKey) {
+        if (sonarrConfig && this.env["API_KEY_SONARR"]) {
+          try {
             const sonarrDef = getApp("sonarr")
-            const sonarrPort = sonarrConfig.port || sonarrDef?.defaultPort || 8989
             await client.configureSonarr(
               "sonarr",
-              sonarrPort,
-              sonarrApiKey,
+              sonarrConfig.port || sonarrDef?.defaultPort || 8989,
+              this.env["API_KEY_SONARR"],
               sonarrDef?.rootFolder?.path || "/data/media/tv"
             )
+          } catch {
+            /* Sonarr config failed */
           }
         }
 
-        this.updateStep("Jellyseerr", "success", "Configured with Jellyfin")
+        this.updateStep("Jellyseerr", "success", result.message)
       } else {
-        // Plex requires token-based auth - mark as needing manual setup
-        this.updateStep("Jellyseerr", "skipped", "Plex requires manual setup")
+        this.updateStep("Jellyseerr", "skipped", result.message)
       }
     } catch (e) {
       this.updateStep("Jellyseerr", "error", `${e}`)
