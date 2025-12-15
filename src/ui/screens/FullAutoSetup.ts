@@ -15,6 +15,7 @@ import { JellyfinClient } from "../../api/jellyfin-api"
 import { JellyseerrClient } from "../../api/jellyseerr-api"
 import { CloudflareApi, setupCloudflaredTunnel } from "../../api/cloudflare-api"
 import { PlexApiClient } from "../../api/plex-api"
+import { UptimeKumaClient } from "../../api/uptime-kuma-api"
 import { saveConfig } from "../../config"
 import { saveCompose } from "../../compose"
 import { getApp } from "../../apps/registry"
@@ -91,6 +92,7 @@ export class FullAutoSetup extends BoxRenderable {
       { name: "Jellyfin", status: "pending" },
       { name: "Jellyseerr", status: "pending" },
       { name: "Plex", status: "pending" },
+      { name: "Uptime Kuma", status: "pending" },
       { name: "Cloudflare Tunnel", status: "pending" },
     ]
   }
@@ -149,7 +151,10 @@ export class FullAutoSetup extends BoxRenderable {
     // Step 9: Plex
     await this.setupPlex()
 
-    // Step 10: Cloudflare Tunnel
+    // Step 10: Uptime Kuma
+    await this.setupUptimeKuma()
+
+    // Step 11: Cloudflare Tunnel
     await this.setupCloudflare()
 
     this.isRunning = false
@@ -657,6 +662,62 @@ export class FullAutoSetup extends BoxRenderable {
       }
     } catch (e) {
       this.updateStep("Plex", "error", `${e}`)
+    }
+    this.refreshContent()
+  }
+
+  private async setupUptimeKuma(): Promise<void> {
+    this.updateStep("Uptime Kuma", "running")
+    this.refreshContent()
+
+    const uptimeKumaConfig = this.config.apps.find((a) => a.id === "uptime-kuma" && a.enabled)
+    if (!uptimeKumaConfig) {
+      this.updateStep("Uptime Kuma", "skipped", "Not enabled")
+      this.refreshContent()
+      return
+    }
+
+    try {
+      const port = uptimeKumaConfig.port || 3001
+      const client = new UptimeKumaClient("localhost", port)
+
+      // Check if reachable
+      const healthy = await client.isHealthy()
+      if (!healthy) {
+        this.updateStep("Uptime Kuma", "skipped", "Not reachable yet")
+        this.refreshContent()
+        return
+      }
+
+      // Run auto-setup (creates admin or logs in)
+      const result = await client.setup({
+        username: this.globalUsername,
+        password: this.globalPassword,
+        env: this.env,
+      })
+
+      if (result.success) {
+        // Now add monitors for enabled apps
+        try {
+          // Re-login since setup disconnects
+          const loggedIn = await client.login(this.globalUsername, this.globalPassword)
+          if (loggedIn) {
+            const addedCount = await client.setupEasiarrMonitors(this.config.apps)
+            client.disconnect()
+            this.updateStep("Uptime Kuma", "success", `${result.message}, ${addedCount} monitors added`)
+          } else {
+            client.disconnect()
+            this.updateStep("Uptime Kuma", "success", result.message)
+          }
+        } catch {
+          client.disconnect()
+          this.updateStep("Uptime Kuma", "success", result.message)
+        }
+      } else {
+        this.updateStep("Uptime Kuma", "skipped", result.message)
+      }
+    } catch (e) {
+      this.updateStep("Uptime Kuma", "error", `${e}`)
     }
     this.refreshContent()
   }

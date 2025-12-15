@@ -69,6 +69,7 @@
   "dependencies": {
     "@opentui/core": "^0.1.60",
     "bcrypt": "^6.0.0",
+    "socket.io-client": "^4.8.1",
     "yaml": "^2.8.2"
   },
   "engines": {
