@@ -369,7 +369,11 @@ export class CloudflareApi {
   /**
    * Create bypass policy for an Access app (e.g., for home IP)
    */
-  async createBypassPolicy(appId: string, bypassIp: string, policyName = "Bypass Home IP"): Promise<{ id: string }> {
+  async createBypassPolicy(
+    appId: string,
+    bypassIp: string,
+    policyName = "easiarr-web-bypass"
+  ): Promise<{ id: string }> {
     const accountId = await this.getAccountId()
 
     // Check if policy already exists
@@ -412,11 +416,11 @@ export class CloudflareApi {
     bypassIp?: string
   ): Promise<{ appId: string; policyId: string; bypassPolicyId?: string }> {
     const app = await this.createAccessApplication(domain, appName)
-    const policy = await this.createAccessPolicy(app.id, allowedEmails)
+    const policy = await this.createAccessPolicy(app.id, allowedEmails, "easiarr-web-allow")
 
     let bypassPolicyId: string | undefined
     if (bypassIp) {
-      const bypassPolicy = await this.createBypassPolicy(app.id, bypassIp, "easiarr-bypass-home-ip")
+      const bypassPolicy = await this.createBypassPolicy(app.id, bypassIp, "easiarr-web-bypass")
       bypassPolicyId = bypassPolicy.id
     }
 
@@ -471,7 +475,7 @@ export class CloudflareApi {
     let bypassPolicyId: string | undefined
 
     // 1. Create/get email-based Allow policy
-    const allowPolicyName = "easiarr-allow"
+    const allowPolicyName = "easiarr-vpn-allow"
     const existingAllow = existingPolicies.result.find((p) => p.name === allowPolicyName)
     if (existingAllow) {
       allowPolicyId = existingAllow.id
@@ -493,7 +497,7 @@ export class CloudflareApi {
 
     // 2. Create/get Bypass policy for local network (if CIDR provided)
     if (privateNetworkCidr) {
-      const bypassPolicyName = "easiarr-bypass-local"
+      const bypassPolicyName = "easiarr-vpn-bypass"
       const existingBypass = existingPolicies.result.find((p) => p.name === bypassPolicyName)
       if (existingBypass) {
         bypassPolicyId = existingBypass.id
