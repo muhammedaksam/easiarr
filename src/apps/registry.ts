@@ -320,6 +320,11 @@ export const APPS: Record<AppId, AppDefinition> = {
       selector: 'PlexOnlineToken="([^"]+)"',
     },
     homepage: { icon: "plex.png", widget: "plex" },
+    autoSetup: {
+      type: "full",
+      description: "Claim server with token, create media libraries",
+      envVars: ["PLEX_CLAIM"],
+    },
   },
 
   jellyfin: {
@@ -352,6 +357,11 @@ export const APPS: Record<AppId, AppDefinition> = {
       selector: "api_key\\s*=\\s*(.+)",
     },
     homepage: { icon: "tautulli.png", widget: "tautulli" },
+    autoSetup: {
+      type: "partial",
+      description: "Connect to Plex, enable API",
+      requires: ["plex"],
+    },
   },
 
   tdarr: {
@@ -390,6 +400,11 @@ export const APPS: Record<AppId, AppDefinition> = {
       selector: "main.apiKey",
     },
     homepage: { icon: "overseerr.png", widget: "overseerr" },
+    autoSetup: {
+      type: "full",
+      description: "Connect to Plex, configure Radarr/Sonarr",
+      requires: ["plex"],
+    },
   },
 
   jellyseerr: {
@@ -673,6 +688,11 @@ export const APPS: Record<AppId, AppDefinition> = {
     pgid: 13000,
     volumes: (root) => [`${root}/config/grafana:/var/lib/grafana`],
     homepage: { icon: "grafana.png", widget: "grafana" },
+    autoSetup: {
+      type: "full",
+      description: "Setup admin user, configure Prometheus datasource",
+      requires: ["prometheus"],
+    },
   },
 
   prometheus: {
@@ -714,6 +734,10 @@ export const APPS: Record<AppId, AppDefinition> = {
     pgid: 0,
     volumes: (root) => [`${root}/config/uptime-kuma:/app/data`, "/var/run/docker.sock:/var/run/docker.sock"],
     homepage: { icon: "uptime-kuma.png", widget: "uptimekuma" },
+    autoSetup: {
+      type: "full",
+      description: "Create admin user, add monitors for enabled apps",
+    },
   },
 
   // === INFRASTRUCTURE ===
