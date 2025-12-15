@@ -15,7 +15,7 @@ import { saveConfig } from "../../config"
 import { saveCompose } from "../../compose"
 import { CloudflareApi, setupCloudflaredTunnel } from "../../api/cloudflare-api"
 
-type SetupStep = "api_token" | "domain" | "confirm" | "progress" | "done"
+type SetupStep = "api_token" | "domain" | "vpn" | "confirm" | "progress" | "done"
 
 export class CloudflaredSetup extends BoxRenderable {
   private cliRenderer: CliRenderer
@@ -29,6 +29,8 @@ export class CloudflaredSetup extends BoxRenderable {
   private domain = ""
   private tunnelName = "easiarr"
   private accessEmail = "" // Optional: email for Cloudflare Access protection
+  private enableVpn = false // Enable Zero Trust VPN access
+  private privateNetworkCidr = "" // e.g., 192.168.1.0/24
 
   // Status
   private statusMessages: string[] = []
@@ -85,6 +87,9 @@ export class CloudflaredSetup extends BoxRenderable {
       case "domain":
         this.renderDomainStep(content)
         break
+      case "vpn":
+        this.renderVpnStep(content)
+        break
       case "confirm":
         this.renderConfirmStep(content)
         break
@@ -100,13 +105,15 @@ export class CloudflaredSetup extends BoxRenderable {
   private getStepInfo(): string {
     switch (this.step) {
       case "api_token":
-        return "Step 1/4: Enter Cloudflare API Token"
+        return "Step 1/5: Enter Cloudflare API Token"
       case "domain":
-        return "Step 2/4: Configure Domain"
+        return "Step 2/5: Configure Domain"
+      case "vpn":
+        return "Step 3/5: Zero Trust VPN (Optional)"
       case "confirm":
-        return "Step 3/4: Confirm Settings"
+        return "Step 4/5: Confirm Settings"
       case "progress":
-        return "Step 4/4: Setting up tunnel..."
+        return "Step 5/5: Setting up tunnel..."
       case "done":
         return "Setup Complete!"
       default:
@@ -136,6 +143,12 @@ export class CloudflaredSetup extends BoxRenderable {
     content.add(
       new TextRenderable(this.cliRenderer, {
         content: "  • Zone:DNS:Edit",
+        fg: "#50fa7b",
+      })
+    )
+    content.add(
+      new TextRenderable(this.cliRenderer, {
+        content: "  • Account:Zero Trust:Edit (for VPN access)",
         fg: "#50fa7b",
       })
     )
@@ -378,7 +391,14 @@ export class CloudflaredSetup extends BoxRenderable {
         this.renderContent()
       } else if (index === 1) {
         if (!this.domain.trim()) return
-        this.step = "confirm"
+        // Auto-detect private network CIDR from local IP
+        const env = readEnvSync()
+        const localIp = env["LOCAL_DOCKER_IP"] || "192.168.1.1"
+        const parts = localIp.split(".")
+        if (parts.length === 4) {
+          this.privateNetworkCidr = `${parts[0]}.${parts[1]}.${parts[2]}.0/24`
+        }
+        this.step = "vpn"
         this.renderContent()
       } else {
         this.cleanup()
@@ -403,6 +423,121 @@ export class CloudflaredSetup extends BoxRenderable {
         // Move to next
         focusIndex = (focusIndex + 1) % focusables.length
         focusables[focusIndex].focus()
+      }
+    }
+    this.cliRenderer.keyInput.on("keypress", this.keyHandler)
+  }
+
+  private renderVpnStep(content: BoxRenderable): void {
+    content.add(
+      new TextRenderable(this.cliRenderer, {
+        content: "Zero Trust VPN Access (Optional)",
+        fg: "#4a9eff",
+      })
+    )
+    content.add(new TextRenderable(this.cliRenderer, { content: " " }))
+
+    content.add(
+      new TextRenderable(this.cliRenderer, {
+        content: "Enable this to access your private network from anywhere using",
+        fg: "#888888",
+      })
+    )
+    content.add(
+      new TextRenderable(this.cliRenderer, {
+        content: "the Cloudflare WARP client on your phone, laptop, etc.",
+        fg: "#888888",
+      })
+    )
+    content.add(new TextRenderable(this.cliRenderer, { content: " " }))
+
+    // Enable VPN toggle display
+    content.add(
+      new TextRenderable(this.cliRenderer, {
+        content: `Enable VPN Access: ${this.enableVpn ? "✓ Yes" : "✗ No"}`,
+        fg: this.enableVpn ? "#50fa7b" : "#888888",
+      })
+    )
+    content.add(new TextRenderable(this.cliRenderer, { content: " " }))
+
+    // CIDR input (only shown if VPN enabled)
+    if (this.enableVpn) {
+      const cidrRow = new BoxRenderable(this.cliRenderer, {
+        width: "100%",
+        height: 1,
+        flexDirection: "row",
+      })
+      cidrRow.add(
+        new TextRenderable(this.cliRenderer, {
+          content: "Private Network CIDR: ",
+          fg: "#aaaaaa",
+        })
+      )
+      const cidrInput = new InputRenderable(this.cliRenderer, {
+        id: "cf-cidr",
+        width: 20,
+        placeholder: "192.168.1.0/24",
+        value: this.privateNetworkCidr,
+      })
+      cidrInput.onPaste = (v) => {
+        this.privateNetworkCidr = v.text.replace(/[\r\n]/g, "")
+        cidrInput.value = this.privateNetworkCidr
+      }
+      cidrInput.on(InputRenderableEvents.CHANGE, (v) => (this.privateNetworkCidr = v))
+      cidrRow.add(cidrInput)
+      content.add(cidrRow)
+
+      content.add(new TextRenderable(this.cliRenderer, { content: " " }))
+      content.add(
+        new TextRenderable(this.cliRenderer, {
+          content: "This allows access to all devices in your network via WARP.",
+          fg: "#888888",
+        })
+      )
+    }
+
+    content.add(new TextRenderable(this.cliRenderer, { content: " " }))
+
+    // Navigation
+    const nav = new SelectRenderable(this.cliRenderer, {
+      id: "cf-vpn-nav",
+      width: "100%",
+      height: 10,
+      options: [
+        { name: this.enableVpn ? "✗ Disable VPN" : "✓ Enable VPN", description: "Toggle VPN access" },
+        { name: "◀ Back", description: "Go back to domain settings" },
+        { name: "➡️  Continue", description: "Proceed to confirmation" },
+        { name: "✕ Cancel", description: "Return to main menu" },
+      ],
+    })
+
+    nav.on(SelectRenderableEvents.ITEM_SELECTED, (index) => {
+      if (index === 0) {
+        // Toggle VPN
+        this.enableVpn = !this.enableVpn
+        this.renderContent()
+      } else if (index === 1) {
+        // Back
+        this.step = "domain"
+        this.renderContent()
+      } else if (index === 2) {
+        // Continue
+        this.step = "confirm"
+        this.renderContent()
+      } else {
+        // Cancel
+        this.cleanup()
+        this.onBack()
+      }
+    })
+
+    content.add(nav)
+    nav.focus()
+
+    this.keyHandler = (key: KeyEvent) => {
+      if (key.name === "escape") {
+        this.step = "domain"
+        this.renderContent()
       }
     }
     this.cliRenderer.keyInput.on("keypress", this.keyHandler)
@@ -472,6 +607,14 @@ export class CloudflaredSetup extends BoxRenderable {
         new TextRenderable(this.cliRenderer, {
           content: `  5. Create Cloudflare Access for: ${this.accessEmail}`,
           fg: "#aaaaaa",
+        })
+      )
+    }
+    if (this.enableVpn) {
+      content.add(
+        new TextRenderable(this.cliRenderer, {
+          content: `  ${this.accessEmail.trim() ? "6" : "5"}. Enable VPN access for: ${this.privateNetworkCidr}`,
+          fg: "#50fa7b",
         })
       )
     }
@@ -633,7 +776,7 @@ export class CloudflaredSetup extends BoxRenderable {
       this.statusMessages.push("Creating/updating Cloudflare Tunnel...")
       this.renderContent()
 
-      const result = await setupCloudflaredTunnel(this.apiToken, this.domain, this.tunnelName)
+      const result = await setupCloudflaredTunnel(this.apiToken, this.domain, this.tunnelName, this.enableVpn)
 
       this.statusMessages.pop()
       this.statusMessages.push(`✓ Tunnel created: ${this.tunnelName}`)
@@ -648,6 +791,8 @@ export class CloudflaredSetup extends BoxRenderable {
       await updateEnv({
         CLOUDFLARE_API_TOKEN: this.apiToken,
         CLOUDFLARE_TUNNEL_TOKEN: result.tunnelToken,
+        CLOUDFLARE_TUNNEL_ID: result.tunnelId,
+        CLOUDFLARE_ACCOUNT_ID: result.accountId,
         CLOUDFLARE_DNS_ZONE: this.domain,
       })
 
@@ -688,10 +833,37 @@ export class CloudflaredSetup extends BoxRenderable {
         this.renderContent()
 
         const api = new CloudflareApi(this.apiToken)
-        await api.setupAccessProtection(this.domain, [this.accessEmail.trim()], "easiarr")
+
+        // Auto-detect public IP for bypass policy
+        let publicIp: string | undefined
+        try {
+          // Try Cloudflare trace (most reliable)
+          const res = await fetch("https://1.1.1.1/cdn-cgi/trace")
+          const text = await res.text()
+          const match = text.match(/ip=(.+)/)
+          if (match && match[1]) {
+            publicIp = `${match[1].trim()}/32`
+          } else {
+            // Fallback to ifconfig.me
+            const res2 = await fetch("https://ifconfig.me/ip")
+            const ip = await res2.text()
+            if (ip.trim()) {
+              publicIp = `${ip.trim()}/32`
+            }
+          }
+        } catch {
+          // Ignore - IP bypass is optional
+        }
+
+        await api.setupAccessProtection(this.domain, [this.accessEmail.trim()], "easiarr", publicIp)
 
         this.statusMessages.pop()
-        this.statusMessages.push(`✓ Cloudflare Access created for: ${this.accessEmail}`)
+        if (publicIp) {
+          this.statusMessages.push(`✓ Cloudflare Access created for: ${this.accessEmail}`)
+          this.statusMessages.push(`✓ Bypass policy added for home IP: ${publicIp}`)
+        } else {
+          this.statusMessages.push(`✓ Cloudflare Access created for: ${this.accessEmail}`)
+        }
         this.renderContent()
       } else {
         // No Cloudflare Access - enable basic auth with global credentials
@@ -727,6 +899,50 @@ export class CloudflaredSetup extends BoxRenderable {
           this.statusMessages.push("⚠️ No protection enabled (no email or GLOBAL_PASSWORD set)")
           this.renderContent()
         }
+      }
+
+      // Step 5: Optional VPN setup
+      if (this.enableVpn && this.privateNetworkCidr.trim()) {
+        this.statusMessages.push("Setting up Zero Trust VPN access...")
+        this.renderContent()
+
+        try {
+          const api = new CloudflareApi(this.apiToken)
+
+          // Check if route already exists
+          const existingRoute = await api.getTunnelRouteForNetwork(this.privateNetworkCidr)
+          if (existingRoute) {
+            this.statusMessages.pop()
+            this.statusMessages.push(`✓ VPN route already exists for: ${this.privateNetworkCidr}`)
+          } else {
+            // Add tunnel route for private network
+            await api.addTunnelRoute(result.tunnelId, this.privateNetworkCidr)
+
+            // Save to .env
+            await updateEnv({
+              CLOUDFLARE_PRIVATE_NETWORK: this.privateNetworkCidr,
+            })
+
+            this.statusMessages.pop()
+            this.statusMessages.push(`✓ VPN access enabled for: ${this.privateNetworkCidr}`)
+          }
+
+          // Create device enrollment policy if access email is set
+          if (this.accessEmail.trim()) {
+            this.statusMessages.push("Creating device enrollment policy...")
+            this.renderContent()
+
+            await api.setupDeviceEnrollment([this.accessEmail.trim()], this.privateNetworkCidr)
+
+            this.statusMessages.pop()
+            this.statusMessages.push(`✓ Device enrollment policy created for: ${this.accessEmail}`)
+          }
+        } catch (vpnErr) {
+          this.statusMessages.pop()
+          this.statusMessages.push(`⚠️ VPN setup failed: ${(vpnErr as Error).message}`)
+          this.statusMessages.push("   (Tunnel still works, VPN requires Zero Trust permission)")
+        }
+        this.renderContent()
       }
 
       // Done!

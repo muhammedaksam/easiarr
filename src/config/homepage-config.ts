@@ -30,7 +30,7 @@ interface HomepageService {
   ping?: string
   widget?: {
     type: string
-    url: string
+    url?: string // Optional - cloudflared doesn't need url
     key?: string
     [key: string]: unknown
   }
@@ -56,7 +56,11 @@ export async function generateServicesYaml(config: EasiarrConfig): Promise<strin
     if (appDef.id === "homepage") continue
 
     const port = appConfig.port ?? appDef.defaultPort
+    const internalPort = appDef.internalPort ?? port
+    // External URL for user browser access (href, ping)
     const baseUrl = `http://${localIp}:${port}`
+    // Internal Docker URL for container-to-container API calls (widgets)
+    const dockerUrl = `http://${appDef.id}:${internalPort}`
 
     const service: HomepageService = {
       href: baseUrl,
@@ -74,55 +78,95 @@ export async function generateServicesYaml(config: EasiarrConfig): Promise<strin
     // Add ping for monitoring
     service.ping = baseUrl
 
-    // Add widget if defined and has API key
+    // Add widget if defined
     if (appDef.homepage?.widget) {
       const apiKey = env[`API_KEY_${appDef.id.toUpperCase()}`]
 
-      service.widget = {
-        type: appDef.homepage.widget,
-        url: baseUrl,
-      }
+      // Some widgets require specific config - skip if not available
+      const widgetType = appDef.homepage.widget
 
-      if (apiKey) {
-        service.widget.key = apiKey
-      }
+      // Cloudflared requires accountid and tunnelid
+      if (appDef.id === "cloudflared") {
+        const accountId = env["CLOUDFLARE_ACCOUNT_ID"]
+        const tunnelId = env["CLOUDFLARE_TUNNEL_ID"]
+        const apiToken = env["CLOUDFLARE_API_TOKEN"]
 
-      // Add widget-specific credentials from env
-      if (appDef.id === "qbittorrent") {
-        const username = env["USERNAME_QBITTORRENT"]
-        const password = env["PASSWORD_QBITTORRENT"]
-        if (username) service.widget.username = username
-        if (password) service.widget.password = password
-      }
-
-      if (appDef.id === "portainer") {
-        // Try to auto-detect Portainer environment ID
-        // User can override with PORTAINER_ENV in .env file
-        if (env["PORTAINER_ENV"]) {
-          service.widget.env = env["PORTAINER_ENV"]
-        } else {
-          // Auto-detect from Portainer API
-          const portainerPort = appConfig.port ?? appDef.defaultPort
-          const portainerClient = new PortainerApiClient(localIp, portainerPort)
-          const apiKey = env["API_KEY_PORTAINER"]
-          if (apiKey) {
-            portainerClient.setApiKey(apiKey)
-          }
-          const localEnvId = await portainerClient.getLocalEnvironmentId()
-          const envIdStr = localEnvId?.toString() ?? "1"
-          service.widget.env = envIdStr
-
-          // Persist the detected env ID to .env for future use
-          if (localEnvId) {
-            await updateEnv({ PORTAINER_ENV: envIdStr })
+        if (accountId && tunnelId && apiToken) {
+          service.widget = {
+            type: widgetType,
+            accountid: accountId,
+            tunnelid: tunnelId,
+            key: apiToken,
           }
         }
+        // Skip widget entirely if missing required params
       }
+      // Headscale requires API key
+      else if (appDef.id === "headscale") {
+        const headscaleKey = env["API_KEY_HEADSCALE"]
+        if (headscaleKey) {
+          service.widget = {
+            type: widgetType,
+            url: dockerUrl,
+            key: headscaleKey,
+          }
+        }
+        // Skip widget if no API key
+      }
+      // Most widgets need API key - only add if available
+      else if (apiKey || ["qbittorrent", "gluetun", "traefik"].includes(appDef.id)) {
+        service.widget = {
+          type: widgetType,
+          url: dockerUrl,
+        }
 
-      // Add any custom widget fields
-      if (appDef.homepage.widgetFields) {
-        Object.assign(service.widget, appDef.homepage.widgetFields)
+        if (apiKey) {
+          service.widget.key = apiKey
+        }
+
+        // Add widget-specific credentials from env
+        if (appDef.id === "qbittorrent") {
+          const username = env["USERNAME_QBITTORRENT"]
+          const password = env["PASSWORD_QBITTORRENT"]
+          if (username) service.widget.username = username
+          if (password) service.widget.password = password
+        }
+
+        // Traefik widget needs the dashboard/API port (8080 internal)
+        if (appDef.id === "traefik") {
+          service.widget.url = `http://traefik:8080`
+        }
+
+        if (appDef.id === "portainer") {
+          // Try to auto-detect Portainer environment ID
+          // User can override with PORTAINER_ENV in .env file
+          if (env["PORTAINER_ENV"]) {
+            service.widget.env = env["PORTAINER_ENV"]
+          } else {
+            // Auto-detect from Portainer API
+            const portainerPort = appConfig.port ?? appDef.defaultPort
+            const portainerClient = new PortainerApiClient(localIp, portainerPort)
+            const portainerApiKey = env["API_KEY_PORTAINER"]
+            if (portainerApiKey) {
+              portainerClient.setApiKey(portainerApiKey)
+            }
+            const localEnvId = await portainerClient.getLocalEnvironmentId()
+            const envIdStr = localEnvId?.toString() ?? "1"
+            service.widget.env = envIdStr
+
+            // Persist the detected env ID to .env for future use
+            if (localEnvId) {
+              await updateEnv({ PORTAINER_ENV: envIdStr })
+            }
+          }
+        }
+
+        // Add any custom widget fields
+        if (appDef.homepage.widgetFields) {
+          Object.assign(service.widget, appDef.homepage.widgetFields)
+        }
       }
+      // If widget requires API key and none is set, skip widget but keep ping/icon
     }
 
     // Add to category group

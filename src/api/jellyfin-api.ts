@@ -4,6 +4,7 @@
  */
 
 import { debugLog } from "../utils/debug"
+import type { IAutoSetupClient, AutoSetupOptions, AutoSetupResult } from "./auto-setup-types"
 
 // ==========================================
 // Startup Wizard Types
@@ -100,7 +101,7 @@ export interface AuthResult {
 // Jellyfin Client
 // ==========================================
 
-export class JellyfinClient {
+export class JellyfinClient implements IAutoSetupClient {
   // ==========================================
   // User Management
   // ==========================================
@@ -409,5 +410,64 @@ export class JellyfinClient {
    */
   async getPublicSystemInfo(): Promise<SystemInfo> {
     return this.request<SystemInfo>("/System/Info/Public")
+  }
+
+  /**
+   * Check if already configured (wizard completed)
+   */
+  async isInitialized(): Promise<boolean> {
+    return this.isStartupComplete()
+  }
+
+  /**
+   * Run the auto-setup process for Jellyfin
+   */
+  async setup(options: AutoSetupOptions): Promise<AutoSetupResult> {
+    const { username, password } = options
+
+    try {
+      // Check if reachable
+      const healthy = await this.isHealthy()
+      if (!healthy) {
+        return { success: false, message: "Jellyfin not reachable" }
+      }
+
+      // Check if wizard already completed
+      const initialized = await this.isStartupComplete()
+      if (initialized) {
+        return {
+          success: true,
+          message: "Already configured",
+          data: { alreadyInitialized: true },
+        }
+      }
+
+      // Run the setup wizard
+      await this.runSetupWizard(username, password)
+
+      // Try to authenticate to get access token
+      const authResult = await this.authenticate(username, password)
+
+      // Create API key for Homepage etc.
+      let apiKey: string | undefined
+      try {
+        apiKey = await this.createApiKey("easiarr")
+      } catch {
+        // API key creation may fail if permission issues
+      }
+
+      return {
+        success: true,
+        message: "Setup wizard completed",
+        data: {
+          accessToken: authResult.AccessToken,
+          serverId: authResult.ServerId,
+          apiKey,
+        },
+        envUpdates: apiKey ? { API_KEY_JELLYFIN: apiKey } : undefined,
+      }
+    } catch (error) {
+      return { success: false, message: `${error}` }
+    }
   }
 }

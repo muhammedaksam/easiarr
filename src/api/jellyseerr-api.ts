@@ -9,6 +9,7 @@
  */
 
 import { debugLog } from "../utils/debug"
+import type { IAutoSetupClient, AutoSetupOptions, AutoSetupResult } from "./auto-setup-types"
 
 // ==========================================
 // Enums (from Jellyseerr server/constants/server.ts)
@@ -143,7 +144,7 @@ interface JellyfinLoginRequest {
 // Client
 // ==========================================
 
-export class JellyseerrClient {
+export class JellyseerrClient implements IAutoSetupClient {
   private baseUrl: string
   private cookie?: string
 
@@ -533,6 +534,53 @@ export class JellyseerrClient {
     } catch (e) {
       debugLog("Jellyseerr", `Sonarr config failed: ${e}`)
       return null
+    }
+  }
+
+  /**
+   * Run the auto-setup process for Jellyseerr
+   */
+  async setup(options: AutoSetupOptions): Promise<AutoSetupResult> {
+    const { username, password, env } = options
+
+    try {
+      // Check if reachable
+      const healthy = await this.isHealthy()
+      if (!healthy) {
+        return { success: false, message: "Jellyseerr not reachable" }
+      }
+
+      // Check if already initialized
+      const initialized = await this.isInitialized()
+      if (initialized) {
+        // Get API key from settings
+        const settings = await this.getMainSettings()
+        return {
+          success: true,
+          message: "Already configured",
+          data: { apiKey: settings.apiKey },
+          envUpdates: { API_KEY_JELLYSEERR: settings.apiKey },
+        }
+      }
+
+      // Get Jellyfin connection details from env
+      const jellyfinHost = env["JELLYFIN_HOST"] || "jellyfin"
+      const jellyfinPort = parseInt(env["JELLYFIN_PORT"] || "8096", 10)
+
+      // Run the setup wizard
+      const apiKey = await this.runJellyfinSetup(jellyfinHost, jellyfinPort, username, password)
+
+      // Mark as initialized
+      await this.initialize()
+
+      return {
+        success: true,
+        message: "Jellyseerr configured with Jellyfin",
+        data: { apiKey },
+        envUpdates: { API_KEY_JELLYSEERR: apiKey },
+      }
+    } catch (error) {
+      return { success: false, message: `${error}` }
     }
   }
 }

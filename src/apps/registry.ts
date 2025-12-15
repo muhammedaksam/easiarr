@@ -148,7 +148,7 @@ export const APPS: Record<AppId, AppDefinition> = {
       generateIfMissing: true,
     },
     prowlarrCategoryIds: [7030], // Comics
-    homepage: { icon: "mylar.png" },
+    homepage: { icon: "mylar.png", widget: "mylar" },
     // Note: Mylar3 is NOT an *arr app - has different API format (?cmd=<endpoint>)
     // Root folder is configured via Web UI settings, not API
   },
@@ -191,6 +191,7 @@ export const APPS: Record<AppId, AppDefinition> = {
       `${root}/data/media/podcasts:/podcasts`,
       `${root}/data/media/audiobookshelf-metadata:/metadata`,
     ],
+    homepage: { icon: "audiobookshelf.png", widget: "audiobookshelf" },
   },
 
   // === INDEXERS ===
@@ -229,6 +230,7 @@ export const APPS: Record<AppId, AppDefinition> = {
       parser: "json",
       selector: "APIKey",
     },
+    homepage: { icon: "jackett.png", widget: "jackett" },
   },
 
   flaresolverr: {
@@ -320,6 +322,11 @@ export const APPS: Record<AppId, AppDefinition> = {
       selector: 'PlexOnlineToken="([^"]+)"',
     },
     homepage: { icon: "plex.png", widget: "plex" },
+    autoSetup: {
+      type: "full",
+      description: "Claim server with token, create media libraries",
+      envVars: ["PLEX_CLAIM"],
+    },
   },
 
   jellyfin: {
@@ -352,6 +359,11 @@ export const APPS: Record<AppId, AppDefinition> = {
       selector: "api_key\\s*=\\s*(.+)",
     },
     homepage: { icon: "tautulli.png", widget: "tautulli" },
+    autoSetup: {
+      type: "partial",
+      description: "Connect to Plex, enable API",
+      requires: ["plex"],
+    },
   },
 
   tdarr: {
@@ -370,6 +382,7 @@ export const APPS: Record<AppId, AppDefinition> = {
       `${root}/data/media:/data`,
     ],
     environment: { serverIP: "0.0.0.0", internalNode: "true" },
+    homepage: { icon: "tdarr.png", widget: "tdarr" },
   },
 
   // === REQUEST MANAGEMENT ===
@@ -390,6 +403,11 @@ export const APPS: Record<AppId, AppDefinition> = {
       selector: "main.apiKey",
     },
     homepage: { icon: "overseerr.png", widget: "overseerr" },
+    autoSetup: {
+      type: "full",
+      description: "Connect to Plex, configure Radarr/Sonarr",
+      requires: ["plex"],
+    },
   },
 
   jellyseerr: {
@@ -427,6 +445,7 @@ export const APPS: Record<AppId, AppDefinition> = {
       `${root}/config/homarr/data:/data`,
       "/var/run/docker.sock:/var/run/docker.sock",
     ],
+    homepage: { icon: "homarr.png" }, // No widget, just icon (it's a dashboard itself)
   },
 
   heimdall: {
@@ -439,6 +458,7 @@ export const APPS: Record<AppId, AppDefinition> = {
     puid: 0,
     pgid: 13000,
     volumes: (root) => [`${root}/config/heimdall:/config`],
+    homepage: { icon: "heimdall.png" }, // No widget, just icon (it's a dashboard itself)
   },
 
   homepage: {
@@ -673,6 +693,11 @@ export const APPS: Record<AppId, AppDefinition> = {
     pgid: 13000,
     volumes: (root) => [`${root}/config/grafana:/var/lib/grafana`],
     homepage: { icon: "grafana.png", widget: "grafana" },
+    autoSetup: {
+      type: "full",
+      description: "Setup admin user, configure Prometheus datasource",
+      requires: ["prometheus"],
+    },
   },
 
   prometheus: {
@@ -685,7 +710,7 @@ export const APPS: Record<AppId, AppDefinition> = {
     puid: 0,
     pgid: 13000,
     volumes: (root) => [`${root}/config/prometheus:/prometheus`],
-    homepage: { icon: "prometheus.png" }, // No widget, just icon
+    homepage: { icon: "prometheus.png", widget: "prometheus" },
   },
 
   dozzle: {
@@ -714,6 +739,10 @@ export const APPS: Record<AppId, AppDefinition> = {
     pgid: 0,
     volumes: (root) => [`${root}/config/uptime-kuma:/app/data`, "/var/run/docker.sock:/var/run/docker.sock"],
     homepage: { icon: "uptime-kuma.png", widget: "uptimekuma" },
+    autoSetup: {
+      type: "full",
+      description: "Create admin user, add monitors for enabled apps",
+    },
   },
 
   // === INFRASTRUCTURE ===
@@ -773,6 +802,7 @@ export const APPS: Record<AppId, AppDefinition> = {
         mask: true,
       },
     ],
+    homepage: { icon: "cloudflare-zero-trust.png", widget: "cloudflared" },
   },
 
   "traefik-certs-dumper": {

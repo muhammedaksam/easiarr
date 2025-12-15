@@ -4,6 +4,7 @@
  */
 
 import { debugLog } from "../utils/debug"
+import type { IAutoSetupClient, AutoSetupOptions, AutoSetupResult } from "./auto-setup-types"
 
 export interface IndexerProxy {
   id?: number
@@ -67,7 +68,7 @@ export interface Application {
 
 export type ArrAppType = "Radarr" | "Sonarr" | "Lidarr" | "Readarr" | "Whisparr" | "Mylar"
 
-export class ProwlarrClient {
+export class ProwlarrClient implements IAutoSetupClient {
   private baseUrl: string
   private apiKey: string
 
@@ -363,6 +364,48 @@ export class ProwlarrClient {
     }
 
     return this.addApplication(appType, appType, prowlarrUrl, appUrl, apiKey, "fullSync", syncCategories)
+  }
+
+  /**
+   * Check if already configured (has any indexers)
+   */
+  async isInitialized(): Promise<boolean> {
+    try {
+      const indexers = await this.getIndexers()
+      return indexers.length > 0
+    } catch {
+      return false
+    }
+  }
+
+  /**
+   * Run the auto-setup process for Prowlarr
+   */
+  async setup(_options: AutoSetupOptions): Promise<AutoSetupResult> {
+    try {
+      // Check if reachable
+      const healthy = await this.isHealthy()
+      if (!healthy) {
+        return { success: false, message: "Prowlarr not reachable" }
+      }
+
+      // Check current state
+      const indexers = await this.getIndexers()
+      const apps = await this.getApplications()
+      const proxies = await this.getIndexerProxies()
+
+      return {
+        success: true,
+        message: indexers.length > 0 ? "Configured" : "Ready for indexer setup",
+        data: {
+          indexerCount: indexers.length,
+          appCount: apps.length,
+          proxyCount: proxies.length,
+        },
+      }
+    } catch (error) {
+      return { success: false, message: `${error}` }
+    }
   }
 }
 
