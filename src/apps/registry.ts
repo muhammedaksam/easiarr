@@ -148,7 +148,7 @@ export const APPS: Record<AppId, AppDefinition> = {
       generateIfMissing: true,
     },
     prowlarrCategoryIds: [7030], // Comics
-    homepage: { icon: "mylar.png" },
+    homepage: { icon: "mylar.png", widget: "mylar" },
     // Note: Mylar3 is NOT an *arr app - has different API format (?cmd=<endpoint>)
     // Root folder is configured via Web UI settings, not API
   },
@@ -191,6 +191,7 @@ export const APPS: Record<AppId, AppDefinition> = {
       `${root}/data/media/podcasts:/podcasts`,
       `${root}/data/media/audiobookshelf-metadata:/metadata`,
     ],
+    homepage: { icon: "audiobookshelf.png", widget: "audiobookshelf" },
   },
 
   // === INDEXERS ===
@@ -229,6 +230,7 @@ export const APPS: Record<AppId, AppDefinition> = {
       parser: "json",
       selector: "APIKey",
     },
+    homepage: { icon: "jackett.png", widget: "jackett" },
   },
 
   flaresolverr: {
@@ -380,6 +382,7 @@ export const APPS: Record<AppId, AppDefinition> = {
       `${root}/data/media:/data`,
     ],
     environment: { serverIP: "0.0.0.0", internalNode: "true" },
+    homepage: { icon: "tdarr.png", widget: "tdarr" },
   },
 
   // === REQUEST MANAGEMENT ===
@@ -707,7 +710,7 @@ export const APPS: Record<AppId, AppDefinition> = {
     puid: 0,
     pgid: 13000,
     volumes: (root) => [`${root}/config/prometheus:/prometheus`],
-    homepage: { icon: "prometheus.png" }, // No widget, just icon
+    homepage: { icon: "prometheus.png", widget: "prometheus" },
   },
 
   dozzle: {
