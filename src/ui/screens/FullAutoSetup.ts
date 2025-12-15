@@ -245,13 +245,14 @@ export class FullAutoSetup extends BoxRenderable {
           }
 
           // Configure Radarr connection if Radarr is enabled
+          // Use container name 'radarr' since Bazarr runs in Docker
           const radarrConfig = this.config.apps.find((a) => a.id === "radarr" && a.enabled)
           const radarrApiKey = this.env["API_KEY_RADARR"]
           if (radarrConfig && radarrApiKey) {
             try {
               const radarrDef = getApp("radarr")
               const radarrPort = radarrConfig.port || radarrDef?.defaultPort || 7878
-              await bazarrClient.configureRadarr("localhost", radarrPort, radarrApiKey)
+              await bazarrClient.configureRadarr("radarr", radarrPort, radarrApiKey)
               debugLog("FullAutoSetup", "Bazarr -> Radarr connection configured")
             } catch {
               debugLog("FullAutoSetup", "Failed to configure Bazarr -> Radarr connection")
@@ -259,13 +260,14 @@ export class FullAutoSetup extends BoxRenderable {
           }
 
           // Configure Sonarr connection if Sonarr is enabled
+          // Use container name 'sonarr' since Bazarr runs in Docker
           const sonarrConfig = this.config.apps.find((a) => a.id === "sonarr" && a.enabled)
           const sonarrApiKey = this.env["API_KEY_SONARR"]
           if (sonarrConfig && sonarrApiKey) {
             try {
               const sonarrDef = getApp("sonarr")
               const sonarrPort = sonarrConfig.port || sonarrDef?.defaultPort || 8989
-              await bazarrClient.configureSonarr("localhost", sonarrPort, sonarrApiKey)
+              await bazarrClient.configureSonarr("sonarr", sonarrPort, sonarrApiKey)
               debugLog("FullAutoSetup", "Bazarr -> Sonarr connection configured")
             } catch {
               debugLog("FullAutoSetup", "Failed to configure Bazarr -> Sonarr connection")
