@@ -503,6 +503,20 @@ export const APPS: Record<AppId, AppDefinition> = {
     puid: 0,
     pgid: 13000,
     volumes: (root) => [`${root}/config/huntarr:/config`],
+    dependsOn: ["sonarr", "radarr", "lidarr", "readarr"],
+    homepage: {
+      icon: "huntarr.png",
+      widget: "customapi",
+      widgetFields: {
+        url: "http://huntarr:9705/api/version",
+        mappings: JSON.stringify([{ field: "version", label: "Version" }]),
+      },
+    },
+    autoSetup: {
+      type: "full",
+      description: "Test connections to Sonarr, Radarr, Lidarr, Readarr, Whisparr",
+      requires: ["sonarr", "radarr"],
+    },
   },
 
   unpackerr: {
