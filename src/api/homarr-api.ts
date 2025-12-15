@@ -234,7 +234,9 @@ export class HomarrClient implements IAutoSetupClient {
   /**
    * Run the auto-setup process for Homarr
    */
-  async setup(_options: AutoSetupOptions): Promise<AutoSetupResult> {
+  async setup(options: AutoSetupOptions): Promise<AutoSetupResult> {
+    const { username, password } = options
+
     try {
       // Check if reachable
       const healthy = await this.isHealthy()
@@ -242,10 +244,19 @@ export class HomarrClient implements IAutoSetupClient {
         return { success: false, message: "Homarr not reachable" }
       }
 
-      // Homarr works out of the box
+      // Check if users exist
+      const users = await this.getUsers()
+      let userCreated = false
+
+      if (users.length === 0) {
+        // Try to create initial user
+        userCreated = await this.createUser(username, password)
+      }
+
       return {
         success: true,
-        message: "Ready - add apps via UI or API",
+        message: userCreated ? "User created, ready" : "Ready - add apps via UI or API",
+        data: { userCreated },
       }
     } catch (error) {
       return { success: false, message: `${error}` }

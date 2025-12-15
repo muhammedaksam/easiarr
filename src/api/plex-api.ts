@@ -246,7 +246,7 @@ export class PlexApiClient implements IAutoSetupClient {
    * Run the auto-setup process for Plex
    */
   async setup(options: AutoSetupOptions): Promise<AutoSetupResult> {
-    const { env } = options
+    const { env, plexToken } = options
 
     // Check if server is reachable
     const healthy = await this.isHealthy()
@@ -255,12 +255,23 @@ export class PlexApiClient implements IAutoSetupClient {
     }
 
     // Check if already claimed
-    const initialized = await this.isInitialized()
-    if (initialized) {
-      return { success: true, message: "Already claimed" }
+    try {
+      const serverInfo = await this.getServerInfo()
+      if (serverInfo.claimed) {
+        return {
+          success: true,
+          message: "Already claimed",
+          data: {
+            machineIdentifier: serverInfo.machineIdentifier,
+            version: serverInfo.version,
+          },
+        }
+      }
+    } catch {
+      // Continue with setup if we can't get server info
     }
 
-    // Get claim token from environment
+    // Get claim token from environment or options
     const claimToken = env["PLEX_CLAIM"]
     if (!claimToken) {
       return {
@@ -269,9 +280,17 @@ export class PlexApiClient implements IAutoSetupClient {
       }
     }
 
+    // Store plexToken for future authenticated requests
+    if (plexToken) {
+      this.setToken(plexToken)
+    }
+
     try {
       // Claim the server
       await this.claimServer(claimToken)
+
+      // Get server info after claiming
+      const serverInfo = await this.getServerInfo()
 
       // Create default libraries if paths exist
       const libraries = [
@@ -280,11 +299,13 @@ export class PlexApiClient implements IAutoSetupClient {
         { name: "Music", type: "artist" as const, path: "/data/media/music" },
       ]
 
+      let librariesCreated = 0
       for (const lib of libraries) {
         const exists = await this.libraryExistsForPath(lib.path)
         if (!exists) {
           try {
             await this.createLibrary(lib.name, lib.type, lib.path)
+            librariesCreated++
           } catch (e) {
             // Library creation may fail if path doesn't exist - that's OK
             debugLog("PlexApi", `Could not create library ${lib.name}: ${e}`)
@@ -292,7 +313,15 @@ export class PlexApiClient implements IAutoSetupClient {
         }
       }
 
-      return { success: true, message: "Server claimed, libraries configured" }
+      return {
+        success: true,
+        message: `Server claimed, ${librariesCreated} libraries configured`,
+        data: {
+          machineIdentifier: serverInfo.machineIdentifier,
+          version: serverInfo.version,
+          librariesCreated,
+        },
+      }
     } catch (error) {
       return { success: false, message: `${error}` }
     }

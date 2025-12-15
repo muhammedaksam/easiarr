@@ -301,15 +301,11 @@ export class GrafanaClient implements IAutoSetupClient {
       // Generate API key for Homepage widget etc.
       const apiKey = await this.createApiKey("easiarr-api-key")
 
-      const envUpdates: Record<string, string> = {}
-      if (apiKey) {
-        envUpdates["API_KEY_GRAFANA"] = apiKey
-      }
-
       return {
         success: true,
         message: initialized ? "Configured" : "Password changed, Prometheus added",
-        envUpdates: Object.keys(envUpdates).length > 0 ? envUpdates : undefined,
+        data: apiKey ? { apiKey } : undefined,
+        envUpdates: apiKey ? { API_KEY_GRAFANA: apiKey } : undefined,
       }
     } catch (error) {
       return { success: false, message: `${error}` }

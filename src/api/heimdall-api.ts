@@ -172,10 +172,14 @@ export class HeimdallClient implements IAutoSetupClient {
         return { success: false, message: "Heimdall not reachable" }
       }
 
+      // Check existing apps count
+      const existingApps = await this.getApps()
+
       // Heimdall works out of the box, tiles can be added via UI
       return {
         success: true,
         message: "Ready - add tiles via UI",
+        data: { existingAppsCount: existingApps.length },
       }
     } catch (error) {
       return { success: false, message: `${error}` }
