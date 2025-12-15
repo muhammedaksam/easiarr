@@ -14,6 +14,7 @@ import { PortainerApiClient } from "../../api/portainer-api"
 import { JellyfinClient } from "../../api/jellyfin-api"
 import { JellyseerrClient } from "../../api/jellyseerr-api"
 import { CloudflareApi, setupCloudflaredTunnel } from "../../api/cloudflare-api"
+import { PlexApiClient } from "../../api/plex-api"
 import { saveConfig } from "../../config"
 import { saveCompose } from "../../compose"
 import { getApp } from "../../apps/registry"
@@ -89,6 +90,7 @@ export class FullAutoSetup extends BoxRenderable {
       { name: "Portainer", status: "pending" },
       { name: "Jellyfin", status: "pending" },
       { name: "Jellyseerr", status: "pending" },
+      { name: "Plex", status: "pending" },
       { name: "Cloudflare Tunnel", status: "pending" },
     ]
   }
@@ -144,7 +146,10 @@ export class FullAutoSetup extends BoxRenderable {
     // Step 8: Jellyseerr
     await this.setupJellyseerr()
 
-    // Step 9: Cloudflare Tunnel
+    // Step 9: Plex
+    await this.setupPlex()
+
+    // Step 10: Cloudflare Tunnel
     await this.setupCloudflare()
 
     this.isRunning = false
@@ -611,6 +616,47 @@ export class FullAutoSetup extends BoxRenderable {
       }
     } catch (e) {
       this.updateStep("Jellyseerr", "error", `${e}`)
+    }
+    this.refreshContent()
+  }
+
+  private async setupPlex(): Promise<void> {
+    this.updateStep("Plex", "running")
+    this.refreshContent()
+
+    const plexConfig = this.config.apps.find((a) => a.id === "plex" && a.enabled)
+    if (!plexConfig) {
+      this.updateStep("Plex", "skipped", "Not enabled")
+      this.refreshContent()
+      return
+    }
+
+    try {
+      const port = plexConfig.port || 32400
+      const client = new PlexApiClient("localhost", port)
+
+      // Check if reachable
+      const healthy = await client.isHealthy()
+      if (!healthy) {
+        this.updateStep("Plex", "skipped", "Not reachable yet")
+        this.refreshContent()
+        return
+      }
+
+      // Run auto-setup
+      const result = await client.setup({
+        username: this.globalUsername,
+        password: this.globalPassword,
+        env: this.env,
+      })
+
+      if (result.success) {
+        this.updateStep("Plex", "success", result.message)
+      } else {
+        this.updateStep("Plex", "skipped", result.message)
+      }
+    } catch (e) {
+      this.updateStep("Plex", "error", `${e}`)
     }
     this.refreshContent()
   }
