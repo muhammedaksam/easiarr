@@ -173,10 +173,12 @@ export class CloudflareApi {
 
   /**
    * Configure tunnel ingress rules
+   * @param warpRouting Enable WARP routing for private network access (VPN)
    */
   async configureTunnel(
     tunnelId: string,
-    ingress: Array<{ hostname?: string; service: string; originRequest?: Record<string, unknown> }>
+    ingress: Array<{ hostname?: string; service: string; originRequest?: Record<string, unknown> }>,
+    warpRouting = false
   ): Promise<void> {
     const accountId = await this.getAccountId()
 
@@ -189,7 +191,7 @@ export class CloudflareApi {
     await this.request("PUT", `/accounts/${accountId}/cfd_tunnel/${tunnelId}/configurations`, {
       config: {
         ingress,
-        "warp-routing": { enabled: false },
+        "warp-routing": { enabled: warpRouting },
       },
     })
   }
@@ -384,7 +386,8 @@ export class CloudflareApi {
 export async function setupCloudflaredTunnel(
   apiToken: string,
   domain: string,
-  tunnelName = "easiarr"
+  tunnelName = "easiarr",
+  warpRouting = false
 ): Promise<{ tunnelToken: string; tunnelId: string; accountId: string }> {
   const api = new CloudflareApi(apiToken)
 
@@ -405,14 +408,18 @@ export async function setupCloudflaredTunnel(
     tunnelToken = await api.getTunnelToken(tunnel.id)
   }
 
-  // 3. Configure ingress rules
-  await api.configureTunnel(tunnel.id, [
-    {
-      hostname: `*.${domain}`,
-      service: "http://traefik:80",
-      originRequest: {},
-    },
-  ])
+  // 3. Configure ingress rules (enable warp-routing if VPN is enabled)
+  await api.configureTunnel(
+    tunnel.id,
+    [
+      {
+        hostname: `*.${domain}`,
+        service: "http://traefik:80",
+        originRequest: {},
+      },
+    ],
+    warpRouting
+  )
 
   // 4. Add DNS CNAME record (wildcard)
   const zoneId = await api.getZoneId(domain)

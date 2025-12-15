@@ -776,7 +776,7 @@ export class CloudflaredSetup extends BoxRenderable {
       this.statusMessages.push("Creating/updating Cloudflare Tunnel...")
       this.renderContent()
 
-      const result = await setupCloudflaredTunnel(this.apiToken, this.domain, this.tunnelName)
+      const result = await setupCloudflaredTunnel(this.apiToken, this.domain, this.tunnelName, this.enableVpn)
 
       this.statusMessages.pop()
       this.statusMessages.push(`✓ Tunnel created: ${this.tunnelName}`)
