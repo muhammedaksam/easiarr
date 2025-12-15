@@ -245,6 +245,50 @@ export class CloudflareApi {
     await this.request("DELETE", `/accounts/${accountId}/cfd_tunnel/${tunnelId}`)
   }
 
+  // ==================== Zero Trust Private Network API ====================
+
+  /**
+   * Add a private network route to a tunnel (for WARP VPN access)
+   * This allows WARP clients to access the specified network through the tunnel
+   */
+  async addTunnelRoute(tunnelId: string, networkCidr: string, comment = "easiarr private network"): Promise<string> {
+    const accountId = await this.getAccountId()
+    const response = await this.request<{ id: string }>("POST", `/accounts/${accountId}/teamnet/routes`, {
+      network: networkCidr,
+      tunnel_id: tunnelId,
+      comment,
+    })
+    return response.result.id
+  }
+
+  /**
+   * List existing tunnel routes for the account
+   */
+  async listTunnelRoutes(): Promise<Array<{ id: string; network: string; tunnel_id: string; comment?: string }>> {
+    const accountId = await this.getAccountId()
+    const response = await this.request<Array<{ id: string; network: string; tunnel_id: string; comment?: string }>>(
+      "GET",
+      `/accounts/${accountId}/teamnet/routes`
+    )
+    return response.result
+  }
+
+  /**
+   * Delete a tunnel route
+   */
+  async deleteTunnelRoute(routeId: string): Promise<void> {
+    const accountId = await this.getAccountId()
+    await this.request("DELETE", `/accounts/${accountId}/teamnet/routes/${routeId}`)
+  }
+
+  /**
+   * Check if a tunnel route already exists for the given network
+   */
+  async getTunnelRouteForNetwork(networkCidr: string): Promise<{ id: string; tunnel_id: string } | null> {
+    const routes = await this.listTunnelRoutes()
+    return routes.find((r) => r.network === networkCidr) || null
+  }
+
   // ==================== Cloudflare Access API ====================
 
   /**
