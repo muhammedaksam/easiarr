@@ -46,13 +46,16 @@ export class BazarrApiClient {
       ...((options.headers as Record<string, string>) || {}),
     }
 
-    // Add API key as query parameter for GET, in body for POST
+    // Always add API key as query parameter
     let finalUrl = url
-    if (this.apiKey && options.method !== "POST") {
+    if (this.apiKey) {
       finalUrl = `${url}${url.includes("?") ? "&" : "?"}apikey=${this.apiKey}`
     }
 
     debugLog("Bazarr", `${options.method || "GET"} ${finalUrl}`)
+    if (options.body) {
+      debugLog("Bazarr", `Request body: ${options.body}`)
+    }
 
     const response = await fetch(finalUrl, {
       ...options,
@@ -67,6 +70,7 @@ export class BazarrApiClient {
 
     // Handle empty responses
     const text = await response.text()
+    debugLog("Bazarr", `Response: ${text.substring(0, 200)}${text.length > 200 ? "..." : ""}`)
     if (!text) return {} as T
 
     return JSON.parse(text) as T
@@ -111,6 +115,8 @@ export class BazarrApiClient {
         return false
       }
 
+      debugLog("Bazarr", `Current auth type: ${currentAuth?.type || "None"}`)
+
       // Bazarr expects settings as a nested object
       // POST to /api/system/settings with the auth object
       const settingsPayload = {
@@ -125,8 +131,9 @@ export class BazarrApiClient {
         },
       }
 
+      debugLog("Bazarr", `Attempting to set form auth for user: ${username}`)
       await this.request("/system/settings", {
-        method: "PATCH",
+        method: "POST",
         body: JSON.stringify(settingsPayload),
       })
 
@@ -148,6 +155,76 @@ export class BazarrApiClient {
       return auth?.apikey || null
     } catch {
       return null
+    }
+  }
+
+  /**
+   * Update Bazarr settings
+   */
+  async updateSettings(settings: Record<string, unknown>): Promise<void> {
+    debugLog("Bazarr", `Updating settings: ${JSON.stringify(settings)}`)
+    await this.request("/system/settings", {
+      method: "POST",
+      body: JSON.stringify(settings),
+    })
+    debugLog("Bazarr", "Settings updated successfully")
+  }
+
+  /**
+   * Configure Radarr connection in Bazarr
+   */
+  async configureRadarr(host: string, port: number, apiKey: string): Promise<boolean> {
+    try {
+      debugLog("Bazarr", `Configuring Radarr connection: ${host}:${port}`)
+
+      const settings = {
+        radarr: {
+          ip: host,
+          port: port,
+          apikey: apiKey,
+          base_url: "",
+          ssl: false,
+        },
+        general: {
+          use_radarr: true,
+        },
+      }
+
+      await this.updateSettings(settings)
+      debugLog("Bazarr", "Radarr connection configured successfully")
+      return true
+    } catch (e) {
+      debugLog("Bazarr", `Failed to configure Radarr: ${e}`)
+      throw e
+    }
+  }
+
+  /**
+   * Configure Sonarr connection in Bazarr
+   */
+  async configureSonarr(host: string, port: number, apiKey: string): Promise<boolean> {
+    try {
+      debugLog("Bazarr", `Configuring Sonarr connection: ${host}:${port}`)
+
+      const settings = {
+        sonarr: {
+          ip: host,
+          port: port,
+          apikey: apiKey,
+          base_url: "",
+          ssl: false,
+        },
+        general: {
+          use_sonarr: true,
+        },
+      }
+
+      await this.updateSettings(settings)
+      debugLog("Bazarr", "Sonarr connection configured successfully")
+      return true
+    } catch (e) {
+      debugLog("Bazarr", `Failed to configure Sonarr: ${e}`)
+      throw e
     }
   }
 }

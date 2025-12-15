@@ -8,6 +8,7 @@ import { existsSync } from "node:fs"
 import { join } from "node:path"
 import { createHash } from "node:crypto"
 import type { EasiarrConfig } from "../config/schema"
+import { debugLog } from "../utils/debug"
 
 export interface TraefikStaticConfig {
   entrypoints: {
@@ -110,18 +111,24 @@ function generateHtpasswdHash(password: string): string {
 export async function saveTraefikConfig(config: EasiarrConfig): Promise<void> {
   // Check if traefik is enabled
   const traefikApp = config.apps.find((a) => a.id === "traefik" && a.enabled)
-  if (!traefikApp) return
+  if (!traefikApp) {
+    debugLog("Traefik", "Traefik not enabled, skipping config generation")
+    return
+  }
 
   const traefikConfigDir = join(config.rootDir, "config", "traefik")
   const letsencryptDir = join(traefikConfigDir, "letsencrypt")
+  debugLog("Traefik", `Generating config in ${traefikConfigDir}`)
 
   try {
     // Create directories if they don't exist
     if (!existsSync(traefikConfigDir)) {
       await mkdir(traefikConfigDir, { recursive: true })
+      debugLog("Traefik", `Created directory: ${traefikConfigDir}`)
     }
     if (!existsSync(letsencryptDir)) {
       await mkdir(letsencryptDir, { recursive: true })
+      debugLog("Traefik", `Created directory: ${letsencryptDir}`)
     }
 
     // Generate and save static config (traefik.yml)

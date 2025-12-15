@@ -5,6 +5,7 @@
 
 import { $ } from "bun"
 import { getComposePath } from "../config/manager"
+import { debugLog } from "../utils/debug"
 
 export interface ContainerStatus {
   name: string
@@ -18,9 +19,12 @@ export async function composeUp(): Promise<{
 }> {
   try {
     const composePath = getComposePath()
+    debugLog("Docker", `compose up -d (path: ${composePath})`)
     const result = await $`docker compose -f ${composePath} up -d`.text()
+    debugLog("Docker", `compose up success`)
     return { success: true, output: result }
   } catch (error) {
+    debugLog("Docker", `compose up failed: ${error}`)
     return { success: false, output: String(error) }
   }
 }
@@ -31,9 +35,12 @@ export async function composeDown(): Promise<{
 }> {
   try {
     const composePath = getComposePath()
+    debugLog("Docker", `compose down (path: ${composePath})`)
     const result = await $`docker compose -f ${composePath} down`.text()
+    debugLog("Docker", `compose down success`)
     return { success: true, output: result }
   } catch (error) {
+    debugLog("Docker", `compose down failed: ${error}`)
     return { success: false, output: String(error) }
   }
 }
@@ -41,11 +48,14 @@ export async function composeDown(): Promise<{
 export async function composeRestart(service?: string): Promise<{ success: boolean; output: string }> {
   try {
     const composePath = getComposePath()
+    debugLog("Docker", `compose restart ${service || "all"}`)
     const result = service
       ? await $`docker compose -f ${composePath} restart ${service}`.text()
       : await $`docker compose -f ${composePath} restart`.text()
+    debugLog("Docker", `compose restart success`)
     return { success: true, output: result }
   } catch (error) {
+    debugLog("Docker", `compose restart failed: ${error}`)
     return { success: false, output: String(error) }
   }
 }
@@ -53,6 +63,7 @@ export async function composeRestart(service?: string): Promise<{ success: boole
 export async function composeStop(service?: string): Promise<{ success: boolean; output: string }> {
   try {
     const composePath = getComposePath()
+    debugLog("Docker", `compose stop ${service || "all"}`)
     const result = service
       ? await $`docker compose -f ${composePath} stop ${service}`.text()
       : await $`docker compose -f ${composePath} stop`.text()

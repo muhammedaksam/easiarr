@@ -226,7 +226,7 @@ export class FullAutoSetup extends BoxRenderable {
         }
       }
 
-      // Setup Bazarr form authentication (it has a different API than *arr apps)
+      // Setup Bazarr form authentication and Radarr/Sonarr connections
       const bazarrConfig = this.config.apps.find((a) => a.id === "bazarr" && a.enabled)
       if (bazarrConfig) {
         const bazarrApiKey = this.env["API_KEY_BAZARR"]
@@ -237,9 +237,39 @@ export class FullAutoSetup extends BoxRenderable {
           bazarrClient.setApiKey(bazarrApiKey)
 
           try {
+            // Enable form auth
             await bazarrClient.enableFormAuth(this.globalUsername, this.globalPassword, false)
           } catch {
             // Skip Bazarr auth failure - non-critical
+            debugLog("FullAutoSetup", "Bazarr form auth failed, continuing...")
+          }
+
+          // Configure Radarr connection if Radarr is enabled
+          const radarrConfig = this.config.apps.find((a) => a.id === "radarr" && a.enabled)
+          const radarrApiKey = this.env["API_KEY_RADARR"]
+          if (radarrConfig && radarrApiKey) {
+            try {
+              const radarrDef = getApp("radarr")
+              const radarrPort = radarrConfig.port || radarrDef?.defaultPort || 7878
+              await bazarrClient.configureRadarr("localhost", radarrPort, radarrApiKey)
+              debugLog("FullAutoSetup", "Bazarr -> Radarr connection configured")
+            } catch {
+              debugLog("FullAutoSetup", "Failed to configure Bazarr -> Radarr connection")
+            }
+          }
+
+          // Configure Sonarr connection if Sonarr is enabled
+          const sonarrConfig = this.config.apps.find((a) => a.id === "sonarr" && a.enabled)
+          const sonarrApiKey = this.env["API_KEY_SONARR"]
+          if (sonarrConfig && sonarrApiKey) {
+            try {
+              const sonarrDef = getApp("sonarr")
+              const sonarrPort = sonarrConfig.port || sonarrDef?.defaultPort || 8989
+              await bazarrClient.configureSonarr("localhost", sonarrPort, sonarrApiKey)
+              debugLog("FullAutoSetup", "Bazarr -> Sonarr connection configured")
+            } catch {
+              debugLog("FullAutoSetup", "Failed to configure Bazarr -> Sonarr connection")
+            }
           }
         }
       }
