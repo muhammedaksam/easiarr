@@ -19,6 +19,7 @@ export interface BazarrAuthSettings {
 
 /**
  * Bazarr API Client
+ * Note: Bazarr uses form data for POST, not JSON!
  */
 export class BazarrApiClient {
   private baseUrl: string
@@ -37,29 +38,21 @@ export class BazarrApiClient {
   }
 
   /**
-   * Make an API request to Bazarr
+   * Make a GET request to Bazarr API (JSON response)
    */
-  private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    const url = `${this.baseUrl}/api${endpoint}`
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-      ...((options.headers as Record<string, string>) || {}),
-    }
-
-    // Always add API key as query parameter
-    let finalUrl = url
+  private async get<T>(endpoint: string): Promise<T> {
+    let url = `${this.baseUrl}/api${endpoint}`
     if (this.apiKey) {
-      finalUrl = `${url}${url.includes("?") ? "&" : "?"}apikey=${this.apiKey}`
+      url = `${url}${url.includes("?") ? "&" : "?"}apikey=${this.apiKey}`
     }
 
-    debugLog("Bazarr", `${options.method || "GET"} ${finalUrl}`)
-    if (options.body) {
-      debugLog("Bazarr", `Request body: ${options.body}`)
-    }
+    debugLog("Bazarr", `GET ${url}`)
 
-    const response = await fetch(finalUrl, {
-      ...options,
-      headers,
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+      },
     })
 
     if (!response.ok) {
@@ -68,7 +61,6 @@ export class BazarrApiClient {
       throw new Error(`Bazarr API error: ${response.status} ${response.statusText}`)
     }
 
-    // Handle empty responses
     const text = await response.text()
     debugLog("Bazarr", `Response: ${text.substring(0, 200)}${text.length > 200 ? "..." : ""}`)
     if (!text) return {} as T
@@ -77,12 +69,47 @@ export class BazarrApiClient {
   }
 
   /**
+   * Make a POST request to Bazarr API using form data (NOT JSON)
+   * Bazarr uses request.form, not request.json
+   */
+  private async postForm(endpoint: string, data: Record<string, string>): Promise<void> {
+    let url = `${this.baseUrl}/api${endpoint}`
+    if (this.apiKey) {
+      url = `${url}${url.includes("?") ? "&" : "?"}apikey=${this.apiKey}`
+    }
+
+    // Convert object to form data
+    const formData = new URLSearchParams()
+    for (const [key, value] of Object.entries(data)) {
+      formData.append(key, value)
+    }
+
+    debugLog("Bazarr", `POST ${url}`)
+    debugLog("Bazarr", `Form data: ${formData.toString()}`)
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: formData.toString(),
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      debugLog("Bazarr", `Error ${response.status}: ${errorText}`)
+      throw new Error(`Bazarr API error: ${response.status} ${response.statusText}`)
+    }
+
+    debugLog("Bazarr", `Response status: ${response.status}`)
+  }
+
+  /**
    * Check if Bazarr is healthy and reachable
    */
   async isHealthy(): Promise<boolean> {
     try {
-      // System ping doesn't require authentication
-      await this.request("/system/ping")
+      await this.get("/system/status")
       return true
     } catch {
       return false
@@ -93,15 +120,12 @@ export class BazarrApiClient {
    * Get current system settings
    */
   async getSettings(): Promise<Record<string, unknown>> {
-    return this.request<Record<string, unknown>>("/system/settings")
+    return this.get<Record<string, unknown>>("/system/settings")
   }
 
   /**
    * Update authentication settings to enable form-based auth
-   *
-   * @param username - Username for web UI login
-   * @param password - Password for web UI login
-   * @param override - If true, override existing auth settings
+   * Bazarr settings use dot notation in form fields
    */
   async enableFormAuth(username: string, password: string, override = false): Promise<boolean> {
     try {
@@ -110,31 +134,19 @@ export class BazarrApiClient {
       const currentAuth = (currentSettings as { auth?: { type?: string } }).auth
 
       // Skip if auth is already configured and override is false
-      if (currentAuth?.type && currentAuth.type !== "None" && !override) {
-        debugLog("Bazarr", "Auth already configured, skipping")
+      if (currentAuth?.type && currentAuth.type !== "None" && currentAuth.type !== null && !override) {
+        debugLog("Bazarr", `Auth already configured (type: ${currentAuth.type}), skipping`)
         return false
       }
 
       debugLog("Bazarr", `Current auth type: ${currentAuth?.type || "None"}`)
+      debugLog("Bazarr", `Setting form auth for user: ${username}`)
 
-      // Bazarr expects settings as a nested object
-      // POST to /api/system/settings with the auth object
-      const settingsPayload = {
-        general: {
-          use_sonarr: true,
-          use_radarr: true,
-        },
-        auth: {
-          type: "form",
-          username,
-          password,
-        },
-      }
-
-      debugLog("Bazarr", `Attempting to set form auth for user: ${username}`)
-      await this.request("/system/settings", {
-        method: "POST",
-        body: JSON.stringify(settingsPayload),
+      // Bazarr uses dot notation for nested settings in form data
+      await this.postForm("/system/settings", {
+        "settings-auth-type": "form",
+        "settings-auth-username": username,
+        "settings-auth-password": password,
       })
 
       debugLog("Bazarr", `Form auth enabled for user: ${username}`)
@@ -159,38 +171,21 @@ export class BazarrApiClient {
   }
 
   /**
-   * Update Bazarr settings
-   */
-  async updateSettings(settings: Record<string, unknown>): Promise<void> {
-    debugLog("Bazarr", `Updating settings: ${JSON.stringify(settings)}`)
-    await this.request("/system/settings", {
-      method: "POST",
-      body: JSON.stringify(settings),
-    })
-    debugLog("Bazarr", "Settings updated successfully")
-  }
-
-  /**
    * Configure Radarr connection in Bazarr
    */
   async configureRadarr(host: string, port: number, apiKey: string): Promise<boolean> {
     try {
       debugLog("Bazarr", `Configuring Radarr connection: ${host}:${port}`)
 
-      const settings = {
-        radarr: {
-          ip: host,
-          port: port,
-          apikey: apiKey,
-          base_url: "",
-          ssl: false,
-        },
-        general: {
-          use_radarr: true,
-        },
-      }
+      await this.postForm("/system/settings", {
+        "settings-radarr-ip": host,
+        "settings-radarr-port": String(port),
+        "settings-radarr-apikey": apiKey,
+        "settings-radarr-base_url": "",
+        "settings-radarr-ssl": "false",
+        "settings-general-use_radarr": "true",
+      })
 
-      await this.updateSettings(settings)
       debugLog("Bazarr", "Radarr connection configured successfully")
       return true
     } catch (e) {
@@ -206,20 +201,15 @@ export class BazarrApiClient {
     try {
       debugLog("Bazarr", `Configuring Sonarr connection: ${host}:${port}`)
 
-      const settings = {
-        sonarr: {
-          ip: host,
-          port: port,
-          apikey: apiKey,
-          base_url: "",
-          ssl: false,
-        },
-        general: {
-          use_sonarr: true,
-        },
-      }
+      await this.postForm("/system/settings", {
+        "settings-sonarr-ip": host,
+        "settings-sonarr-port": String(port),
+        "settings-sonarr-apikey": apiKey,
+        "settings-sonarr-base_url": "",
+        "settings-sonarr-ssl": "false",
+        "settings-general-use_sonarr": "true",
+      })
 
-      await this.updateSettings(settings)
       debugLog("Bazarr", "Sonarr connection configured successfully")
       return true
     } catch (e) {
