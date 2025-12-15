@@ -378,6 +378,102 @@ export class CloudflareApi {
     const policy = await this.createAccessPolicy(app.id, allowedEmails)
     return { appId: app.id, policyId: policy.id }
   }
+
+  // ==================== WARP Device Enrollment API ====================
+
+  /**
+   * Get or create device enrollment application (type: warp)
+   */
+  async getDeviceEnrollmentApp(): Promise<{ id: string; name: string } | null> {
+    const accountId = await this.getAccountId()
+    const apps = await this.request<Array<{ id: string; name: string; type: string }>>(
+      "GET",
+      `/accounts/${accountId}/access/apps`
+    )
+    return apps.result.find((a) => a.type === "warp") || null
+  }
+
+  /**
+   * Create device enrollment policy for WARP
+   * This allows specified emails to enroll their devices
+   * Also creates a bypass policy for local network access
+   */
+  async setupDeviceEnrollment(
+    allowedEmails: string[],
+    privateNetworkCidr?: string
+  ): Promise<{ appId: string; allowPolicyId: string; bypassPolicyId?: string }> {
+    const accountId = await this.getAccountId()
+
+    // Check if WARP enrollment app exists
+    let warpApp = await this.getDeviceEnrollmentApp()
+
+    if (!warpApp) {
+      // Create WARP enrollment app
+      const response = await this.request<{ id: string; name: string }>("POST", `/accounts/${accountId}/access/apps`, {
+        type: "warp",
+        name: "Device Enrollment",
+        session_duration: "24h",
+      })
+      warpApp = response.result
+    }
+
+    // Get existing policies
+    const existingPolicies = await this.request<Array<{ id: string; name: string }>>(
+      "GET",
+      `/accounts/${accountId}/access/apps/${warpApp.id}/policies`
+    )
+
+    let allowPolicyId: string
+    let bypassPolicyId: string | undefined
+
+    // 1. Create/get email-based Allow policy
+    const allowPolicyName = "easiarr-allow"
+    const existingAllow = existingPolicies.result.find((p) => p.name === allowPolicyName)
+    if (existingAllow) {
+      allowPolicyId = existingAllow.id
+    } else {
+      const policy = await this.request<{ id: string }>(
+        "POST",
+        `/accounts/${accountId}/access/apps/${warpApp.id}/policies`,
+        {
+          name: allowPolicyName,
+          decision: "allow",
+          include: allowedEmails.map((email) => ({
+            email: { email },
+          })),
+          precedence: existingPolicies.result.length + 1,
+        }
+      )
+      allowPolicyId = policy.result.id
+    }
+
+    // 2. Create/get Bypass policy for local network (if CIDR provided)
+    if (privateNetworkCidr) {
+      const bypassPolicyName = "easiarr-bypass-local"
+      const existingBypass = existingPolicies.result.find((p) => p.name === bypassPolicyName)
+      if (existingBypass) {
+        bypassPolicyId = existingBypass.id
+      } else {
+        const bypassPolicy = await this.request<{ id: string }>(
+          "POST",
+          `/accounts/${accountId}/access/apps/${warpApp.id}/policies`,
+          {
+            name: bypassPolicyName,
+            decision: "bypass",
+            include: [
+              {
+                ip: { ip: privateNetworkCidr },
+              },
+            ],
+            precedence: existingPolicies.result.length + 2,
+          }
+        )
+        bypassPolicyId = bypassPolicy.result.id
+      }
+    }
+
+    return { appId: warpApp.id, allowPolicyId, bypassPolicyId }
+  }
 }
 
 /**

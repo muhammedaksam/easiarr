@@ -899,6 +899,17 @@ export class CloudflaredSetup extends BoxRenderable {
             this.statusMessages.pop()
             this.statusMessages.push(`✓ VPN access enabled for: ${this.privateNetworkCidr}`)
           }
+
+          // Create device enrollment policy if access email is set
+          if (this.accessEmail.trim()) {
+            this.statusMessages.push("Creating device enrollment policy...")
+            this.renderContent()
+
+            await api.setupDeviceEnrollment([this.accessEmail.trim()], this.privateNetworkCidr)
+
+            this.statusMessages.pop()
+            this.statusMessages.push(`✓ Device enrollment policy created for: ${this.accessEmail}`)
+          }
         } catch (vpnErr) {
           this.statusMessages.pop()
           this.statusMessages.push(`⚠️ VPN setup failed: ${(vpnErr as Error).message}`)
