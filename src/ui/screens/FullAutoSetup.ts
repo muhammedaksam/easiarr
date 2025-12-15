@@ -17,6 +17,10 @@ import { CloudflareApi, setupCloudflaredTunnel } from "../../api/cloudflare-api"
 import { PlexApiClient } from "../../api/plex-api"
 import { UptimeKumaClient } from "../../api/uptime-kuma-api"
 import { GrafanaClient } from "../../api/grafana-api"
+import { OverseerrClient } from "../../api/overseerr-api"
+import { TautulliClient } from "../../api/tautulli-api"
+import { HomarrClient } from "../../api/homarr-api"
+import { HeimdallClient } from "../../api/heimdall-api"
 import { saveConfig } from "../../config"
 import { saveCompose } from "../../compose"
 import { getApp } from "../../apps/registry"
@@ -93,8 +97,13 @@ export class FullAutoSetup extends BoxRenderable {
       { name: "Jellyfin", status: "pending" },
       { name: "Jellyseerr", status: "pending" },
       { name: "Plex", status: "pending" },
+      { name: "Overseerr", status: "pending" },
+      { name: "Tautulli", status: "pending" },
+      { name: "Bazarr", status: "pending" },
       { name: "Uptime Kuma", status: "pending" },
       { name: "Grafana", status: "pending" },
+      { name: "Homarr", status: "pending" },
+      { name: "Heimdall", status: "pending" },
       { name: "Cloudflare Tunnel", status: "pending" },
     ]
   }
@@ -153,13 +162,28 @@ export class FullAutoSetup extends BoxRenderable {
     // Step 9: Plex
     await this.setupPlex()
 
-    // Step 10: Uptime Kuma
+    // Step 10: Overseerr (requires Plex)
+    await this.setupOverseerr()
+
+    // Step 11: Tautulli (Plex monitoring)
+    await this.setupTautulli()
+
+    // Step 12: Bazarr (subtitles)
+    await this.setupBazarr()
+
+    // Step 13: Uptime Kuma (monitors)
     await this.setupUptimeKuma()
 
-    // Step 11: Grafana
+    // Step 14: Grafana (dashboards)
     await this.setupGrafana()
 
-    // Step 12: Cloudflare Tunnel
+    // Step 15: Homarr (dashboard)
+    await this.setupHomarr()
+
+    // Step 16: Heimdall (dashboard)
+    await this.setupHeimdall()
+
+    // Step 17: Cloudflare Tunnel
     await this.setupCloudflare()
 
     this.isRunning = false
@@ -835,6 +859,238 @@ export class FullAutoSetup extends BoxRenderable {
       }
     } catch (e) {
       this.updateStep("Cloudflare Tunnel", "error", `${e}`)
+    }
+    this.refreshContent()
+  }
+
+  private async setupOverseerr(): Promise<void> {
+    this.updateStep("Overseerr", "running")
+    this.refreshContent()
+
+    const overseerrConfig = this.config.apps.find((a) => a.id === "overseerr" && a.enabled)
+    if (!overseerrConfig) {
+      this.updateStep("Overseerr", "skipped", "Not enabled")
+      this.refreshContent()
+      return
+    }
+
+    // Overseerr requires Plex
+    const plexConfig = this.config.apps.find((a) => a.id === "plex" && a.enabled)
+    if (!plexConfig) {
+      this.updateStep("Overseerr", "skipped", "Plex not enabled")
+      this.refreshContent()
+      return
+    }
+
+    const plexToken = this.env["PLEX_TOKEN"]
+    if (!plexToken) {
+      this.updateStep("Overseerr", "skipped", "No PLEX_TOKEN in .env")
+      this.refreshContent()
+      return
+    }
+
+    try {
+      const port = overseerrConfig.port || 5055
+      const client = new OverseerrClient("localhost", port)
+
+      const result = await client.setup({
+        username: this.globalUsername,
+        password: this.globalPassword,
+        env: this.env,
+        plexToken,
+      })
+
+      if (result.success) {
+        if (result.envUpdates) {
+          await updateEnv(result.envUpdates)
+          Object.assign(this.env, result.envUpdates)
+        }
+        this.updateStep("Overseerr", "success", result.message)
+      } else {
+        this.updateStep("Overseerr", "skipped", result.message)
+      }
+    } catch (e) {
+      this.updateStep("Overseerr", "error", `${e}`)
+    }
+    this.refreshContent()
+  }
+
+  private async setupTautulli(): Promise<void> {
+    this.updateStep("Tautulli", "running")
+    this.refreshContent()
+
+    const tautulliConfig = this.config.apps.find((a) => a.id === "tautulli" && a.enabled)
+    if (!tautulliConfig) {
+      this.updateStep("Tautulli", "skipped", "Not enabled")
+      this.refreshContent()
+      return
+    }
+
+    try {
+      const port = tautulliConfig.port || 8181
+      const client = new TautulliClient("localhost", port)
+
+      const result = await client.setup({
+        username: this.globalUsername,
+        password: this.globalPassword,
+        env: this.env,
+      })
+
+      if (result.success) {
+        if (result.envUpdates) {
+          await updateEnv(result.envUpdates)
+          Object.assign(this.env, result.envUpdates)
+        }
+        // Check if wizard still needed
+        const requiresWizard = result.data?.requiresWizard
+        const msg = requiresWizard ? `${result.message} (manual Plex setup needed)` : result.message
+        this.updateStep("Tautulli", "success", msg)
+      } else {
+        this.updateStep("Tautulli", "skipped", result.message)
+      }
+    } catch (e) {
+      this.updateStep("Tautulli", "error", `${e}`)
+    }
+    this.refreshContent()
+  }
+
+  private async setupBazarr(): Promise<void> {
+    this.updateStep("Bazarr", "running")
+    this.refreshContent()
+
+    const bazarrConfig = this.config.apps.find((a) => a.id === "bazarr" && a.enabled)
+    if (!bazarrConfig) {
+      this.updateStep("Bazarr", "skipped", "Not enabled")
+      this.refreshContent()
+      return
+    }
+
+    try {
+      const port = bazarrConfig.port || 6767
+      const client = new BazarrApiClient("localhost", port)
+
+      // Get and set API key if available
+      const existingApiKey = this.env["API_KEY_BAZARR"]
+      if (existingApiKey) {
+        client.setApiKey(existingApiKey)
+      }
+
+      const result = await client.setup({
+        username: this.globalUsername,
+        password: this.globalPassword,
+        env: this.env,
+      })
+
+      if (result.success) {
+        if (result.envUpdates) {
+          await updateEnv(result.envUpdates)
+          Object.assign(this.env, result.envUpdates)
+        }
+
+        // Configure Radarr/Sonarr connections
+        let configured = 0
+        const radarrConfig = this.config.apps.find((a) => a.id === "radarr" && a.enabled)
+        if (radarrConfig && this.env["API_KEY_RADARR"]) {
+          try {
+            await client.configureRadarr("radarr", radarrConfig.port || 7878, this.env["API_KEY_RADARR"])
+            configured++
+          } catch {
+            /* connection failed */
+          }
+        }
+
+        const sonarrConfig = this.config.apps.find((a) => a.id === "sonarr" && a.enabled)
+        if (sonarrConfig && this.env["API_KEY_SONARR"]) {
+          try {
+            await client.configureSonarr("sonarr", sonarrConfig.port || 8989, this.env["API_KEY_SONARR"])
+            configured++
+          } catch {
+            /* connection failed */
+          }
+        }
+
+        this.updateStep("Bazarr", "success", configured > 0 ? `${configured} apps connected` : result.message)
+      } else {
+        this.updateStep("Bazarr", "skipped", result.message)
+      }
+    } catch (e) {
+      this.updateStep("Bazarr", "error", `${e}`)
+    }
+    this.refreshContent()
+  }
+
+  private async setupHomarr(): Promise<void> {
+    this.updateStep("Homarr", "running")
+    this.refreshContent()
+
+    const homarrConfig = this.config.apps.find((a) => a.id === "homarr" && a.enabled)
+    if (!homarrConfig) {
+      this.updateStep("Homarr", "skipped", "Not enabled")
+      this.refreshContent()
+      return
+    }
+
+    try {
+      const port = homarrConfig.port || 7575
+      const client = new HomarrClient("localhost", port)
+
+      const result = await client.setup({
+        username: this.globalUsername,
+        password: this.globalPassword,
+        env: this.env,
+      })
+
+      if (result.success) {
+        // Add enabled apps to Homarr dashboard
+        try {
+          const addedCount = await client.setupEasiarrApps(this.config.apps)
+          this.updateStep("Homarr", "success", `${result.message}, ${addedCount} apps added`)
+        } catch {
+          this.updateStep("Homarr", "success", result.message)
+        }
+      } else {
+        this.updateStep("Homarr", "skipped", result.message)
+      }
+    } catch (e) {
+      this.updateStep("Homarr", "error", `${e}`)
+    }
+    this.refreshContent()
+  }
+
+  private async setupHeimdall(): Promise<void> {
+    this.updateStep("Heimdall", "running")
+    this.refreshContent()
+
+    const heimdallConfig = this.config.apps.find((a) => a.id === "heimdall" && a.enabled)
+    if (!heimdallConfig) {
+      this.updateStep("Heimdall", "skipped", "Not enabled")
+      this.refreshContent()
+      return
+    }
+
+    try {
+      const port = heimdallConfig.port || 8090
+      const client = new HeimdallClient("localhost", port)
+
+      const result = await client.setup({
+        username: this.globalUsername,
+        password: this.globalPassword,
+        env: this.env,
+      })
+
+      if (result.success) {
+        // Add enabled apps to Heimdall dashboard
+        try {
+          const addedCount = await client.setupEasiarrApps(this.config.apps)
+          this.updateStep("Heimdall", "success", `${result.message}, ${addedCount} apps added`)
+        } catch {
+          this.updateStep("Heimdall", "success", result.message)
+        }
+      } else {
+        this.updateStep("Heimdall", "skipped", result.message)
+      }
+    } catch (e) {
+      this.updateStep("Heimdall", "error", `${e}`)
     }
     this.refreshContent()
   }
