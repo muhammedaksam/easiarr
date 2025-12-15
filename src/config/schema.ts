@@ -206,6 +206,20 @@ export interface AppDefinition {
   minPasswordLength?: number
   /** Homepage dashboard configuration */
   homepage?: HomepageMeta
+  /** Auto-setup capability metadata */
+  autoSetup?: AutoSetupCapability
+}
+
+/** Auto-setup capability for an app */
+export interface AutoSetupCapability {
+  /** Type of auto-setup support: full (complete config), partial (basic config), manual (user must configure) */
+  type: "full" | "partial" | "manual"
+  /** Human-readable description of what gets configured */
+  description: string
+  /** Other apps that must be set up first */
+  requires?: AppId[]
+  /** Environment variables required for setup */
+  envVars?: string[]
 }
 
 /** Homepage dashboard widget/service configuration */
