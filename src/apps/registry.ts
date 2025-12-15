@@ -442,6 +442,7 @@ export const APPS: Record<AppId, AppDefinition> = {
       `${root}/config/homarr/data:/data`,
       "/var/run/docker.sock:/var/run/docker.sock",
     ],
+    homepage: { icon: "homarr.png" }, // No widget, just icon (it's a dashboard itself)
   },
 
   heimdall: {
@@ -454,6 +455,7 @@ export const APPS: Record<AppId, AppDefinition> = {
     puid: 0,
     pgid: 13000,
     volumes: (root) => [`${root}/config/heimdall:/config`],
+    homepage: { icon: "heimdall.png" }, // No widget, just icon (it's a dashboard itself)
   },
 
   homepage: {
@@ -797,6 +799,7 @@ export const APPS: Record<AppId, AppDefinition> = {
         mask: true,
       },
     ],
+    homepage: { icon: "cloudflare-zero-trust.png", widget: "cloudflared" },
   },
 
   "traefik-certs-dumper": {
