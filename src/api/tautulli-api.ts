@@ -1,16 +1,32 @@
 /**
  * Tautulli API Client
  * Handles Tautulli auto-setup for Plex monitoring
- * Note: Tautulli requires Plex to be configured first
+ * Note: Initial Plex connection requires web wizard, but API key can be retrieved automatically
  */
 
 import { debugLog } from "../utils/debug"
 import type { IAutoSetupClient, AutoSetupOptions, AutoSetupResult } from "./auto-setup-types"
 
 interface TautulliServerInfo {
-  version: string
-  pms_name?: string
   pms_identifier?: string
+  pms_ip?: string
+  pms_is_remote?: number
+  pms_name?: string
+  pms_platform?: string
+  pms_plexpass?: number
+  pms_port?: number
+  pms_ssl?: number
+  pms_url?: string
+  pms_url_manual?: number
+  pms_version?: string
+}
+
+interface TautulliApiResponse<T = unknown> {
+  response: {
+    result: "success" | "error"
+    message?: string
+    data: T
+  }
 }
 
 export class TautulliClient implements IAutoSetupClient {
@@ -71,25 +87,51 @@ export class TautulliClient implements IAutoSetupClient {
   }
 
   /**
-   * Check if Tautulli is already configured (has Plex connection)
+   * Check if Tautulli has Plex connection configured
    */
   async isInitialized(): Promise<boolean> {
+    if (!this.apiKey) return false
+
     try {
-      // Without API key, we can only check if the service is running
-      // Tautulli shows setup wizard automatically if not configured
-      const response = await fetch(`${this.baseUrl}/status`, {
-        method: "GET",
-      })
-
-      if (!response.ok) return false
-
-      // Check if redirected to setup wizard
-      const text = await response.text()
-      const isWizard = text.includes("setup") || text.includes("wizard")
-      return !isWizard
+      const serverInfo = await this.getServerInfo()
+      // If we have PMS identifier, Plex is connected
+      return !!serverInfo?.pms_identifier
     } catch {
       return false
     }
+  }
+
+  /**
+   * Get or create API key
+   * Works without authentication on first run!
+   */
+  async getApiKey(username?: string, password?: string): Promise<string | null> {
+    debugLog("TautulliApi", "Getting/creating API key...")
+
+    try {
+      const url = new URL(`${this.baseUrl}/api/v2`)
+      url.searchParams.set("cmd", "get_apikey")
+      if (username) url.searchParams.set("username", username)
+      if (password) url.searchParams.set("password", password)
+
+      const response = await fetch(url.toString(), { method: "GET" })
+
+      if (response.ok) {
+        const data = (await response.json()) as TautulliApiResponse<string>
+        if (data.response?.result === "success" && data.response.data) {
+          const apiKey = data.response.data
+          this.apiKey = apiKey
+          debugLog("TautulliApi", "API key obtained successfully")
+          return apiKey
+        }
+      }
+
+      const text = await response.text()
+      debugLog("TautulliApi", `Failed to get API key: ${response.status} - ${text}`)
+    } catch (error) {
+      debugLog("TautulliApi", `Error getting API key: ${error}`)
+    }
+    return null
   }
 
   /**
@@ -104,7 +146,7 @@ export class TautulliClient implements IAutoSetupClient {
       })
 
       if (response.ok) {
-        const data = await response.json()
+        const data = (await response.json()) as TautulliApiResponse<TautulliServerInfo>
         if (data.response?.result === "success") {
           return data.response.data
         }
@@ -127,7 +169,7 @@ export class TautulliClient implements IAutoSetupClient {
       })
 
       if (response.ok) {
-        const data = await response.json()
+        const data = (await response.json()) as TautulliApiResponse<Record<string, unknown>>
         if (data.response?.result === "success") {
           return data.response.data
         }
@@ -136,6 +178,27 @@ export class TautulliClient implements IAutoSetupClient {
       // Ignore
     }
     return null
+  }
+
+  /**
+   * Check server connection status
+   */
+  async serverStatus(): Promise<boolean> {
+    if (!this.apiKey) return false
+
+    try {
+      const response = await fetch(this.buildApiUrl("server_status"), {
+        method: "GET",
+      })
+
+      if (response.ok) {
+        const data = (await response.json()) as TautulliApiResponse<{ connected: boolean }>
+        return data.response?.result === "success" && data.response.data?.connected === true
+      }
+    } catch {
+      // Ignore
+    }
+    return false
   }
 
   /**
@@ -150,7 +213,7 @@ export class TautulliClient implements IAutoSetupClient {
       })
 
       if (response.ok) {
-        const data = await response.json()
+        const data = (await response.json()) as TautulliApiResponse<Record<string, unknown>>
         if (data.response?.result === "success") {
           return data.response.data
         }
@@ -163,9 +226,9 @@ export class TautulliClient implements IAutoSetupClient {
 
   /**
    * Run the auto-setup process for Tautulli
-   * Note: Tautulli requires manual Plex connection via web wizard
+   * Gets API key automatically, but Plex connection requires manual wizard
    */
-  async setup(_options: AutoSetupOptions): Promise<AutoSetupResult> {
+  async setup(options: AutoSetupOptions): Promise<AutoSetupResult> {
     try {
       // Check if reachable
       const healthy = await this.isHealthy()
@@ -173,16 +236,39 @@ export class TautulliClient implements IAutoSetupClient {
         return { success: false, message: "Tautulli not reachable" }
       }
 
-      // Check if already initialized
-      const initialized = await this.isInitialized()
-      if (initialized) {
-        return { success: true, message: "Already configured" }
+      // Step 1: Get or create API key (works without auth initially)
+      debugLog("TautulliApi", "Step 1: Getting API key...")
+      let apiKey: string | undefined = this.apiKey
+      if (!apiKey) {
+        const newKey = await this.getApiKey(options.username, options.password)
+        if (!newKey) {
+          return { success: false, message: "Failed to get API key" }
+        }
+        apiKey = newKey
       }
 
-      // Tautulli requires manual Plex connection via setup wizard
+      // Step 2: Check if Plex is already connected
+      debugLog("TautulliApi", "Step 2: Checking Plex connection...")
+      const serverInfo = await this.getServerInfo()
+      const plexConnected = !!serverInfo?.pms_identifier
+
+      if (plexConnected) {
+        debugLog("TautulliApi", `Plex connected: ${serverInfo?.pms_name}`)
+        return {
+          success: true,
+          message: `Connected to Plex: ${serverInfo?.pms_name}`,
+          data: { apiKey },
+          envUpdates: { API_KEY_TAUTULLI: apiKey },
+        }
+      }
+
+      // Plex not connected - requires manual wizard
+      // But we still got the API key which is useful
       return {
-        success: false,
-        message: "Requires manual Plex connection via web wizard",
+        success: true,
+        message: "API key obtained. Complete Plex connection via web wizard.",
+        data: { apiKey, requiresWizard: true },
+        envUpdates: { API_KEY_TAUTULLI: apiKey },
       }
     } catch (error) {
       return { success: false, message: `${error}` }
