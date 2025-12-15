@@ -4,6 +4,7 @@
  */
 
 import { debugLog } from "../utils/debug"
+import type { IAutoSetupClient, AutoSetupOptions, AutoSetupResult } from "./auto-setup-types"
 
 /**
  * Bazarr System Settings (partial - auth related fields)
@@ -21,7 +22,7 @@ export interface BazarrAuthSettings {
  * Bazarr API Client
  * Note: Bazarr uses form data for POST, not JSON!
  */
-export class BazarrApiClient {
+export class BazarrApiClient implements IAutoSetupClient {
   private baseUrl: string
   private apiKey: string | null = null
 
@@ -215,6 +216,58 @@ export class BazarrApiClient {
     } catch (e) {
       debugLog("Bazarr", `Failed to configure Sonarr: ${e}`)
       throw e
+    }
+  }
+
+  /**
+   * Check if already configured (has auth set up)
+   */
+  async isInitialized(): Promise<boolean> {
+    try {
+      const settings = await this.getSettings()
+      const auth = (settings as { auth?: { type?: string } }).auth
+      return !!auth?.type && auth.type !== "None"
+    } catch {
+      return false
+    }
+  }
+
+  /**
+   * Run the auto-setup process for Bazarr
+   */
+  async setup(options: AutoSetupOptions): Promise<AutoSetupResult> {
+    const { username, password } = options
+
+    try {
+      // Check if reachable
+      const healthy = await this.isHealthy()
+      if (!healthy) {
+        return { success: false, message: "Bazarr not reachable" }
+      }
+
+      // Get API key first (needed for subsequent requests)
+      const apiKey = await this.getApiKey()
+      if (apiKey) {
+        this.setApiKey(apiKey)
+      }
+
+      // Check if auth already configured
+      const initialized = await this.isInitialized()
+      let authConfigured = false
+
+      if (!initialized) {
+        // Enable form auth
+        authConfigured = await this.enableFormAuth(username, password)
+      }
+
+      return {
+        success: true,
+        message: initialized ? "Already configured" : authConfigured ? "Auth enabled" : "Ready",
+        data: { apiKey, authConfigured },
+        envUpdates: apiKey ? { API_KEY_BAZARR: apiKey } : undefined,
+      }
+    } catch (error) {
+      return { success: false, message: `${error}` }
     }
   }
 }
