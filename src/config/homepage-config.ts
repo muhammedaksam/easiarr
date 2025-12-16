@@ -66,8 +66,15 @@ export async function generateServicesYaml(config: EasiarrConfig): Promise<strin
       description: appDef.description,
     }
 
-    // Cloudflared has no web UI - skip href/ping
-    if (appDef.id !== "cloudflared") {
+    // Special cases for href/ping
+    if (appDef.id === "cloudflared") {
+      // Cloudflared has no web UI - skip href/ping
+    } else if (appDef.id === "traefik") {
+      // Traefik dashboard is on port 8083 (secondary port), not 80 (proxy)
+      const dashboardUrl = `http://${localIp}:8083`
+      service.href = dashboardUrl
+      service.ping = dashboardUrl
+    } else {
       service.href = baseUrl
       service.ping = baseUrl
     }
