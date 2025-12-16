@@ -55,6 +55,9 @@ export async function generateServicesYaml(config: EasiarrConfig): Promise<strin
     // Skip homepage itself
     if (appDef.id === "homepage") continue
 
+    // Skip Huntarr - it uses Docker labels for Homepage autodiscovery
+    if (appDef.id === "huntarr") continue
+
     const port = appConfig.port ?? appDef.defaultPort
     const internalPort = appDef.internalPort ?? port
     // External URL for user browser access (href, ping)
