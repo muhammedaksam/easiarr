@@ -462,12 +462,14 @@ export class JellyseerrClient implements IAutoSetupClient {
 
   /**
    * Configure Radarr connection with auto-detection of profiles
+   * @param externalUrl - Optional external URL for navigation (e.g., https://radarr.example.com)
    */
   async configureRadarr(
     hostname: string,
     port: number,
     apiKey: string,
-    rootFolder: string
+    rootFolder: string,
+    externalUrl?: string
   ): Promise<JellyseerrRadarrSettings | null> {
     try {
       const testResult = await this.testRadarr({
@@ -496,6 +498,7 @@ export class JellyseerrClient implements IAutoSetupClient {
         is4k: false,
         minimumAvailability: "announced",
         isDefault: true,
+        externalUrl,
       })
     } catch (e) {
       debugLog("Jellyseerr", `Radarr config failed: ${e}`)
@@ -505,12 +508,14 @@ export class JellyseerrClient implements IAutoSetupClient {
 
   /**
    * Configure Sonarr connection with auto-detection of profiles
+   * @param externalUrl - Optional external URL for navigation (e.g., https://sonarr.example.com)
    */
   async configureSonarr(
     hostname: string,
     port: number,
     apiKey: string,
-    rootFolder: string
+    rootFolder: string,
+    externalUrl?: string
   ): Promise<JellyseerrSonarrSettings | null> {
     try {
       const testResult = await this.testSonarr({
@@ -539,6 +544,7 @@ export class JellyseerrClient implements IAutoSetupClient {
         is4k: false,
         enableSeasonFolders: true,
         isDefault: true,
+        externalUrl,
       })
     } catch (e) {
       debugLog("Jellyseerr", `Sonarr config failed: ${e}`)

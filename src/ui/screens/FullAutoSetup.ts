@@ -368,37 +368,8 @@ export class FullAutoSetup extends BoxRenderable {
         }
       }
 
-      // Configure Jellyseerr
-      const jellyseerrConfig = this.config.apps.find((a) => a.id === "jellyseerr" && a.enabled)
-      if (jellyseerrConfig) {
-        const port = jellyseerrConfig.port || 5055
-        const client = new JellyseerrClient("localhost", port)
-
-        try {
-          const applicationUrl = getApplicationUrl("jellyseerr", port, this.config)
-          await client.setApplicationUrl(applicationUrl)
-          debugLog("FullAutoSetup", `Set applicationUrl for jellyseerr: ${applicationUrl}`)
-          configured++
-        } catch (e) {
-          debugLog("FullAutoSetup", `Failed to set applicationUrl for jellyseerr: ${e}`)
-        }
-      }
-
-      // Configure Overseerr
-      const overseerrConfig = this.config.apps.find((a) => a.id === "overseerr" && a.enabled)
-      if (overseerrConfig) {
-        const port = overseerrConfig.port || 5055
-        const client = new OverseerrClient("localhost", port)
-
-        try {
-          const applicationUrl = getApplicationUrl("overseerr", port, this.config)
-          await client.setApplicationUrl(applicationUrl)
-          debugLog("FullAutoSetup", `Set applicationUrl for overseerr: ${applicationUrl}`)
-          configured++
-        } catch (e) {
-          debugLog("FullAutoSetup", `Failed to set applicationUrl for overseerr: ${e}`)
-        }
-      }
+      // Note: Jellyseerr and Overseerr are handled in their own setup steps
+      // (setupJellyseerr/setupOverseerr) because they require authentication first
 
       // Configure Bazarr
       const bazarrConfig = this.config.apps.find((a) => a.id === "bazarr" && a.enabled)
@@ -685,12 +656,16 @@ export class FullAutoSetup extends BoxRenderable {
         if (radarrConfig && this.env["API_KEY_RADARR"]) {
           try {
             const radarrDef = getApp("radarr")
+            const radarrPort = radarrConfig.port || radarrDef?.defaultPort || 7878
+            const radarrExternalUrl = getApplicationUrl("radarr", radarrPort, this.config)
             await client.configureRadarr(
               "radarr",
-              radarrConfig.port || radarrDef?.defaultPort || 7878,
+              radarrPort,
               this.env["API_KEY_RADARR"],
-              radarrDef?.rootFolder?.path || "/data/media/movies"
+              radarrDef?.rootFolder?.path || "/data/media/movies",
+              radarrExternalUrl
             )
+            debugLog("FullAutoSetup", `Jellyseerr: Radarr externalUrl set to ${radarrExternalUrl}`)
           } catch {
             /* Radarr config failed */
           }
@@ -700,15 +675,28 @@ export class FullAutoSetup extends BoxRenderable {
         if (sonarrConfig && this.env["API_KEY_SONARR"]) {
           try {
             const sonarrDef = getApp("sonarr")
+            const sonarrPort = sonarrConfig.port || sonarrDef?.defaultPort || 8989
+            const sonarrExternalUrl = getApplicationUrl("sonarr", sonarrPort, this.config)
             await client.configureSonarr(
               "sonarr",
-              sonarrConfig.port || sonarrDef?.defaultPort || 8989,
+              sonarrPort,
               this.env["API_KEY_SONARR"],
-              sonarrDef?.rootFolder?.path || "/data/media/tv"
+              sonarrDef?.rootFolder?.path || "/data/media/tv",
+              sonarrExternalUrl
             )
+            debugLog("FullAutoSetup", `Jellyseerr: Sonarr externalUrl set to ${sonarrExternalUrl}`)
           } catch {
             /* Sonarr config failed */
           }
+        }
+
+        // Set Jellyseerr's own applicationUrl (we're already authenticated from setup)
+        try {
+          const jellyseerrUrl = getApplicationUrl("jellyseerr", port, this.config)
+          await client.setApplicationUrl(jellyseerrUrl)
+          debugLog("FullAutoSetup", `Jellyseerr: applicationUrl set to ${jellyseerrUrl}`)
+        } catch {
+          debugLog("FullAutoSetup", "Failed to set Jellyseerr applicationUrl")
         }
 
         this.updateStep("Jellyseerr", "success", result.message)
@@ -978,6 +966,16 @@ export class FullAutoSetup extends BoxRenderable {
           await updateEnv(result.envUpdates)
           Object.assign(this.env, result.envUpdates)
         }
+
+        // Set Overseerr's applicationUrl (we're already authenticated from setup)
+        try {
+          const overseerrUrl = getApplicationUrl("overseerr", port, this.config)
+          await client.setApplicationUrl(overseerrUrl)
+          debugLog("FullAutoSetup", `Overseerr: applicationUrl set to ${overseerrUrl}`)
+        } catch {
+          debugLog("FullAutoSetup", "Failed to set Overseerr applicationUrl")
+        }
+
         this.updateStep("Overseerr", "success", result.message)
       } else {
         this.updateStep("Overseerr", "skipped", result.message)
