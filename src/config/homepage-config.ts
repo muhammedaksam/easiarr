@@ -165,6 +165,19 @@ export async function generateServicesYaml(config: EasiarrConfig): Promise<strin
         if (appDef.homepage.widgetFields) {
           Object.assign(service.widget, appDef.homepage.widgetFields)
         }
+
+        // Huntarr: dynamically build mappings based on enabled *arr apps
+        if (appDef.id === "huntarr") {
+          const huntarrApps = ["radarr", "sonarr", "lidarr", "whisparr", "readarr"]
+          const mappings = huntarrApps
+            .filter((appId) => config.apps.some((a) => a.id === appId && a.enabled))
+            .map((appId) => ({
+              field: `${appId}.next_cycle`,
+              label: appId.charAt(0).toUpperCase() + appId.slice(1),
+              format: "relativeDate",
+            }))
+          service.widget.mappings = JSON.stringify(mappings)
+        }
       }
       // If widget requires API key and none is set, skip widget but keep ping/icon
     }
