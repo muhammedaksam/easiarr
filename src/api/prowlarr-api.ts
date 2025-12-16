@@ -240,11 +240,11 @@ export class ProwlarrClient implements IAutoSetupClient {
 
   // Sync Profile management (aka App Sync Profile)
   async getSyncProfiles(): Promise<SyncProfile[]> {
-    return this.request<SyncProfile[]>("/appsyncprofile")
+    return this.request<SyncProfile[]>("/appprofile")
   }
 
   async createSyncProfile(profile: Omit<SyncProfile, "id">): Promise<SyncProfile> {
-    return this.request<SyncProfile>("/appsyncprofile", {
+    return this.request<SyncProfile>("/appprofile", {
       method: "POST",
       body: JSON.stringify(profile),
     })
@@ -335,15 +335,55 @@ export class ProwlarrClient implements IAutoSetupClient {
     await this.request(`/applications/${id}`, { method: "DELETE" })
   }
 
-  // Sync all apps - triggers Prowlarr to push indexers to connected apps
-  async syncApplications(): Promise<void> {
-    await this.request("/applications/action/sync", {
-      method: "POST",
-      body: JSON.stringify({}), // API requires non-empty body
+  // Update an existing application
+  async updateApplication(
+    id: number,
+    appType: ArrAppType,
+    name: string,
+    prowlarrUrl: string,
+    appUrl: string,
+    appApiKey: string,
+    syncLevel: "disabled" | "addOnly" | "fullSync" = "fullSync",
+    syncCategories: number[] = [],
+    tags: number[] = []
+  ): Promise<Application> {
+    const fields: { name: string; value: unknown }[] = [
+      { name: "prowlarrUrl", value: prowlarrUrl },
+      { name: "baseUrl", value: appUrl },
+      { name: "apiKey", value: appApiKey },
+      { name: "syncCategories", value: syncCategories },
+      { name: "syncRejectBlocklistedTorrentHashesWhileGrabbing", value: false },
+    ]
+
+    return this.request<Application>(`/applications/${id}`, {
+      method: "PUT",
+      body: JSON.stringify({
+        id,
+        name,
+        syncLevel,
+        enable: true,
+        implementation: appType,
+        implementationName: appType,
+        configContract: `${appType}Settings`,
+        infoLink: `https://wiki.servarr.com/prowlarr/supported#${appType.toLowerCase()}`,
+        fields,
+        tags,
+      }),
     })
   }
 
-  // Add *arr app with auto-detection
+  // Sync all apps - triggers Prowlarr to push indexers to connected apps
+  async syncApplications(): Promise<void> {
+    await this.request("/command", {
+      method: "POST",
+      body: JSON.stringify({
+        name: "ApplicationIndexerSync",
+        forceSync: true,
+      }),
+    })
+  }
+
+  // Add or update *arr app
   async addArrApp(
     appType: ArrAppType,
     host: string,
@@ -359,10 +399,27 @@ export class ProwlarrClient implements IAutoSetupClient {
     // Check if app already exists
     const apps = await this.getApplications()
     const existing = apps.find((a) => a.implementation === appType)
-    if (existing) {
-      return existing
+
+    if (existing && existing.id) {
+      // Update existing app with new syncCategories
+      debugLog(
+        "Prowlarr",
+        `Updating existing ${appType} app (id=${existing.id}) with syncCategories: ${JSON.stringify(syncCategories)}`
+      )
+      return this.updateApplication(
+        existing.id,
+        appType,
+        existing.name,
+        prowlarrUrl,
+        appUrl,
+        apiKey,
+        "fullSync",
+        syncCategories || [],
+        existing.tags || []
+      )
     }
 
+    // Create new app
     return this.addApplication(appType, appType, prowlarrUrl, appUrl, apiKey, "fullSync", syncCategories)
   }
 

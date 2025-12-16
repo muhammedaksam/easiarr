@@ -29,7 +29,7 @@ export const APPS: Record<AppId, AppDefinition> = {
       path: "/data/media/movies",
       apiVersion: "v3",
     },
-    prowlarrCategoryIds: [2000], // Movies
+    prowlarrCategoryIds: [2000, 2010, 2020, 2030, 2040, 2045, 2050, 2060, 2070, 2080, 2090], // Movies + all sub-categories
     homepage: { icon: "radarr.png", widget: "radarr" },
   },
 
@@ -54,7 +54,7 @@ export const APPS: Record<AppId, AppDefinition> = {
       path: "/data/media/tv",
       apiVersion: "v3",
     },
-    prowlarrCategoryIds: [5000], // TV
+    prowlarrCategoryIds: [5000, 5010, 5020, 5030, 5040, 5045, 5050, 5060, 5070, 5080, 5090], // TV + all sub-categories
     homepage: { icon: "sonarr.png", widget: "sonarr" },
   },
 
@@ -77,7 +77,7 @@ export const APPS: Record<AppId, AppDefinition> = {
       path: "/data/media/music",
       apiVersion: "v1",
     },
-    prowlarrCategoryIds: [3000], // Audio
+    prowlarrCategoryIds: [3000, 3010, 3020, 3030, 3040, 3050, 3060], // Audio + all sub-categories
     homepage: { icon: "lidarr.png", widget: "lidarr" },
   },
 
@@ -100,7 +100,7 @@ export const APPS: Record<AppId, AppDefinition> = {
       path: "/data/media/books",
       apiVersion: "v1",
     },
-    prowlarrCategoryIds: [7000], // Books
+    prowlarrCategoryIds: [7000, 7010, 7020, 7030, 7040, 7050, 7060], // Books + all sub-categories
     arch: {
       deprecated: ["arm64", "arm32"],
       warning: "Readarr is deprecated - no ARM64 support (project abandoned by upstream)",
@@ -172,7 +172,7 @@ export const APPS: Record<AppId, AppDefinition> = {
       path: "/data/media/adult",
       apiVersion: "v3",
     },
-    prowlarrCategoryIds: [6000], // XXX
+    prowlarrCategoryIds: [6000, 6010, 6020, 6030, 6040, 6045, 6050, 6060, 6070, 6080, 6090], // XXX + all sub-categories
     homepage: { icon: "whisparr.png", widget: "sonarr" }, // Uses sonarr widget type
   },
 
