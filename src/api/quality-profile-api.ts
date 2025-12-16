@@ -1,10 +1,14 @@
 /**
  * Quality Profile API Client
- * Manages Quality Profiles and Custom Format scoring for Radarr/Sonarr
+ * Manages Quality Profiles and Custom Format scoring for Radarr/Sonarr/Lidarr
  */
 
 import { debugLog } from "../utils/debug"
-import { TRASH_RADARR_QUALITY_DEFINITIONS, TRASH_SONARR_QUALITY_DEFINITIONS } from "../config/trash-quality-definitions"
+import {
+  TRASH_RADARR_QUALITY_DEFINITIONS,
+  TRASH_SONARR_QUALITY_DEFINITIONS,
+  TRASH_LIDARR_QUALITY_DEFINITIONS,
+} from "../config/trash-quality-definitions"
 
 export interface QualityItem {
   id?: number
@@ -219,12 +223,22 @@ export class QualityProfileClient {
     return this.updateQualityProfile(profileId, profile)
   }
 
-  // Apply TRaSH Quality Definitions (File Size Limits)
-  async updateTrashQualityDefinitions(appType: "radarr" | "sonarr"): Promise<void> {
+  // Apply TRaSH/Davo Quality Definitions (File Size Limits)
+  async updateTrashQualityDefinitions(appType: "radarr" | "sonarr" | "lidarr"): Promise<void> {
     try {
       debugLog("QualityProfile", `Updating Quality Definitions for ${appType}`)
       const definitions = await this.getQualityDefinitions()
-      const trashDefs = appType === "radarr" ? TRASH_RADARR_QUALITY_DEFINITIONS : TRASH_SONARR_QUALITY_DEFINITIONS
+
+      // Get appropriate definitions based on app type
+      let trashDefs
+      if (appType === "radarr") {
+        trashDefs = TRASH_RADARR_QUALITY_DEFINITIONS
+      } else if (appType === "sonarr") {
+        trashDefs = TRASH_SONARR_QUALITY_DEFINITIONS
+      } else {
+        trashDefs = TRASH_LIDARR_QUALITY_DEFINITIONS
+      }
+
       let updatedCount = 0
 
       const newDefinitions = definitions.map((def) => {
