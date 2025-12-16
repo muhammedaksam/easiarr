@@ -492,9 +492,11 @@ export class JellyseerrClient implements IAutoSetupClient {
 
       if (existingConfig?.id) {
         // Update existing configuration (just update externalUrl)
+        // Note: id must be excluded from body - it's read-only in the API
         debugLog("Jellyseerr", `Updating existing Radarr config (id: ${existingConfig.id})`)
-        return await this.updateRadarr(existingConfig.id, {
-          ...existingConfig,
+        const { id, ...configWithoutId } = existingConfig
+        return await this.updateRadarr(id, {
+          ...configWithoutId,
           externalUrl,
         })
       }
@@ -552,9 +554,11 @@ export class JellyseerrClient implements IAutoSetupClient {
 
       if (existingConfig?.id) {
         // Update existing configuration (just update externalUrl)
+        // Note: id must be excluded from body - it's read-only in the API
         debugLog("Jellyseerr", `Updating existing Sonarr config (id: ${existingConfig.id})`)
-        return await this.updateSonarr(existingConfig.id, {
-          ...existingConfig,
+        const { id, ...configWithoutId } = existingConfig
+        return await this.updateSonarr(id, {
+          ...configWithoutId,
           externalUrl,
         })
       }
