@@ -55,6 +55,9 @@ export async function generateServicesYaml(config: EasiarrConfig): Promise<strin
     // Skip homepage itself
     if (appDef.id === "homepage") continue
 
+    // Skip apps with no web UI (port 0) and no homepage config
+    if (appDef.defaultPort === 0 && !appDef.homepage) continue
+
     const port = appConfig.port ?? appDef.defaultPort
     const internalPort = appDef.internalPort ?? port
     // External URL for user browser access (href, ping)
