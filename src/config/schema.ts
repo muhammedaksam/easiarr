@@ -106,6 +106,8 @@ export type AppId =
   // Download Clients
   | "qbittorrent"
   | "sabnzbd"
+  | "slskd"
+  | "soularr"
   // Media Servers
   | "plex"
   | "jellyfin"

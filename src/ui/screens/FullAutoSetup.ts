@@ -25,6 +25,11 @@ import { HeimdallClient } from "../../api/heimdall-api"
 import { HuntarrClient } from "../../api/huntarr-api"
 import { saveConfig } from "../../config"
 import { saveCompose } from "../../compose"
+import { generateSlskdConfig, getSlskdConfigPath } from "../../config/slskd-config"
+import { generateSoularrConfig, getSoularrConfigPath } from "../../config/soularr-config"
+import { writeFile, mkdir } from "fs/promises"
+import { dirname } from "path"
+import { existsSync } from "fs"
 import { getApp } from "../../apps/registry"
 // import type { AppId } from "../../config/schema"
 import { getCategoriesForApps } from "../../utils/categories"
@@ -111,6 +116,8 @@ export class FullAutoSetup extends BoxRenderable {
       { name: "Homarr", status: "pending" },
       { name: "Heimdall", status: "pending" },
       { name: "Huntarr", status: "pending" },
+      { name: "Slskd", status: "pending" },
+      { name: "Soularr", status: "pending" },
       { name: "Cloudflare Tunnel", status: "pending" },
     ]
   }
@@ -202,7 +209,13 @@ export class FullAutoSetup extends BoxRenderable {
     // Step 18: Huntarr (*arr app manager)
     await this.setupHuntarr()
 
-    // Step 19: Cloudflare Tunnel
+    // Step 19: Slskd (Soulseek client)
+    await this.setupSlskd()
+
+    // Step 20: Soularr (Lidarr -> Slskd bridge)
+    await this.setupSoularr()
+
+    // Step 21: Cloudflare Tunnel
     await this.setupCloudflare()
 
     this.isRunning = false
@@ -1280,6 +1293,92 @@ export class FullAutoSetup extends BoxRenderable {
       }
     } catch (e) {
       this.updateStep("Heimdall", "error", `${e}`)
+    }
+    this.refreshContent()
+  }
+
+  private async setupSlskd(): Promise<void> {
+    this.updateStep("Slskd", "running")
+    this.refreshContent()
+
+    const slskdConfig = this.config.apps.find((a) => a.id === "slskd" && a.enabled)
+    if (!slskdConfig) {
+      this.updateStep("Slskd", "skipped", "Not enabled")
+      this.refreshContent()
+      return
+    }
+
+    try {
+      // Generate slskd.yml config with auto-generated API key
+      const { yaml, apiKey } = generateSlskdConfig(this.config)
+      const configPath = getSlskdConfigPath(this.config.rootDir)
+
+      // Ensure config directory exists
+      const configDir = dirname(configPath)
+      if (!existsSync(configDir)) {
+        await mkdir(configDir, { recursive: true })
+      }
+
+      // Create slskd download directories (like qBittorrent categories)
+      const slskdDownloadsDir = `${this.config.rootDir}/data/slskd_downloads`
+      await mkdir(`${slskdDownloadsDir}/incomplete`, { recursive: true })
+      await mkdir(`${slskdDownloadsDir}/complete`, { recursive: true })
+      debugLog("FullAutoSetup", `Created slskd download directories at ${slskdDownloadsDir}`)
+
+      // Always write slskd.yml - Docker creates a commented-out example that we need to replace
+      await writeFile(configPath, yaml)
+      debugLog("FullAutoSetup", `Generated slskd.yml at ${configPath}`)
+
+      // Save API key to .env for Homepage widget and Soularr
+      await updateEnv({ API_KEY_SLSKD: apiKey })
+      this.env["API_KEY_SLSKD"] = apiKey
+
+      this.updateStep("Slskd", "success", "Config generated, API key saved")
+    } catch (e) {
+      this.updateStep("Slskd", "error", `${e}`)
+    }
+    this.refreshContent()
+  }
+
+  private async setupSoularr(): Promise<void> {
+    this.updateStep("Soularr", "running")
+    this.refreshContent()
+
+    const soularrConfig = this.config.apps.find((a) => a.id === "soularr" && a.enabled)
+    if (!soularrConfig) {
+      this.updateStep("Soularr", "skipped", "Not enabled")
+      this.refreshContent()
+      return
+    }
+
+    // Check dependencies
+    const lidarrConfig = this.config.apps.find((a) => a.id === "lidarr" && a.enabled)
+    const slskdConfig = this.config.apps.find((a) => a.id === "slskd" && a.enabled)
+
+    if (!lidarrConfig || !slskdConfig) {
+      this.updateStep("Soularr", "skipped", "Requires Lidarr & Slskd")
+      this.refreshContent()
+      return
+    }
+
+    try {
+      // Generate soularr config.ini
+      const configContent = generateSoularrConfig(this.config)
+      const configPath = getSoularrConfigPath(this.config.rootDir)
+
+      // Ensure directory exists
+      const configDir = dirname(configPath)
+      if (!existsSync(configDir)) {
+        await mkdir(configDir, { recursive: true })
+      }
+
+      // Write config file
+      await writeFile(configPath, configContent)
+      debugLog("FullAutoSetup", `Generated soularr config at ${configPath}`)
+
+      this.updateStep("Soularr", "success", "Config generated")
+    } catch (e) {
+      this.updateStep("Soularr", "error", `${e}`)
     }
     this.refreshContent()
   }
