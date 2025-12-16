@@ -255,6 +255,30 @@ export class OverseerrClient implements IAutoSetupClient {
   }
 
   /**
+   * Set application URL for external access
+   * URL will be used for links to Overseerr from other apps
+   */
+  async setApplicationUrl(applicationUrl: string): Promise<boolean> {
+    debugLog("OverseerrApi", `Setting applicationUrl to: ${applicationUrl}`)
+
+    try {
+      const response = await fetch(`${this.baseUrl}/api/v1/settings/main`, {
+        method: "POST",
+        headers: this.getHeaders(),
+        body: JSON.stringify({ applicationUrl }),
+      })
+
+      if (response.ok) {
+        debugLog("OverseerrApi", "Application URL set successfully")
+        return true
+      }
+    } catch (error) {
+      debugLog("OverseerrApi", `Failed to set application URL: ${error}`)
+    }
+    return false
+  }
+
+  /**
    * Sync Plex libraries
    */
   async syncPlexLibraries(): Promise<boolean> {

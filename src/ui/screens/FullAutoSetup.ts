@@ -29,6 +29,7 @@ import { getApp } from "../../apps/registry"
 import { getCategoriesForApps } from "../../utils/categories"
 import { readEnvSync, updateEnv } from "../../utils/env"
 import { debugLog } from "../../utils/debug"
+import { getApplicationUrl } from "../../utils/url-utils"
 
 interface SetupStep {
   name: string
@@ -91,6 +92,7 @@ export class FullAutoSetup extends BoxRenderable {
     this.steps = [
       { name: "Root Folders", status: "pending" },
       { name: "Authentication", status: "pending" },
+      { name: "External URLs", status: "pending" },
       { name: "Prowlarr Apps", status: "pending" },
       { name: "FlareSolverr", status: "pending" },
       { name: "qBittorrent", status: "pending" },
@@ -143,52 +145,55 @@ export class FullAutoSetup extends BoxRenderable {
     // Step 2: Authentication
     await this.setupAuthentication()
 
-    // Step 3: Prowlarr apps
+    // Step 3: External URLs
+    await this.setupExternalUrls()
+
+    // Step 4: Prowlarr apps
     await this.setupProwlarrApps()
 
-    // Step 4: FlareSolverr
+    // Step 5: FlareSolverr
     await this.setupFlareSolverr()
 
-    // Step 5: qBittorrent
+    // Step 6: qBittorrent
     await this.setupQBittorrent()
 
-    // Step 6: Portainer
+    // Step 7: Portainer
     await this.setupPortainer()
 
-    // Step 7: Jellyfin
+    // Step 8: Jellyfin
     await this.setupJellyfin()
 
-    // Step 8: Jellyseerr
+    // Step 9: Jellyseerr
     await this.setupJellyseerr()
 
-    // Step 9: Plex
+    // Step 10: Plex
     await this.setupPlex()
 
-    // Step 10: Overseerr (requires Plex)
+    // Step 11: Overseerr (requires Plex)
     await this.setupOverseerr()
 
-    // Step 11: Tautulli (Plex monitoring)
+    // Step 12: Tautulli (Plex monitoring)
     await this.setupTautulli()
 
-    // Step 12: Bazarr (subtitles)
+    // Step 13: Bazarr (subtitles)
     await this.setupBazarr()
 
-    // Step 13: Uptime Kuma (monitors)
+    // Step 14: Uptime Kuma (monitors)
     await this.setupUptimeKuma()
 
-    // Step 14: Grafana (dashboards)
+    // Step 15: Grafana (dashboards)
     await this.setupGrafana()
 
-    // Step 15: Homarr (dashboard)
+    // Step 16: Homarr (dashboard)
     await this.setupHomarr()
 
-    // Step 16: Heimdall (dashboard)
+    // Step 17: Heimdall (dashboard)
     await this.setupHeimdall()
 
-    // Step 17: Huntarr (*arr app manager)
+    // Step 18: Huntarr (*arr app manager)
     await this.setupHuntarr()
 
-    // Step 18: Cloudflare Tunnel
+    // Step 19: Cloudflare Tunnel
     await this.setupCloudflare()
 
     this.isRunning = false
@@ -323,6 +328,105 @@ export class FullAutoSetup extends BoxRenderable {
       this.updateStep("Authentication", "success")
     } catch (e) {
       this.updateStep("Authentication", "error", `${e}`)
+    }
+    this.refreshContent()
+  }
+
+  private async setupExternalUrls(): Promise<void> {
+    this.updateStep("External URLs", "running")
+    this.refreshContent()
+
+    let configured = 0
+
+    try {
+      // Configure *arr apps (Radarr, Sonarr, Lidarr, Readarr, Whisparr, Prowlarr)
+      const arrApps = this.config.apps.filter((a) => {
+        const def = getApp(a.id)
+        return a.enabled && (def?.rootFolder || a.id === "prowlarr")
+      })
+
+      for (const app of arrApps) {
+        const def = getApp(app.id)
+        if (!def) continue
+
+        const apiKey = this.env[`API_KEY_${app.id.toUpperCase()}`]
+        if (!apiKey) {
+          continue
+        }
+
+        const port = app.port || def.defaultPort
+        const apiVersion = app.id === "prowlarr" ? "v1" : def.rootFolder?.apiVersion || "v3"
+        const client = new ArrApiClient("localhost", port, apiKey, apiVersion)
+
+        try {
+          const applicationUrl = getApplicationUrl(app.id, port, this.config)
+          await client.setApplicationUrl(applicationUrl)
+          debugLog("FullAutoSetup", `Set applicationUrl for ${app.id}: ${applicationUrl}`)
+          configured++
+        } catch (e) {
+          debugLog("FullAutoSetup", `Failed to set applicationUrl for ${app.id}: ${e}`)
+        }
+      }
+
+      // Configure Jellyseerr
+      const jellyseerrConfig = this.config.apps.find((a) => a.id === "jellyseerr" && a.enabled)
+      if (jellyseerrConfig) {
+        const port = jellyseerrConfig.port || 5055
+        const client = new JellyseerrClient("localhost", port)
+
+        try {
+          const applicationUrl = getApplicationUrl("jellyseerr", port, this.config)
+          await client.setApplicationUrl(applicationUrl)
+          debugLog("FullAutoSetup", `Set applicationUrl for jellyseerr: ${applicationUrl}`)
+          configured++
+        } catch (e) {
+          debugLog("FullAutoSetup", `Failed to set applicationUrl for jellyseerr: ${e}`)
+        }
+      }
+
+      // Configure Overseerr
+      const overseerrConfig = this.config.apps.find((a) => a.id === "overseerr" && a.enabled)
+      if (overseerrConfig) {
+        const port = overseerrConfig.port || 5055
+        const client = new OverseerrClient("localhost", port)
+
+        try {
+          const applicationUrl = getApplicationUrl("overseerr", port, this.config)
+          await client.setApplicationUrl(applicationUrl)
+          debugLog("FullAutoSetup", `Set applicationUrl for overseerr: ${applicationUrl}`)
+          configured++
+        } catch (e) {
+          debugLog("FullAutoSetup", `Failed to set applicationUrl for overseerr: ${e}`)
+        }
+      }
+
+      // Configure Bazarr
+      const bazarrConfig = this.config.apps.find((a) => a.id === "bazarr" && a.enabled)
+      if (bazarrConfig) {
+        const bazarrApiKey = this.env["API_KEY_BAZARR"]
+        if (bazarrApiKey) {
+          const port = bazarrConfig.port || 6767
+          const client = new BazarrApiClient("localhost", port)
+          client.setApiKey(bazarrApiKey)
+
+          try {
+            const baseUrl = getApplicationUrl("bazarr", port, this.config)
+            await client.setBaseUrl(baseUrl)
+            debugLog("FullAutoSetup", `Set baseUrl for bazarr: ${baseUrl}`)
+            configured++
+          } catch (e) {
+            debugLog("FullAutoSetup", `Failed to set baseUrl for bazarr: ${e}`)
+          }
+        }
+      }
+
+      if (configured > 0) {
+        this.updateStep("External URLs", "success", `${configured} apps configured`)
+      } else {
+        this.updateStep("External URLs", "skipped", "No apps with API keys")
+      }
+    } catch (e) {
+      this.updateStep("External URLs", "error", `${e}`)
     }
     this.refreshContent()
   }

@@ -239,7 +239,28 @@ export class ArrApiClient {
     })
   }
 
+  /**
+   * Set application URL for external access (e.g., from Jellyseerr/dashboard links)
+   * URL will be used when generating external links in the app
+   */
+  async setApplicationUrl(applicationUrl: string): Promise<HostConfig> {
+    const currentConfig = await this.getHostConfig()
+
+    const updatedConfig: HostConfig = {
+      ...currentConfig,
+      applicationUrl,
+    }
+
+    debugLog("ArrAPI", `Setting applicationUrl to: ${applicationUrl}`)
+
+    return this.request<HostConfig>("/config/host", {
+      method: "PUT",
+      body: JSON.stringify(updatedConfig),
+    })
+  }
+
   // Remote Path Mapping methods - for Docker path translation
+
   async getRemotePathMappings(): Promise<RemotePathMapping[]> {
     return this.request<RemotePathMapping[]>("/remotepathmapping")
   }

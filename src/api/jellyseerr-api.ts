@@ -237,6 +237,15 @@ export class JellyseerrClient implements IAutoSetupClient {
     })
   }
 
+  /**
+   * Set application URL for external access
+   * URL will be used for links to Jellyseerr from other apps
+   */
+  async setApplicationUrl(applicationUrl: string): Promise<JellyseerrMainSettings> {
+    debugLog("Jellyseerr", `Setting applicationUrl to: ${applicationUrl}`)
+    return this.updateMainSettings({ applicationUrl })
+  }
+
   // ==========================================
   // Jellyfin Configuration
   // ==========================================
