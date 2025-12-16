@@ -91,6 +91,7 @@ export class FullAutoSetup extends BoxRenderable {
   private initSteps(): void {
     this.steps = [
       { name: "Root Folders", status: "pending" },
+      { name: "Naming Scheme", status: "pending" },
       { name: "Authentication", status: "pending" },
       { name: "External URLs", status: "pending" },
       { name: "Prowlarr Apps", status: "pending" },
@@ -142,7 +143,10 @@ export class FullAutoSetup extends BoxRenderable {
     // Step 1: Root folders
     await this.setupRootFolders()
 
-    // Step 2: Authentication
+    // Step 2: Naming Scheme
+    await this.setupNaming()
+
+    // Step 3: Authentication
     await this.setupAuthentication()
 
     // Step 3: External URLs
@@ -236,6 +240,40 @@ export class FullAutoSetup extends BoxRenderable {
       this.updateStep("Root Folders", "success")
     } catch (e) {
       this.updateStep("Root Folders", "error", `${e}`)
+    }
+    this.refreshContent()
+  }
+
+  private async setupNaming(): Promise<void> {
+    this.updateStep("Naming Scheme", "running")
+    this.refreshContent()
+
+    try {
+      const arrApps = this.config.apps.filter((a) => {
+        return a.enabled && (a.id === "radarr" || a.id === "sonarr")
+      })
+
+      for (const app of arrApps) {
+        const apiKey = this.env[`API_KEY_${app.id.toUpperCase()}`]
+        if (!apiKey) continue
+
+        const def = getApp(app.id)
+        if (!def) continue
+
+        const port = app.port || def.defaultPort
+        const client = new ArrApiClient("localhost", port, apiKey, def.rootFolder?.apiVersion || "v3")
+
+        try {
+          await client.configureTRaSHNaming(app.id as "radarr" | "sonarr")
+          debugLog("FullAutoSetup", `Configured naming for ${app.id}`)
+        } catch (e) {
+          debugLog("FullAutoSetup", `Failed to configure naming for ${app.id}: ${e}`)
+        }
+      }
+
+      this.updateStep("Naming Scheme", "success")
+    } catch (e) {
+      this.updateStep("Naming Scheme", "error", `${e}`)
     }
     this.refreshContent()
   }

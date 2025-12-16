@@ -7,6 +7,7 @@ import { BoxRenderable, CliRenderer, TextRenderable, KeyEvent } from "@opentui/c
 import { createPageLayout } from "../components/PageLayout"
 import { EasiarrConfig, AppId } from "../../config/schema"
 import { getApp } from "../../apps/registry"
+import { ArrApiClient } from "../../api/arr-api"
 import { QualityProfileClient } from "../../api/quality-profile-api"
 import { CustomFormatClient, getCFNamesForCategories } from "../../api/custom-format-api"
 import { getPresetsForApp, TRaSHProfilePreset } from "../../data/trash-profiles"
@@ -18,6 +19,7 @@ interface SetupResult {
   appName: string
   profile: string
   cfCount: number
+  namingConfigured: boolean
   status: "pending" | "configuring" | "success" | "error"
   message?: string
 }
@@ -185,6 +187,7 @@ export class TRaSHProfileSetup extends BoxRenderable {
         appName: appDef.name,
         profile: preset.name,
         cfCount: 0,
+        namingConfigured: false,
         status: "configuring",
       })
       this.refreshContent()
@@ -195,6 +198,7 @@ export class TRaSHProfileSetup extends BoxRenderable {
         if (result) {
           result.status = "success"
           result.cfCount = Object.keys(preset.cfScores).length
+          result.namingConfigured = true
         }
       } catch (error) {
         const result = this.results.find((r) => r.appId === appId)
@@ -237,6 +241,10 @@ export class TRaSHProfileSetup extends BoxRenderable {
 
     // Create quality profile
     await qpClient.createTRaSHProfile(preset.name, preset.cutoffQuality, preset.allowedQualities, preset.cfScores)
+
+    // Configure naming scheme
+    const arrClient = new ArrApiClient("localhost", port, apiKey, appDef.rootFolder?.apiVersion || "v3")
+    await arrClient.configureTRaSHNaming(appId as "radarr" | "sonarr")
   }
 
   private refreshContent(): void {
@@ -349,7 +357,7 @@ export class TRaSHProfileSetup extends BoxRenderable {
 
       let content = `${status} ${result.appName}: ${result.profile}`
       if (result.status === "success") {
-        content += ` (${result.cfCount} CF scores)`
+        content += ` (${result.cfCount} CF scores, naming configured)`
       }
       if (result.message) {
         content += ` - ${result.message}`
