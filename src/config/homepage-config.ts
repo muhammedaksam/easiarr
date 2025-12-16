@@ -123,7 +123,10 @@ export async function generateServicesYaml(config: EasiarrConfig): Promise<strin
         // Skip widget if no API key
       }
       // Most widgets need API key - only add if available
-      else if (apiKey || ["qbittorrent", "gluetun", "traefik", "huntarr"].includes(appDef.id)) {
+      else if (
+        apiKey ||
+        ["qbittorrent", "gluetun", "traefik", "huntarr", "easiarr", "flaresolverr"].includes(appDef.id)
+      ) {
         service.widget = {
           type: widgetType,
           url: dockerUrl,
