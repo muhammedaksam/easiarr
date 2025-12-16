@@ -1313,11 +1313,17 @@ export class FullAutoSetup extends BoxRenderable {
       const { yaml, apiKey } = generateSlskdConfig(this.config)
       const configPath = getSlskdConfigPath(this.config.rootDir)
 
-      // Ensure directory exists
+      // Ensure config directory exists
       const configDir = dirname(configPath)
       if (!existsSync(configDir)) {
         await mkdir(configDir, { recursive: true })
       }
+
+      // Create slskd download directories (like qBittorrent categories)
+      const slskdDownloadsDir = `${this.config.rootDir}/data/slskd_downloads`
+      await mkdir(`${slskdDownloadsDir}/incomplete`, { recursive: true })
+      await mkdir(`${slskdDownloadsDir}/complete`, { recursive: true })
+      debugLog("FullAutoSetup", `Created slskd download directories at ${slskdDownloadsDir}`)
 
       // Always write slskd.yml - Docker creates a commented-out example that we need to replace
       await writeFile(configPath, yaml)
