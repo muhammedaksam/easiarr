@@ -313,7 +313,8 @@ export class FullAutoSetup extends BoxRenderable {
         if (!def) continue
 
         const port = app.port || def.defaultPort
-        const client = new QualityProfileClient("localhost", port, apiKey)
+        const apiVersion = def.rootFolder?.apiVersion || "v3"
+        const client = new QualityProfileClient("localhost", port, apiKey, apiVersion)
 
         try {
           await client.updateTrashQualityDefinitions(app.id as "radarr" | "sonarr" | "lidarr")

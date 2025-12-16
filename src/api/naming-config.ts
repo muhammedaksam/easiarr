@@ -79,7 +79,7 @@ export const TRASH_NAMING_CONFIG = {
   lidarr: {
     renameTracks: true,
     replaceIllegalCharacters: true,
-    colonReplacementFormat: "dash",
+    colonReplacementFormat: 4, // 4 = Smart Replace (Dash or Space Dash depending on name)
     // Standard track format: Artist - Album (Year) - Track# - Title
     standardTrackFormat: "{Artist CleanName} - {Album CleanTitle} ({Release Year}) - {track:00} - {Track CleanTitle}",
     // Multi-disc format includes disc number
