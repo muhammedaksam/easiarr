@@ -690,6 +690,19 @@ export class FullAutoSetup extends BoxRenderable {
           }
         }
 
+        // Set Jellyfin's externalHostname for navigation links
+        const jellyfinConfig = this.config.apps.find((a) => a.id === "jellyfin" && a.enabled)
+        if (jellyfinConfig) {
+          try {
+            const jellyfinPort = jellyfinConfig.port || 8096
+            const jellyfinUrl = getApplicationUrl("jellyfin", jellyfinPort, this.config)
+            await client.updateJellyfinSettings({ externalHostname: jellyfinUrl })
+            debugLog("FullAutoSetup", `Jellyseerr: Jellyfin externalHostname set to ${jellyfinUrl}`)
+          } catch {
+            debugLog("FullAutoSetup", "Failed to set Jellyfin externalHostname in Jellyseerr")
+          }
+        }
+
         // Set Jellyseerr's own applicationUrl (we're already authenticated from setup)
         try {
           const jellyseerrUrl = getApplicationUrl("jellyseerr", port, this.config)

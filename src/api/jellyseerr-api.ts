@@ -392,6 +392,13 @@ export class JellyseerrClient implements IAutoSetupClient {
     })
   }
 
+  async updateRadarr(id: number, settings: Partial<JellyseerrRadarrSettings>): Promise<JellyseerrRadarrSettings> {
+    return this.request<JellyseerrRadarrSettings>(`/settings/radarr/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(settings),
+    })
+  }
+
   // ==========================================
   // Sonarr Configuration
   // ==========================================
@@ -416,6 +423,13 @@ export class JellyseerrClient implements IAutoSetupClient {
   async addSonarr(settings: JellyseerrSonarrSettings): Promise<JellyseerrSonarrSettings> {
     return this.request<JellyseerrSonarrSettings>("/settings/sonarr", {
       method: "POST",
+      body: JSON.stringify(settings),
+    })
+  }
+
+  async updateSonarr(id: number, settings: Partial<JellyseerrSonarrSettings>): Promise<JellyseerrSonarrSettings> {
+    return this.request<JellyseerrSonarrSettings>(`/settings/sonarr/${id}`, {
+      method: "PUT",
       body: JSON.stringify(settings),
     })
   }
@@ -472,6 +486,20 @@ export class JellyseerrClient implements IAutoSetupClient {
     externalUrl?: string
   ): Promise<JellyseerrRadarrSettings | null> {
     try {
+      // Check if Radarr is already configured
+      const existingConfigs = await this.getRadarrSettings()
+      const existingConfig = existingConfigs.find((c) => c.hostname === hostname && c.port === port)
+
+      if (existingConfig?.id) {
+        // Update existing configuration (just update externalUrl)
+        debugLog("Jellyseerr", `Updating existing Radarr config (id: ${existingConfig.id})`)
+        return await this.updateRadarr(existingConfig.id, {
+          ...existingConfig,
+          externalUrl,
+        })
+      }
+
+      // Test connection and get profiles
       const testResult = await this.testRadarr({
         hostname,
         port,
@@ -518,6 +546,20 @@ export class JellyseerrClient implements IAutoSetupClient {
     externalUrl?: string
   ): Promise<JellyseerrSonarrSettings | null> {
     try {
+      // Check if Sonarr is already configured
+      const existingConfigs = await this.getSonarrSettings()
+      const existingConfig = existingConfigs.find((c) => c.hostname === hostname && c.port === port)
+
+      if (existingConfig?.id) {
+        // Update existing configuration (just update externalUrl)
+        debugLog("Jellyseerr", `Updating existing Sonarr config (id: ${existingConfig.id})`)
+        return await this.updateSonarr(existingConfig.id, {
+          ...existingConfig,
+          externalUrl,
+        })
+      }
+
+      // Test connection and get profiles
       const testResult = await this.testSonarr({
         hostname,
         port,
