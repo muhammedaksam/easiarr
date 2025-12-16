@@ -29,7 +29,7 @@ host_url = http://lidarr:${lidarrPort}
 # Path to slskd downloads inside the Lidarr container
 download_dir = /data/slskd_downloads
 # If true, Lidarr won't auto-import from Slskd (recommended: True to avoid failed_imports issues)
-disable_sync = True
+disable_sync = False
 
 [Slskd]
 # Create manually in Slskd web UI
