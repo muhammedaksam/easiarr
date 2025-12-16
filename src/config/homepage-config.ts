@@ -24,7 +24,7 @@ export function getHomepageConfigPath(config: EasiarrConfig): string {
  * Homepage service entry
  */
 interface HomepageService {
-  href: string
+  href?: string // Optional - cloudflared has no web UI
   icon?: string
   description?: string
   ping?: string
@@ -63,8 +63,13 @@ export async function generateServicesYaml(config: EasiarrConfig): Promise<strin
     const dockerUrl = `http://${appDef.id}:${internalPort}`
 
     const service: HomepageService = {
-      href: baseUrl,
       description: appDef.description,
+    }
+
+    // Cloudflared has no web UI - skip href/ping
+    if (appDef.id !== "cloudflared") {
+      service.href = baseUrl
+      service.ping = baseUrl
     }
 
     // Add icon if defined in homepage meta
@@ -74,9 +79,6 @@ export async function generateServicesYaml(config: EasiarrConfig): Promise<strin
       // Default to app ID as icon name
       service.icon = `${appDef.id}.png`
     }
-
-    // Add ping for monitoring
-    service.ping = baseUrl
 
     // Add widget if defined
     if (appDef.homepage?.widget) {
