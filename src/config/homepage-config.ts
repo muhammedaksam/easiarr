@@ -335,11 +335,9 @@ export async function saveHomepageConfig(config: EasiarrConfig): Promise<{ servi
   const servicesYaml = await generateServicesYaml(config)
   await writeFile(servicesPath, servicesYaml, "utf-8")
 
-  // Generate and save settings.yaml (only if doesn't exist)
-  if (!existsSync(settingsPath)) {
-    const settingsYaml = generateSettingsYaml()
-    await writeFile(settingsPath, settingsYaml, "utf-8")
-  }
+  // Generate and save settings.yaml (always regenerate to include docker integration)
+  const settingsYaml = generateSettingsYaml()
+  await writeFile(settingsPath, settingsYaml, "utf-8")
 
   return { services: servicesPath, settings: settingsPath }
 }
