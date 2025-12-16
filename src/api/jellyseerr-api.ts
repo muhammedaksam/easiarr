@@ -565,10 +565,27 @@ export class JellyseerrClient implements IAutoSetupClient {
         return { success: false, message: "Jellyseerr not reachable" }
       }
 
+      // Get Jellyfin connection details from env
+      const jellyfinHost = env["JELLYFIN_HOST"] || "jellyfin"
+      const jellyfinPort = parseInt(env["JELLYFIN_PORT"] || "8096", 10)
+
       // Check if already initialized
       const initialized = await this.isInitialized()
       if (initialized) {
-        // Get API key from settings
+        // Authenticate first to get session cookie (needed for protected endpoints)
+        try {
+          await this.authenticateJellyfin(username, password, jellyfinHost, jellyfinPort)
+          debugLog("Jellyseerr", "Authenticated to already-initialized instance")
+        } catch (authError) {
+          debugLog("Jellyseerr", `Auth failed on initialized instance: ${authError}`)
+          // Still return success, just without API key access
+          return {
+            success: true,
+            message: "Already configured (could not authenticate)",
+          }
+        }
+
+        // Now we can access protected endpoints with our session cookie
         const settings = await this.getMainSettings()
         return {
           success: true,
@@ -578,11 +595,7 @@ export class JellyseerrClient implements IAutoSetupClient {
         }
       }
 
-      // Get Jellyfin connection details from env
-      const jellyfinHost = env["JELLYFIN_HOST"] || "jellyfin"
-      const jellyfinPort = parseInt(env["JELLYFIN_PORT"] || "8096", 10)
-
-      // Run the setup wizard
+      // Run the setup wizard (authenticates as part of setup)
       const apiKey = await this.runJellyfinSetup(jellyfinHost, jellyfinPort, username, password)
 
       // Mark as initialized
