@@ -268,7 +268,7 @@ export class FullAutoSetup extends BoxRenderable {
 
     try {
       const arrApps = this.config.apps.filter((a) => {
-        return a.enabled && (a.id === "radarr" || a.id === "sonarr")
+        return a.enabled && (a.id === "radarr" || a.id === "sonarr" || a.id === "lidarr")
       })
 
       for (const app of arrApps) {
@@ -282,7 +282,7 @@ export class FullAutoSetup extends BoxRenderable {
         const client = new ArrApiClient("localhost", port, apiKey, def.rootFolder?.apiVersion || "v3")
 
         try {
-          await client.configureTRaSHNaming(app.id as "radarr" | "sonarr")
+          await client.configureTRaSHNaming(app.id as "radarr" | "sonarr" | "lidarr")
           debugLog("FullAutoSetup", `Configured naming for ${app.id}`)
         } catch (e) {
           debugLog("FullAutoSetup", `Failed to configure naming for ${app.id}: ${e}`)
@@ -302,7 +302,7 @@ export class FullAutoSetup extends BoxRenderable {
 
     try {
       const arrApps = this.config.apps.filter((a) => {
-        return a.enabled && (a.id === "radarr" || a.id === "sonarr")
+        return a.enabled && (a.id === "radarr" || a.id === "sonarr" || a.id === "lidarr")
       })
 
       for (const app of arrApps) {
@@ -313,10 +313,11 @@ export class FullAutoSetup extends BoxRenderable {
         if (!def) continue
 
         const port = app.port || def.defaultPort
-        const client = new QualityProfileClient("localhost", port, apiKey)
+        const apiVersion = def.rootFolder?.apiVersion || "v3"
+        const client = new QualityProfileClient("localhost", port, apiKey, apiVersion)
 
         try {
-          await client.updateTrashQualityDefinitions(app.id as "radarr" | "sonarr")
+          await client.updateTrashQualityDefinitions(app.id as "radarr" | "sonarr" | "lidarr")
           debugLog("FullAutoSetup", `Configured quality settings for ${app.id}`)
         } catch (e) {
           debugLog("FullAutoSetup", `Failed to configure quality settings for ${app.id}: ${e}`)
