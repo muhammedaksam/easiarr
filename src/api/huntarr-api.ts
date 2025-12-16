@@ -110,12 +110,65 @@ export class HuntarrClient implements IAutoSetupClient {
             debugLog("HuntarrApi", "Created user and got session cookie")
           }
         }
+
+        // Complete setup wizard (saves progress then clears)
+        await this.completeSetup(username)
         return true
       }
 
       debugLog("HuntarrApi", `Create user failed: ${response.status}`)
     } catch (error) {
       debugLog("HuntarrApi", `Create user error: ${error}`)
+    }
+    return false
+  }
+
+  /**
+   * Complete setup by saving progress then clearing
+   */
+  async completeSetup(username: string): Promise<boolean> {
+    try {
+      // First save progress with all steps completed
+      const progress = {
+        current_step: 6,
+        completed_steps: [1, 2, 3, 4, 5],
+        account_created: true,
+        two_factor_enabled: false,
+        plex_setup_done: false,
+        auth_mode_selected: false,
+        recovery_key_generated: true,
+        username,
+        timestamp: new Date().toISOString(),
+      }
+
+      const saveResponse = await fetch(`${this.baseUrl}/api/setup/progress`, {
+        method: "POST",
+        headers: this.getHeaders(),
+        body: JSON.stringify({ progress }),
+        signal: AbortSignal.timeout(5000),
+      })
+
+      if (!saveResponse.ok) {
+        debugLog("HuntarrApi", `Failed to save setup progress: ${saveResponse.status}`)
+        return false
+      }
+      debugLog("HuntarrApi", "Saved setup progress with all steps completed")
+
+      // Then clear the setup progress
+      const clearResponse = await fetch(`${this.baseUrl}/api/setup/clear`, {
+        method: "POST",
+        headers: this.getHeaders(),
+        signal: AbortSignal.timeout(5000),
+      })
+
+      if (clearResponse.ok) {
+        debugLog("HuntarrApi", "Cleared setup progress")
+        return true
+      }
+
+      debugLog("HuntarrApi", `Failed to clear setup: ${clearResponse.status}`)
+    } catch (error) {
+      debugLog("HuntarrApi", `Complete setup error: ${error}`)
     }
     return false
   }
@@ -304,27 +357,47 @@ export class HuntarrClient implements IAutoSetupClient {
    */
   async addArrInstance(appType: HuntarrAppType, name: string, apiUrl: string, apiKey: string): Promise<boolean> {
     try {
-      // Get current settings
-      const settings = (await this.getSettings(appType)) || { instances: [] }
+      // Get current settings (preserve all other app settings)
+      const settings = await this.getSettings(appType)
 
-      // Check if instance already exists
-      const exists = settings.instances?.some((i) => i.api_url === apiUrl || i.name === name)
+      if (!settings) {
+        // If no settings exist, create minimal structure
+        return await this.saveSettings(appType, {
+          instances: [{ name, api_url: apiUrl, api_key: apiKey, enabled: true }],
+        })
+      }
 
-      if (exists) {
-        debugLog("HuntarrApi", `Instance "${name}" already exists in ${appType}`)
+      // Initialize instances array if needed
+      if (!settings.instances) settings.instances = []
+
+      // Check if instance with same URL already exists and is configured
+      const existingByUrl = settings.instances.find((i) => i.api_url === apiUrl && i.api_key)
+      if (existingByUrl) {
+        debugLog("HuntarrApi", `Instance for ${apiUrl} already configured in ${appType}`)
         return true
       }
 
-      // Add new instance
-      if (!settings.instances) settings.instances = []
-      settings.instances.push({
-        name,
-        api_url: apiUrl,
-        api_key: apiKey,
-        enabled: true,
-      })
+      // Check if there's a default/empty instance we can update
+      const emptyInstance = settings.instances.find((i) => !i.api_url || !i.api_key)
+      if (emptyInstance) {
+        // Update the existing empty instance
+        emptyInstance.name = name
+        emptyInstance.api_url = apiUrl
+        emptyInstance.api_key = apiKey
+        emptyInstance.enabled = true
+        debugLog("HuntarrApi", `Updated default instance in ${appType}`)
+      } else {
+        // Add new instance
+        settings.instances.push({
+          name,
+          api_url: apiUrl,
+          api_key: apiKey,
+          enabled: true,
+        })
+        debugLog("HuntarrApi", `Added new instance to ${appType}`)
+      }
 
-      // Save updated settings
+      // Save updated settings (preserves all other app settings)
       return await this.saveSettings(appType, settings)
     } catch (error) {
       debugLog("HuntarrApi", `Error adding ${appType} instance: ${error}`)
