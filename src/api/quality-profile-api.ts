@@ -115,10 +115,23 @@ export class QualityProfileClient {
   }
 
   async updateQualityDefinitions(definitions: QualityDefinition[]): Promise<QualityDefinition[]> {
-    return this.request<QualityDefinition[]>("/qualitydefinition", {
-      method: "PUT",
-      body: JSON.stringify(definitions),
-    })
+    const updated: QualityDefinition[] = []
+
+    // Update each definition individually as bulk update is not reliably supported across all versions
+    for (const def of definitions) {
+      if (!def.id) continue
+
+      try {
+        const result = await this.request<QualityDefinition>(`/qualitydefinition/${def.id}`, {
+          method: "PUT",
+          body: JSON.stringify(def),
+        })
+        updated.push(result)
+      } catch (e) {
+        debugLog("QualityProfile", `Failed to update definition ${def.id}: ${e}`)
+      }
+    }
+    return updated
   }
 
   // Helper: Get quality by name from existing profiles
