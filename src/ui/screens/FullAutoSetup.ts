@@ -12,6 +12,7 @@ import { ProwlarrClient, type ArrAppType } from "../../api/prowlarr-api"
 import { QBittorrentClient, type QBittorrentCategory } from "../../api/qbittorrent-api"
 import { PortainerApiClient } from "../../api/portainer-api"
 import { JellyfinClient } from "../../api/jellyfin-api"
+import { QualityProfileClient } from "../../api/quality-profile-api"
 import { JellyseerrClient } from "../../api/jellyseerr-api"
 import { CloudflareApi, setupCloudflaredTunnel } from "../../api/cloudflare-api"
 import { PlexApiClient } from "../../api/plex-api"
@@ -92,6 +93,7 @@ export class FullAutoSetup extends BoxRenderable {
     this.steps = [
       { name: "Root Folders", status: "pending" },
       { name: "Naming Scheme", status: "pending" },
+      { name: "Quality Settings", status: "pending" },
       { name: "Authentication", status: "pending" },
       { name: "External URLs", status: "pending" },
       { name: "Prowlarr Apps", status: "pending" },
@@ -145,6 +147,9 @@ export class FullAutoSetup extends BoxRenderable {
 
     // Step 2: Naming Scheme
     await this.setupNaming()
+
+    // Step 2b: Quality Settings
+    await this.setupQuality()
 
     // Step 3: Authentication
     await this.setupAuthentication()
@@ -278,6 +283,40 @@ export class FullAutoSetup extends BoxRenderable {
     this.refreshContent()
   }
 
+  private async setupQuality(): Promise<void> {
+    this.updateStep("Quality Settings", "running")
+    this.refreshContent()
+
+    try {
+      const arrApps = this.config.apps.filter((a) => {
+        return a.enabled && (a.id === "radarr" || a.id === "sonarr")
+      })
+
+      for (const app of arrApps) {
+        const apiKey = this.env[`API_KEY_${app.id.toUpperCase()}`]
+        if (!apiKey) continue
+
+        const def = getApp(app.id)
+        if (!def) continue
+
+        const port = app.port || def.defaultPort
+        const client = new QualityProfileClient("localhost", port, apiKey)
+
+        try {
+          await client.updateTrashQualityDefinitions(app.id as "radarr" | "sonarr")
+          debugLog("FullAutoSetup", `Configured quality settings for ${app.id}`)
+        } catch (e) {
+          debugLog("FullAutoSetup", `Failed to configure quality settings for ${app.id}: ${e}`)
+        }
+      }
+
+      this.updateStep("Quality Settings", "success")
+    } catch (e) {
+      this.updateStep("Quality Settings", "error", `${e}`)
+    }
+    this.refreshContent()
+  }
+
   private async setupAuthentication(): Promise<void> {
     this.updateStep("Authentication", "running")
     this.refreshContent()
@@ -360,6 +399,10 @@ export class FullAutoSetup extends BoxRenderable {
               debugLog("FullAutoSetup", "Failed to configure Bazarr -> Sonarr connection")
             }
           }
+
+          // TRaSH Recommended Settings
+          await bazarrClient.configureGeneralSettings()
+          await bazarrClient.configureDefaultLanguageProfile()
         }
       }
 

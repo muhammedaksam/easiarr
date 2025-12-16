@@ -7,6 +7,19 @@ import { debugLog } from "../utils/debug"
 import type { IAutoSetupClient, AutoSetupOptions, AutoSetupResult } from "./auto-setup-types"
 
 /**
+ * Bazarr Language Profile Structure
+ */
+export interface BazarrLanguageProfile {
+  name: string
+  cutoff: string
+  languages: {
+    code: string
+    forced: boolean
+    hi: boolean
+  }[]
+}
+
+/**
  * Bazarr System Settings (partial - auth related fields)
  */
 export interface BazarrAuthSettings {
@@ -248,6 +261,76 @@ export class BazarrApiClient implements IAutoSetupClient {
       const auth = (settings as { auth?: { type?: string } }).auth
       return !!auth?.type && auth.type !== "None"
     } catch {
+      return false
+    }
+  }
+
+  /**
+   * Configure General Settings (TRaSH Recommended)
+   */
+  async configureGeneralSettings(): Promise<boolean> {
+    try {
+      debugLog("Bazarr", "Configuring general settings")
+      await this.postForm("/system/settings", {
+        "settings-subtitles-use_embedded_subtitles": "true",
+        "settings-subtitles-autosearch": "true",
+        "settings-subtitles-path_mapping": "", // Empty = Alongside Media File
+      })
+      return true
+    } catch (e) {
+      debugLog("Bazarr", `Failed to configure general settings: ${e}`)
+      return false
+    }
+  }
+
+  /**
+   * Get all language profiles
+   */
+  async getLanguageProfiles(): Promise<BazarrLanguageProfile[]> {
+    return this.get<BazarrLanguageProfile[]>("/system/languages/profiles")
+  }
+
+  /**
+   * Configure Default Language Profile
+   * Creates an english profile if it doesn't exist
+   */
+  async configureDefaultLanguageProfile(name = "English", language = "en"): Promise<boolean> {
+    try {
+      debugLog("Bazarr", `Configuring language profile: ${name}`)
+
+      // Get existing profiles to check and to preserve them
+      const profiles = (await this.getLanguageProfiles()) || []
+      const existing = profiles.find((p) => p.name === name)
+
+      if (existing) {
+        debugLog("Bazarr", `Language profile '${name}' already exists`)
+        return true
+      }
+
+      const newProfile: BazarrLanguageProfile = {
+        name: name,
+        cutoff: language,
+        languages: [
+          {
+            code: language,
+            forced: false,
+            hi: false,
+          },
+        ],
+      }
+
+      profiles.push(newProfile)
+
+      // Update settings with the new list (serialized as JSON)
+      // Note: Bazarr expects 'languages_profiles' as a JSON string in the form data
+      await this.postForm("/system/settings", {
+        languages_profiles: JSON.stringify(profiles),
+      })
+
+      debugLog("Bazarr", `Created language profile: ${name}`)
+      return true
+    } catch (e) {
+      debugLog("Bazarr", `Failed to configure language profile: ${e}`)
       return false
     }
   }
