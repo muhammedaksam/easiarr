@@ -508,7 +508,7 @@ export class FullAutoSetup extends BoxRenderable {
         const port = app.port || def?.defaultPort || 7878
 
         try {
-          await prowlarr.addArrApp(appType, app.id, port, appApiKey, "prowlarr", prowlarrPort)
+          await prowlarr.addArrApp(appType, app.id, port, appApiKey, "prowlarr", prowlarrPort, def?.prowlarrCategoryIds)
         } catch {
           // Skip - may already exist
         }
