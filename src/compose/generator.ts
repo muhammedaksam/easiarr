@@ -179,17 +179,6 @@ function buildService(appDef: ReturnType<typeof getApp>, appConfig: AppConfig, c
     }
   }
 
-  // Huntarr: Add Homepage widget labels for Docker autodiscovery
-  // This allows Homepage to discover widget config via Docker socket without auth
-  if (appDef.id === "huntarr") {
-    const huntarrLabels = generateHuntarrHomepageLabels(config)
-    if (service.labels) {
-      service.labels = [...service.labels, ...huntarrLabels]
-    } else {
-      service.labels = huntarrLabels
-    }
-  }
-
   return service
 }
 
@@ -212,37 +201,6 @@ function generateTraefikLabels(serviceName: string, port: number, traefik: Traef
     `traefik.http.services.${serviceName}.loadbalancer.server.scheme=http`,
     `traefik.http.services.${serviceName}.loadbalancer.server.port=${port}`
   )
-
-  return labels
-}
-
-/**
- * Generate Homepage widget labels for Huntarr
- * Homepage discovers these via Docker socket, avoiding auth requirements
- */
-function generateHuntarrHomepageLabels(config: EasiarrConfig): string[] {
-  const huntarrApps = ["radarr", "sonarr", "lidarr", "whisparr", "readarr"]
-  const enabledApps = huntarrApps.filter((appId) => config.apps.some((a) => a.id === appId && a.enabled))
-
-  const labels: string[] = [
-    "homepage.group=Utilities",
-    "homepage.name=Huntarr",
-    "homepage.icon=huntarr.png",
-    "homepage.description=Missing content manager for *arr apps",
-    "homepage.widget.type=customapi",
-    "homepage.widget.method=GET",
-    "homepage.widget.url=http://huntarr:9705/api/cycle/status",
-  ]
-
-  // Add mappings for each enabled *arr app
-  enabledApps.forEach((appId, index) => {
-    const appName = appId.charAt(0).toUpperCase() + appId.slice(1)
-    labels.push(
-      `homepage.widget.mappings[${index}].label=${appName}`,
-      `homepage.widget.mappings[${index}].field=${appId}.next_cycle`,
-      `homepage.widget.mappings[${index}].format=relativeDate`
-    )
-  })
 
   return labels
 }

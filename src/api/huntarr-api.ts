@@ -111,8 +111,9 @@ export class HuntarrClient implements IAutoSetupClient {
           }
         }
 
-        // Complete setup wizard (saves progress then clears)
+        // Complete setup wizard and enable local access bypass for Homepage
         await this.completeSetup(username)
+        await this.enableLocalAccessBypass()
         return true
       }
 
@@ -121,6 +122,31 @@ export class HuntarrClient implements IAutoSetupClient {
       debugLog("HuntarrApi", `Create user failed: ${response.status} - ${errorBody}`)
     } catch (error) {
       debugLog("HuntarrApi", `Create user error: ${error}`)
+    }
+    return false
+  }
+
+  /**
+   * Enable local access bypass for Homepage widget access
+   * Note: This allows unauthenticated API access from Docker network
+   */
+  async enableLocalAccessBypass(): Promise<boolean> {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/settings/general`, {
+        method: "POST",
+        headers: this.getHeaders(),
+        body: JSON.stringify({ local_access_bypass: true }),
+        signal: AbortSignal.timeout(10000),
+      })
+
+      if (response.ok) {
+        debugLog("HuntarrApi", "Enabled local_access_bypass for Homepage widget")
+        return true
+      }
+
+      debugLog("HuntarrApi", `Failed to enable local_access_bypass: ${response.status}`)
+    } catch (error) {
+      debugLog("HuntarrApi", `Error enabling local_access_bypass: ${error}`)
     }
     return false
   }
