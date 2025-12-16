@@ -245,7 +245,10 @@ export async function generateServicesYaml(config: EasiarrConfig): Promise<strin
 
     for (const { name, service } of services) {
       yaml += `    - ${name}:\n`
-      yaml += `        href: ${service.href}\n`
+
+      if (service.href) {
+        yaml += `        href: ${service.href}\n`
+      }
 
       if (service.icon) {
         yaml += `        icon: ${service.icon}\n`
@@ -262,7 +265,9 @@ export async function generateServicesYaml(config: EasiarrConfig): Promise<strin
       if (service.widget) {
         yaml += `        widget:\n`
         yaml += `          type: ${service.widget.type}\n`
-        yaml += `          url: ${service.widget.url}\n`
+        if (service.widget.url) {
+          yaml += `          url: ${service.widget.url}\n`
+        }
 
         if (service.widget.key) {
           yaml += `          key: ${service.widget.key}\n`
