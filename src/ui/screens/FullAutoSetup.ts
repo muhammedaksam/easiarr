@@ -452,26 +452,6 @@ export class FullAutoSetup extends BoxRenderable {
       // Note: Jellyseerr and Overseerr are handled in their own setup steps
       // (setupJellyseerr/setupOverseerr) because they require authentication first
 
-      // Configure Bazarr
-      const bazarrConfig = this.config.apps.find((a) => a.id === "bazarr" && a.enabled)
-      if (bazarrConfig) {
-        const bazarrApiKey = this.env["API_KEY_BAZARR"]
-        if (bazarrApiKey) {
-          const port = bazarrConfig.port || 6767
-          const client = new BazarrApiClient("localhost", port)
-          client.setApiKey(bazarrApiKey)
-
-          try {
-            const baseUrl = getApplicationUrl("bazarr", port, this.config)
-            await client.setBaseUrl(baseUrl)
-            debugLog("FullAutoSetup", `Set baseUrl for bazarr: ${baseUrl}`)
-            configured++
-          } catch (e) {
-            debugLog("FullAutoSetup", `Failed to set baseUrl for bazarr: ${e}`)
-          }
-        }
-      }
-
       if (configured > 0) {
         this.updateStep("External URLs", "success", `${configured} apps configured`)
       } else {

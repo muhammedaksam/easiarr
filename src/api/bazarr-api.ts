@@ -185,26 +185,6 @@ export class BazarrApiClient implements IAutoSetupClient {
   }
 
   /**
-   * Set base URL for external access
-   * URL will be used for links to Bazarr from other apps
-   */
-  async setBaseUrl(baseUrl: string): Promise<boolean> {
-    try {
-      debugLog("Bazarr", `Setting base URL to: ${baseUrl}`)
-
-      await this.postForm("/system/settings", {
-        "settings-general-base_url": baseUrl,
-      })
-
-      debugLog("Bazarr", "Base URL set successfully")
-      return true
-    } catch (e) {
-      debugLog("Bazarr", `Failed to set base URL: ${e}`)
-      return false
-    }
-  }
-
-  /**
    * Configure Radarr connection in Bazarr
    */
   async configureRadarr(host: string, port: number, apiKey: string): Promise<boolean> {
