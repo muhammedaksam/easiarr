@@ -185,3 +185,29 @@ export const TRASH_SONARR_QUALITY_DEFINITIONS: TrashQualityDefinition[] = [
     max: 1000,
   },
 ]
+
+/**
+ * Lidarr Quality Definitions (Davo's Community Guide)
+ * Source: https://wiki.servarr.com/lidarr/community-guide
+ * Filters out single track rips for entire albums (FLAC/CUE files)
+ */
+export const TRASH_LIDARR_QUALITY_DEFINITIONS: TrashQualityDefinition[] = [
+  {
+    quality: "FLAC",
+    min: 0,
+    preferred: 895,
+    max: 1400,
+  },
+  {
+    quality: "FLAC 24bit",
+    min: 0,
+    preferred: 895,
+    max: 1495,
+  },
+  {
+    quality: "MP3-320",
+    min: 0,
+    preferred: 0,
+    max: 0, // No size limit for MP3
+  },
+]

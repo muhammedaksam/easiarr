@@ -11,6 +11,7 @@ import { ArrApiClient } from "../../api/arr-api"
 import { QualityProfileClient } from "../../api/quality-profile-api"
 import { CustomFormatClient, getCFNamesForCategories } from "../../api/custom-format-api"
 import { getPresetsForApp, TRaSHProfilePreset } from "../../data/trash-profiles"
+import { LIDARR_CUSTOM_FORMATS } from "../../data/lidarr-custom-formats"
 import { readEnvSync } from "../../utils/env"
 import { debugLog } from "../../utils/debug"
 
@@ -63,12 +64,14 @@ export class TRaSHProfileSetup extends BoxRenderable {
     this.pageContainer = pageContainer
 
     // Get enabled *arr apps that support quality profiles
-    this.availableApps = config.apps.filter((a) => a.enabled && ["radarr", "sonarr"].includes(a.id)).map((a) => a.id)
+    this.availableApps = config.apps
+      .filter((a) => a.enabled && ["radarr", "sonarr", "lidarr"].includes(a.id))
+      .map((a) => a.id)
 
     // Initialize selections
     this.availableApps.forEach((id) => {
       this.selectedApps.set(id, true)
-      const presets = getPresetsForApp(id as "radarr" | "sonarr")
+      const presets = getPresetsForApp(id as "radarr" | "sonarr" | "lidarr")
       if (presets.length > 0) {
         this.selectedProfiles.set(id, presets[0].id)
       }
@@ -136,7 +139,7 @@ export class TRaSHProfileSetup extends BoxRenderable {
   private handleSelectProfilesKeys(key: KeyEvent): void {
     const selectedAppIds = this.availableApps.filter((id) => this.selectedApps.get(id))
     const app = selectedAppIds[this.currentIndex]
-    const presets = getPresetsForApp(app as "radarr" | "sonarr")
+    const presets = getPresetsForApp(app as "radarr" | "sonarr" | "lidarr")
 
     if (key.name === "up") {
       const current = this.selectedProfiles.get(app)
@@ -178,7 +181,7 @@ export class TRaSHProfileSetup extends BoxRenderable {
     for (const appId of selectedAppIds) {
       const appDef = getApp(appId)
       const profileId = this.selectedProfiles.get(appId)
-      const preset = getPresetsForApp(appId as "radarr" | "sonarr").find((p) => p.id === profileId)
+      const preset = getPresetsForApp(appId as "radarr" | "sonarr" | "lidarr").find((p) => p.id === profileId)
 
       if (!appDef || !preset) continue
 
@@ -223,28 +226,36 @@ export class TRaSHProfileSetup extends BoxRenderable {
     if (!apiKey) throw new Error("API key not found - run Extract API Keys first")
 
     const port = this.config.apps.find((a) => a.id === appId)?.port || appDef.defaultPort
-    const qpClient = new QualityProfileClient("localhost", port, apiKey)
-    const cfClient = new CustomFormatClient("localhost", port, apiKey)
+    const apiVersion = appDef.rootFolder?.apiVersion || "v3"
+    const qpClient = new QualityProfileClient("localhost", port, apiKey, apiVersion)
+    const cfClient = new CustomFormatClient("localhost", port, apiKey, apiVersion)
 
-    // Import Custom Formats first
-    const cfCategories = ["unwanted", "misc"]
-    if (preset.id.includes("uhd") || preset.id.includes("2160")) {
-      cfCategories.push("hdr")
+    // Import Custom Formats - Lidarr uses Davo's guide formats, Radarr/Sonarr use TRaSH
+    if (appId === "lidarr") {
+      // Import Lidarr custom formats from Davo's Community Guide
+      await cfClient.importCustomFormats(LIDARR_CUSTOM_FORMATS)
+    } else {
+      // Import TRaSH custom formats for Radarr/Sonarr
+      const cfCategories = ["unwanted", "misc"]
+      if (preset.id.includes("uhd") || preset.id.includes("2160")) {
+        cfCategories.push("hdr")
+      }
+      if (preset.id.includes("remux")) {
+        cfCategories.push("audio")
+      }
+      const cfNames = getCFNamesForCategories(appId as "radarr" | "sonarr", cfCategories)
+      const { cfs } = await CustomFormatClient.fetchTRaSHCustomFormats(appId as "radarr" | "sonarr", cfNames)
+      await cfClient.importCustomFormats(cfs)
     }
-    if (preset.id.includes("remux")) {
-      cfCategories.push("audio")
-    }
-
-    const cfNames = getCFNamesForCategories(appId as "radarr" | "sonarr", cfCategories)
-    const { cfs } = await CustomFormatClient.fetchTRaSHCustomFormats(appId as "radarr" | "sonarr", cfNames)
-    await cfClient.importCustomFormats(cfs)
 
     // Create quality profile
     await qpClient.createTRaSHProfile(preset.name, preset.cutoffQuality, preset.allowedQualities, preset.cfScores)
 
-    // Configure naming scheme
-    const arrClient = new ArrApiClient("localhost", port, apiKey, appDef.rootFolder?.apiVersion || "v3")
-    await arrClient.configureTRaSHNaming(appId as "radarr" | "sonarr")
+    // Configure naming scheme (skip for Lidarr - different API structure)
+    if (appId !== "lidarr") {
+      const arrClient = new ArrApiClient("localhost", port, apiKey, apiVersion)
+      await arrClient.configureTRaSHNaming(appId as "radarr" | "sonarr")
+    }
   }
 
   private refreshContent(): void {
@@ -301,7 +312,7 @@ export class TRaSHProfileSetup extends BoxRenderable {
 
     selectedAppIds.forEach((appId, appIdx) => {
       const app = getApp(appId)
-      const presets = getPresetsForApp(appId as "radarr" | "sonarr")
+      const presets = getPresetsForApp(appId as "radarr" | "sonarr" | "lidarr")
       const selectedPresetId = this.selectedProfiles.get(appId)
       const isCurrent = appIdx === this.currentIndex
 

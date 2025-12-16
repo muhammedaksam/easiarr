@@ -1,5 +1,13 @@
 import { describe, expect, test } from "@jest/globals"
-import { RADARR_PRESETS, SONARR_PRESETS, getPresetsForApp, getPresetById, CF_SCORES } from "../src/data/trash-profiles"
+import {
+  RADARR_PRESETS,
+  SONARR_PRESETS,
+  LIDARR_PRESETS,
+  LIDARR_CF_SCORES,
+  getPresetsForApp,
+  getPresetById,
+  CF_SCORES,
+} from "../src/data/trash-profiles"
 
 describe("TRaSH Profile Presets", () => {
   describe("RADARR_PRESETS", () => {
@@ -46,6 +54,50 @@ describe("TRaSH Profile Presets", () => {
     })
   })
 
+  describe("LIDARR_PRESETS (Davo's Guide)", () => {
+    test("contains 3 presets", () => {
+      expect(LIDARR_PRESETS).toHaveLength(3)
+    })
+
+    test("High Quality FLAC preset has correct settings", () => {
+      const preset = LIDARR_PRESETS.find((p) => p.id === "high-quality-flac")
+      expect(preset).toBeDefined()
+      expect(preset?.cutoffQuality).toBe("FLAC")
+      expect(preset?.allowedQualities).toContain("FLAC")
+      expect(preset?.allowedQualities).toContain("MP3-320")
+    })
+
+    test("FLAC Only preset excludes MP3", () => {
+      const preset = LIDARR_PRESETS.find((p) => p.id === "flac-only")
+      expect(preset?.allowedQualities).not.toContain("MP3-320")
+      expect(preset?.allowedQualities).toContain("FLAC")
+    })
+
+    test("presets avoid Vinyl releases", () => {
+      const preset = LIDARR_PRESETS.find((p) => p.id === "high-quality-flac")
+      expect(preset?.cfScores["Vinyl"]).toBe(-10000)
+    })
+
+    test("presets prefer CD over WEB source", () => {
+      const preset = LIDARR_PRESETS.find((p) => p.id === "high-quality-flac")
+      expect(preset?.cfScores["CD"]).toBeGreaterThan(preset?.cfScores["WEB"] || 0)
+    })
+  })
+
+  describe("LIDARR_CF_SCORES", () => {
+    test("Vinyl has negative score", () => {
+      expect(LIDARR_CF_SCORES["Vinyl"]).toBe(-10000)
+    })
+
+    test("CD source preferred over WEB", () => {
+      expect(LIDARR_CF_SCORES["CD"]).toBeGreaterThan(LIDARR_CF_SCORES["WEB"])
+    })
+
+    test("Preferred Groups have positive score", () => {
+      expect(LIDARR_CF_SCORES["Preferred Groups"]).toBe(5)
+    })
+  })
+
   describe("getPresetsForApp", () => {
     test("returns Radarr presets for radarr", () => {
       const presets = getPresetsForApp("radarr")
@@ -55,6 +107,11 @@ describe("TRaSH Profile Presets", () => {
     test("returns Sonarr presets for sonarr", () => {
       const presets = getPresetsForApp("sonarr")
       expect(presets).toEqual(SONARR_PRESETS)
+    })
+
+    test("returns Lidarr presets for lidarr", () => {
+      const presets = getPresetsForApp("lidarr")
+      expect(presets).toEqual(LIDARR_PRESETS)
     })
   })
 
@@ -67,6 +124,11 @@ describe("TRaSH Profile Presets", () => {
     test("finds Sonarr preset by id", () => {
       const preset = getPresetById("web-1080p")
       expect(preset?.name).toBe("WEB-1080p")
+    })
+
+    test("finds Lidarr preset by id", () => {
+      const preset = getPresetById("high-quality-flac")
+      expect(preset?.name).toBe("High Quality FLAC")
     })
 
     test("returns undefined for unknown id", () => {

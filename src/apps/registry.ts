@@ -313,6 +313,62 @@ export const APPS: Record<AppId, AppDefinition> = {
     homepage: { icon: "sabnzbd.png", widget: "sabnzbd" },
   },
 
+  slskd: {
+    id: "slskd",
+    name: "Slskd",
+    description: "Soulseek client for music downloads",
+    category: "downloader",
+    defaultPort: 5030,
+    image: "slskd/slskd",
+    puid: 13016,
+    pgid: 13000,
+    volumes: (root) => [`${root}/config/slskd:/app`, `${root}/data:/data`],
+    secondaryPorts: ["5031:5031", "50300:50300"],
+    environment: {
+      SLSKD_REMOTE_CONFIGURATION: "true",
+      // Web UI authentication (use global credentials)
+      SLSKD_USERNAME: "${USERNAME_GLOBAL}",
+      SLSKD_PASSWORD: "${PASSWORD_GLOBAL}",
+      // Soulseek network credentials (separate account)
+      SLSKD_SLSK_USERNAME: "${USERNAME_SOULSEEK}",
+      SLSKD_SLSK_PASSWORD: "${PASSWORD_SOULSEEK}",
+    },
+    secrets: [
+      {
+        name: "USERNAME_SOULSEEK",
+        description: "Soulseek network username (your Soulseek account)",
+        required: true,
+      },
+      {
+        name: "PASSWORD_SOULSEEK",
+        description: "Soulseek network password",
+        required: true,
+        mask: true,
+      },
+    ],
+    homepage: { icon: "slskd.png", widget: "slskd" },
+    autoSetup: {
+      type: "partial",
+      description: "Generates slskd.yml with API key for Homepage widget and Soularr integration",
+    },
+  },
+
+  soularr: {
+    id: "soularr",
+    name: "Soularr",
+    description: "Connects Lidarr with Soulseek via Slskd",
+    category: "downloader",
+    defaultPort: 0, // No web UI
+    image: "mrusse08/soularr:latest",
+    puid: 13017,
+    pgid: 13000,
+    volumes: (root) => [`${root}/data/slskd_downloads:/downloads`, `${root}/config/soularr:/data`],
+    environment: {
+      SCRIPT_INTERVAL: "300",
+    },
+    dependsOn: ["lidarr", "slskd"],
+  },
+
   // === MEDIA SERVERS ===
   plex: {
     id: "plex",

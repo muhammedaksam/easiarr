@@ -7,7 +7,7 @@ export interface TRaSHProfilePreset {
   id: string
   name: string
   description: string
-  app: "radarr" | "sonarr" | "both"
+  app: "radarr" | "sonarr" | "lidarr" | "both"
   cutoffQuality: string
   allowedQualities: string[]
   cfScores: Record<string, number>
@@ -239,14 +239,88 @@ export const SONARR_PRESETS: TRaSHProfilePreset[] = [
   },
 ]
 
+// Lidarr Quality Names (Davo's Community Guide)
+export const LIDARR_QUALITIES = {
+  FLAC: "FLAC",
+  "FLAC 24bit": "FLAC 24bit",
+  "MP3-320": "MP3-320",
+  "MP3-256": "MP3-256",
+  "MP3-128": "MP3-128",
+}
+
+// Lidarr Custom Format Scores (Davo's Community Guide)
+// Scoring requires minimum 1 to grab, prefers CD > WEB, avoids Vinyl
+export const LIDARR_CF_SCORES = {
+  // Preferred Release Groups
+  "Preferred Groups": 5,
+
+  // Source Preferences
+  CD: 3, // Prefer CD source
+  WEB: 2, // Accept WEB source
+  Lossless: 1, // Tag for lossless
+
+  // Avoid Vinyl (analog noise, pops, clicks)
+  Vinyl: -10000,
+}
+
+// Lidarr Profile Presets (Davo's Community Guide)
+export const LIDARR_PRESETS: TRaSHProfilePreset[] = [
+  {
+    id: "high-quality-flac",
+    name: "High Quality FLAC",
+    description: "FLAC quality with MP3-320 fallback. Prefers CD source, avoids Vinyl.",
+    app: "lidarr",
+    cutoffQuality: "FLAC",
+    allowedQualities: ["FLAC", "FLAC 24bit", "MP3-320"],
+    cfScores: {
+      "Preferred Groups": 5,
+      CD: 3,
+      WEB: 2,
+      Lossless: 1,
+      Vinyl: -10000,
+    },
+  },
+  {
+    id: "flac-only",
+    name: "FLAC Only",
+    description: "Lossless FLAC only, no MP3 fallback. Best quality.",
+    app: "lidarr",
+    cutoffQuality: "FLAC",
+    allowedQualities: ["FLAC", "FLAC 24bit"],
+    cfScores: {
+      "Preferred Groups": 5,
+      CD: 3,
+      WEB: 2,
+      Lossless: 1,
+      Vinyl: -10000,
+    },
+  },
+  {
+    id: "any-quality",
+    name: "Any Quality",
+    description: "Accept any quality including MP3. For maximum availability.",
+    app: "lidarr",
+    cutoffQuality: "MP3-320",
+    allowedQualities: ["FLAC", "FLAC 24bit", "MP3-320", "MP3-256", "MP3-128"],
+    cfScores: {
+      "Preferred Groups": 5,
+      CD: 3,
+      WEB: 2,
+      Lossless: 1,
+      Vinyl: -10000,
+    },
+  },
+]
+
 // Get all presets for an app
-export function getPresetsForApp(app: "radarr" | "sonarr"): TRaSHProfilePreset[] {
+export function getPresetsForApp(app: "radarr" | "sonarr" | "lidarr"): TRaSHProfilePreset[] {
   if (app === "radarr") return RADARR_PRESETS
   if (app === "sonarr") return SONARR_PRESETS
+  if (app === "lidarr") return LIDARR_PRESETS
   return []
 }
 
 // Get a specific preset by ID
 export function getPresetById(id: string): TRaSHProfilePreset | undefined {
-  return [...RADARR_PRESETS, ...SONARR_PRESETS].find((p) => p.id === id)
+  return [...RADARR_PRESETS, ...SONARR_PRESETS, ...LIDARR_PRESETS].find((p) => p.id === id)
 }
