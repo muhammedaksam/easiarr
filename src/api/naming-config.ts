@@ -12,7 +12,7 @@ export interface SonarrNamingConfig {
   renameEpisodes: boolean
   replaceIllegalCharacters: boolean
   colonReplacementFormat: "dash" | "spaceDash" | "spaceDashSpace" | "smart" | "delete" | number
-  multiEpisodeStyle: "extend" | "duplicate" | "repeat" | "scene" | "range" | "prefixedRange"
+  multiEpisodeStyle: "extend" | "duplicate" | "repeat" | "scene" | "range" | "prefixedRange" | number
   dailyEpisodeFormat: string
   animeEpisodeFormat: string
   seriesFolderFormat: string
@@ -48,7 +48,7 @@ export const TRASH_NAMING_CONFIG = {
     renameEpisodes: true,
     replaceIllegalCharacters: true,
     colonReplacementFormat: 1, // 1 = Dash
-    multiEpisodeStyle: "prefixedRange",
+    multiEpisodeStyle: 5, // 5 = Prefixed Range
     standardEpisodeFormat:
       "{Series TitleYear} - S{season:00}E{episode:00} - {Episode CleanTitle} {[Custom Formats]}{[Quality Full]}{[Mediainfo AudioCodec}{ Mediainfo AudioChannels]}{[MediaInfo VideoDynamicRangeType]}{[Mediainfo VideoCodec]}{-Release Group}",
     dailyEpisodeFormat:
