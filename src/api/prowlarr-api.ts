@@ -240,11 +240,11 @@ export class ProwlarrClient implements IAutoSetupClient {
 
   // Sync Profile management (aka App Sync Profile)
   async getSyncProfiles(): Promise<SyncProfile[]> {
-    return this.request<SyncProfile[]>("/appsyncprofile")
+    return this.request<SyncProfile[]>("/appprofile")
   }
 
   async createSyncProfile(profile: Omit<SyncProfile, "id">): Promise<SyncProfile> {
-    return this.request<SyncProfile>("/appsyncprofile", {
+    return this.request<SyncProfile>("/appprofile", {
       method: "POST",
       body: JSON.stringify(profile),
     })
