@@ -26,11 +26,22 @@ export interface SonarrNamingConfig {
   numberStyle: string
 }
 
-export type NamingConfig = RadarrNamingConfig | SonarrNamingConfig
+export interface LidarrNamingConfig {
+  renameTracks: boolean
+  replaceIllegalCharacters: boolean
+  colonReplacementFormat: "dash" | "spaceDash" | "spaceDashSpace" | "smart" | "delete" | number
+  standardTrackFormat: string
+  multiDiscTrackFormat: string
+  artistFolderFormat: string
+  albumFolderFormat: string
+}
+
+export type NamingConfig = RadarrNamingConfig | SonarrNamingConfig | LidarrNamingConfig
 
 // TRaSH Guides Recommended Naming Schemes
 // Source: https://trash-guides.info/Radarr/Radarr-recommended-naming-scheme/
 // Source: https://trash-guides.info/Sonarr/Sonarr-recommended-naming-scheme/
+// Lidarr: https://wiki.servarr.com/lidarr/settings#media-management
 
 export const TRASH_NAMING_CONFIG = {
   radarr: {
@@ -64,4 +75,19 @@ export const TRASH_NAMING_CONFIG = {
     separator: " - ",
     numberStyle: "S{season:00}E{episode:00}",
   } as SonarrNamingConfig,
+
+  lidarr: {
+    renameTracks: true,
+    replaceIllegalCharacters: true,
+    colonReplacementFormat: "dash",
+    // Standard track format: Artist - Album (Year) - Track# - Title
+    standardTrackFormat: "{Artist CleanName} - {Album CleanTitle} ({Release Year}) - {track:00} - {Track CleanTitle}",
+    // Multi-disc format includes disc number
+    multiDiscTrackFormat:
+      "{Artist CleanName} - {Album CleanTitle} ({Release Year}) - {medium:00}-{track:00} - {Track CleanTitle}",
+    // Artist folder: Artist Name
+    artistFolderFormat: "{Artist CleanName}",
+    // Album folder: Album Title (Year) [Quality]
+    albumFolderFormat: "{Album CleanTitle} ({Release Year})",
+  } as LidarrNamingConfig,
 }
