@@ -504,20 +504,6 @@ export const APPS: Record<AppId, AppDefinition> = {
     pgid: 13000,
     volumes: (root) => [`${root}/config/huntarr:/config`],
     dependsOn: ["sonarr", "radarr", "lidarr", "readarr"],
-    homepage: {
-      icon: "huntarr.png",
-      widget: "customapi",
-      widgetFields: {
-        url: "http://huntarr:9705/api/cycle/status",
-        mappings: JSON.stringify([
-          { field: "sonarr.next_cycle", label: "Sonarr", format: "relativeDate" },
-          { field: "radarr.next_cycle", label: "Radarr", format: "relativeDate" },
-          { field: "lidarr.next_cycle", label: "Lidarr", format: "relativeDate" },
-          { field: "readarr.next_cycle", label: "Readarr", format: "relativeDate" },
-          { field: "whisparr.next_cycle", label: "Whisparr", format: "relativeDate" },
-        ]),
-      },
-    },
     autoSetup: {
       type: "full",
       description: "Test connections to Sonarr, Radarr, Lidarr, Readarr, Whisparr",
