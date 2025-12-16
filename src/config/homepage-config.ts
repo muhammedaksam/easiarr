@@ -114,7 +114,7 @@ export async function generateServicesYaml(config: EasiarrConfig): Promise<strin
         // Skip widget if no API key
       }
       // Most widgets need API key - only add if available
-      else if (apiKey || ["qbittorrent", "gluetun", "traefik"].includes(appDef.id)) {
+      else if (apiKey || ["qbittorrent", "gluetun", "traefik", "huntarr"].includes(appDef.id)) {
         service.widget = {
           type: widgetType,
           url: dockerUrl,
@@ -164,6 +164,19 @@ export async function generateServicesYaml(config: EasiarrConfig): Promise<strin
         // Add any custom widget fields
         if (appDef.homepage.widgetFields) {
           Object.assign(service.widget, appDef.homepage.widgetFields)
+        }
+
+        // Huntarr: dynamically build mappings based on enabled *arr apps
+        if (appDef.id === "huntarr") {
+          const huntarrApps = ["radarr", "sonarr", "lidarr", "whisparr", "readarr"]
+          const mappings = huntarrApps
+            .filter((appId) => config.apps.some((a) => a.id === appId && a.enabled))
+            .map((appId) => ({
+              field: `${appId}.next_cycle`,
+              label: appId.charAt(0).toUpperCase() + appId.slice(1),
+              format: "relativeDate",
+            }))
+          service.widget.mappings = JSON.stringify(mappings)
         }
       }
       // If widget requires API key and none is set, skip widget but keep ping/icon
@@ -299,6 +312,11 @@ cardBlur: md
 theme: dark
 color: slate
 
+# Docker integration for label-based widget autodiscovery
+# Some apps (e.g., Huntarr) use Docker labels instead of API keys
+docker:
+  enable: true
+
 layout:
   Media Management:
     style: row
@@ -330,11 +348,9 @@ export async function saveHomepageConfig(config: EasiarrConfig): Promise<{ servi
   const servicesYaml = await generateServicesYaml(config)
   await writeFile(servicesPath, servicesYaml, "utf-8")
 
-  // Generate and save settings.yaml (only if doesn't exist)
-  if (!existsSync(settingsPath)) {
-    const settingsYaml = generateSettingsYaml()
-    await writeFile(settingsPath, settingsYaml, "utf-8")
-  }
+  // Generate and save settings.yaml (always regenerate to include docker integration)
+  const settingsYaml = generateSettingsYaml()
+  await writeFile(settingsPath, settingsYaml, "utf-8")
 
   return { services: servicesPath, settings: settingsPath }
 }
