@@ -243,14 +243,21 @@ export class HuntarrClient implements IAutoSetupClient {
     const exists = await this.userExists()
 
     if (!exists) {
-      // No user yet - create one
+      // No user yet - create one (createUser calls enableLocalAccessBypass)
       debugLog("HuntarrApi", "No user exists, creating...")
       return await this.createUser(username, password)
     }
 
     // User exists - try to login
     debugLog("HuntarrApi", "User exists, logging in...")
-    return await this.login(username, password)
+    const loggedIn = await this.login(username, password)
+
+    if (loggedIn) {
+      // Enable local bypass for Homepage widget access
+      await this.enableLocalAccessBypass()
+    }
+
+    return loggedIn
   }
 
   /**
