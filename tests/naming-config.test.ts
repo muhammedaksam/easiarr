@@ -30,26 +30,14 @@ describe("Naming Configuration", () => {
     expect(config.renameMovies).toBe(true)
   })
 
-  test("updateNamingConfig sends PUT request with config", async () => {
+  test("configureTRaSHNaming merges current config with TRaSH config", async () => {
+    // 1. GET response
     mockFetch.mockResolvedValueOnce({
       ok: true,
-      text: async () => JSON.stringify({ renameMovies: true }),
+      text: async () => JSON.stringify({ id: 123, existingField: "keep-me", renameMovies: false }),
     } as Response)
 
-    const newConfig = { renameMovies: true, standardMovieFormat: "{Movie Title}" }
-    // @ts-ignore
-    await client.updateNamingConfig(newConfig)
-
-    expect(mockFetch).toHaveBeenCalledWith(
-      "http://localhost:7878/api/v3/config/naming",
-      expect.objectContaining({
-        method: "PUT",
-        body: JSON.stringify(newConfig),
-      })
-    )
-  })
-
-  test("configureTRaSHNaming applies Radarr config", async () => {
+    // 2. PUT response
     mockFetch.mockResolvedValueOnce({
       ok: true,
       text: async () => "{}",
@@ -57,29 +45,28 @@ describe("Naming Configuration", () => {
 
     await client.configureTRaSHNaming("radarr")
 
-    expect(mockFetch).toHaveBeenCalledWith(
+    // Verify GET call
+    expect(mockFetch).toHaveBeenNthCalledWith(1, "http://localhost:7878/api/v3/config/naming", expect.anything())
+
+    // Verify PUT call with merged data
+    expect(mockFetch).toHaveBeenNthCalledWith(
+      2,
       "http://localhost:7878/api/v3/config/naming",
       expect.objectContaining({
         method: "PUT",
-        body: JSON.stringify(TRASH_NAMING_CONFIG.radarr),
+        body: expect.stringContaining('"id":123'), // ID preserved
       })
     )
-  })
 
-  test("configureTRaSHNaming applies Sonarr config", async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      text: async () => "{}",
-    } as Response)
+    const putCall = mockFetch.mock.calls[1]
+    const body = JSON.parse(putCall?.[1]?.body as string)
 
-    await client.configureTRaSHNaming("sonarr")
+    // Check preservation
+    expect(body.id).toBe(123)
+    expect(body.existingField).toBe("keep-me")
 
-    expect(mockFetch).toHaveBeenCalledWith(
-      "http://localhost:7878/api/v3/config/naming",
-      expect.objectContaining({
-        method: "PUT",
-        body: JSON.stringify(TRASH_NAMING_CONFIG.sonarr),
-      })
-    )
+    // Check overwrite
+    expect(body.renameMovies).toBe(true) // Overwritten by TRaSH config
+    expect(body.colonReplacementFormat).toBe("dash")
   })
 })

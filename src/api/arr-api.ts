@@ -279,8 +279,22 @@ export class ArrApiClient {
   }
 
   async configureTRaSHNaming(appType: "radarr" | "sonarr"): Promise<void> {
-    const config = TRASH_NAMING_CONFIG[appType]
-    await this.updateNamingConfig(config)
+    try {
+      // 1. Get current configuration to preserve ID and other fields
+      const currentConfig = await this.getNamingConfig<NamingConfig & { id?: number }>()
+
+      // 2. Merge with TRaSH defaults
+      const trashConfig = TRASH_NAMING_CONFIG[appType]
+      const newConfig = {
+        ...currentConfig,
+        ...trashConfig,
+      }
+
+      // 3. Update configuration
+      await this.updateNamingConfig(newConfig)
+    } catch (e) {
+      throw new Error(`Failed to configure naming: ${e}`)
+    }
   }
 
   async addRemotePathMapping(host: string, remotePath: string, localPath: string): Promise<RemotePathMapping> {

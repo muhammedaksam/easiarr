@@ -1,7 +1,7 @@
 export interface RadarrNamingConfig {
   renameMovies: boolean
   replaceIllegalCharacters: boolean
-  colonReplacementFormat: "dash" | "spaceDash" | "spaceDashSpace" | "smart" | "delete"
+  colonReplacementFormat: "dash" | "spaceDash" | "spaceDashSpace" | "smart" | "delete" | number
   standardMovieFormat: string
   movieFolderFormat: string
   includeQuality: boolean
@@ -11,7 +11,7 @@ export interface RadarrNamingConfig {
 export interface SonarrNamingConfig {
   renameEpisodes: boolean
   replaceIllegalCharacters: boolean
-  colonReplacementFormat: "dash" | "spaceDash" | "spaceDashSpace" | "smart" | "delete"
+  colonReplacementFormat: "dash" | "spaceDash" | "spaceDashSpace" | "smart" | "delete" | number
   multiEpisodeStyle: "extend" | "duplicate" | "repeat" | "scene" | "range" | "prefixedRange"
   dailyEpisodeFormat: string
   animeEpisodeFormat: string
@@ -47,10 +47,10 @@ export const TRASH_NAMING_CONFIG = {
   sonarr: {
     renameEpisodes: true,
     replaceIllegalCharacters: true,
-    colonReplacementFormat: "dash",
+    colonReplacementFormat: 1, // 1 = Dash
     multiEpisodeStyle: "prefixedRange",
     standardEpisodeFormat:
-      "{Series TitleYear} - S{season:00}E{episode:00} - {Episode CleanTitle} {[Custom Formats]}{[Quality Full]}{[MediaInfo 3D]}{[Mediainfo AudioCodec}{ Mediainfo AudioChannels]}{[MediaInfo VideoDynamicRangeType]}{[Mediainfo VideoCodec]}{-Release Group}",
+      "{Series TitleYear} - S{season:00}E{episode:00} - {Episode CleanTitle} {[Custom Formats]}{[Quality Full]}{[Mediainfo AudioCodec}{ Mediainfo AudioChannels]}{[MediaInfo VideoDynamicRangeType]}{[Mediainfo VideoCodec]}{-Release Group}",
     dailyEpisodeFormat:
       "{Series TitleYear} - {Air-Date} - {Episode CleanTitle} {[Custom Formats]}{[Quality Full]}{[MediaInfo 3D]}{[Mediainfo AudioCodec}{ Mediainfo AudioChannels]}{[MediaInfo VideoDynamicRangeType]}{[Mediainfo VideoCodec]}{-Release Group}",
     animeEpisodeFormat:
