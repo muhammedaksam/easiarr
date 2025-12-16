@@ -21,6 +21,7 @@ import { OverseerrClient } from "../../api/overseerr-api"
 import { TautulliClient } from "../../api/tautulli-api"
 import { HomarrClient } from "../../api/homarr-api"
 import { HeimdallClient } from "../../api/heimdall-api"
+import { HuntarrClient } from "../../api/huntarr-api"
 import { saveConfig } from "../../config"
 import { saveCompose } from "../../compose"
 import { getApp } from "../../apps/registry"
@@ -104,6 +105,7 @@ export class FullAutoSetup extends BoxRenderable {
       { name: "Grafana", status: "pending" },
       { name: "Homarr", status: "pending" },
       { name: "Heimdall", status: "pending" },
+      { name: "Huntarr", status: "pending" },
       { name: "Cloudflare Tunnel", status: "pending" },
     ]
   }
@@ -183,7 +185,10 @@ export class FullAutoSetup extends BoxRenderable {
     // Step 16: Heimdall (dashboard)
     await this.setupHeimdall()
 
-    // Step 17: Cloudflare Tunnel
+    // Step 17: Huntarr (*arr app manager)
+    await this.setupHuntarr()
+
+    // Step 18: Cloudflare Tunnel
     await this.setupCloudflare()
 
     this.isRunning = false
@@ -1017,6 +1022,50 @@ export class FullAutoSetup extends BoxRenderable {
       }
     } catch (e) {
       this.updateStep("Homarr", "error", `${e}`)
+    }
+    this.refreshContent()
+  }
+
+  private async setupHuntarr(): Promise<void> {
+    this.updateStep("Huntarr", "running")
+    this.refreshContent()
+
+    const huntarrConfig = this.config.apps.find((a) => a.id === "huntarr" && a.enabled)
+    if (!huntarrConfig) {
+      this.updateStep("Huntarr", "skipped", "Not enabled")
+      this.refreshContent()
+      return
+    }
+
+    try {
+      const port = huntarrConfig.port || 9705
+      const client = new HuntarrClient("localhost", port)
+
+      // Check if reachable
+      const healthy = await client.isHealthy()
+      if (!healthy) {
+        this.updateStep("Huntarr", "skipped", "Not reachable yet")
+        this.refreshContent()
+        return
+      }
+
+      // Authenticate (creates user if needed, otherwise logs in)
+      const authenticated = await client.authenticate(this.globalUsername, this.globalPassword)
+      if (!authenticated) {
+        this.updateStep("Huntarr", "skipped", "Auth failed")
+        this.refreshContent()
+        return
+      }
+
+      // Add enabled *arr apps to Huntarr
+      try {
+        const result = await client.setupEasiarrApps(this.config.apps, this.env)
+        this.updateStep("Huntarr", "success", `${result.added} *arr apps added`)
+      } catch {
+        this.updateStep("Huntarr", "success", "Ready")
+      }
+    } catch (e) {
+      this.updateStep("Huntarr", "error", `${e}`)
     }
     this.refreshContent()
   }
