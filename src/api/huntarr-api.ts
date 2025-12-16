@@ -73,7 +73,7 @@ export class HuntarrClient implements IAutoSetupClient {
    */
   async userExists(): Promise<boolean> {
     try {
-      const response = await fetch(`${this.baseUrl}/ready`, {
+      const response = await fetch(`${this.baseUrl}/api/setup/status`, {
         method: "GET",
         signal: AbortSignal.timeout(5000),
       })
@@ -116,7 +116,9 @@ export class HuntarrClient implements IAutoSetupClient {
         return true
       }
 
-      debugLog("HuntarrApi", `Create user failed: ${response.status}`)
+      // Log error details
+      const errorBody = await response.text()
+      debugLog("HuntarrApi", `Create user failed: ${response.status} - ${errorBody}`)
     } catch (error) {
       debugLog("HuntarrApi", `Create user error: ${error}`)
     }
