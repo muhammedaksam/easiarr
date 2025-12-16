@@ -210,6 +210,8 @@ export interface AppDefinition {
   homepage?: HomepageMeta
   /** Auto-setup capability metadata */
   autoSetup?: AutoSetupCapability
+  /** Use Docker's user: directive instead of PUID/PGID env vars (e.g., slskd) */
+  useDockerUser?: boolean
 }
 
 /** Auto-setup capability for an app */

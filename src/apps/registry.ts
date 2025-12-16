@@ -320,8 +320,9 @@ export const APPS: Record<AppId, AppDefinition> = {
     category: "downloader",
     defaultPort: 5030,
     image: "slskd/slskd",
-    puid: 13016,
-    pgid: 13000,
+    puid: 0, // Uses Docker user: directive instead
+    pgid: 0,
+    useDockerUser: true, // Use Docker's user: directive for file permissions
     volumes: (root) => [`${root}/config/slskd:/app`, `${root}/data:/data`],
     secondaryPorts: ["5031:5031", "50300:50300"],
     environment: {
