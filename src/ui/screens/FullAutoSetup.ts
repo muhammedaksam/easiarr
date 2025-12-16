@@ -1319,11 +1319,9 @@ export class FullAutoSetup extends BoxRenderable {
         await mkdir(configDir, { recursive: true })
       }
 
-      // Check if slskd.yml already exists - don't overwrite unless it's the example
-      if (!existsSync(configPath) || existsSync(configPath.replace("slskd.yml", "slskd.example.yml"))) {
-        await writeFile(configPath, yaml)
-        debugLog("FullAutoSetup", `Generated slskd.yml at ${configPath}`)
-      }
+      // Always write slskd.yml - Docker creates a commented-out example that we need to replace
+      await writeFile(configPath, yaml)
+      debugLog("FullAutoSetup", `Generated slskd.yml at ${configPath}`)
 
       // Save API key to .env for Homepage widget and Soularr
       await updateEnv({ API_KEY_SLSKD: apiKey })
