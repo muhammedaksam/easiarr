@@ -528,10 +528,62 @@ export class HuntarrClient implements IAutoSetupClient {
       })
     }
 
+    // Also configure Prowlarr (different structure - not instance-based)
+    const prowlarrConfig = apps.find((a) => a.id === "prowlarr" && a.enabled)
+    if (prowlarrConfig) {
+      const prowlarrApiKey = env["API_KEY_PROWLARR"]
+      if (prowlarrApiKey) {
+        const prowlarrDef = getApp("prowlarr")
+        const prowlarrPort = prowlarrConfig.port || prowlarrDef?.defaultPort || 9696
+        const prowlarrUrl = `http://prowlarr:${prowlarrPort}`
+
+        debugLog("HuntarrApi", `Configuring Prowlarr in Huntarr`)
+        const configured = await this.configureProwlarr(prowlarrUrl, prowlarrApiKey)
+        results.push({
+          app: "prowlarr",
+          success: configured,
+          message: configured ? "Configured in Huntarr" : "Failed to configure",
+        })
+      }
+    }
+
     return {
       added: results.filter((r) => r.success).length,
       skipped: results.filter((r) => !r.success).length,
       results,
     }
+  }
+
+  /**
+   * Configure Prowlarr in Huntarr (different structure - not instance-based)
+   */
+  async configureProwlarr(apiUrl: string, apiKey: string): Promise<boolean> {
+    try {
+      // Prowlarr settings are simple: api_url, api_key, name, enabled
+      const settings = {
+        api_url: apiUrl,
+        api_key: apiKey,
+        name: "Prowlarr",
+        enabled: true,
+      }
+
+      const response = await fetch(`${this.baseUrl}/api/settings/prowlarr`, {
+        method: "POST",
+        headers: this.getHeaders(),
+        body: JSON.stringify(settings),
+        signal: AbortSignal.timeout(10000),
+      })
+
+      if (response.ok) {
+        debugLog("HuntarrApi", "Prowlarr configured in Huntarr")
+        return true
+      }
+
+      const errorBody = await response.text()
+      debugLog("HuntarrApi", `Failed to configure Prowlarr: ${response.status} - ${errorBody}`)
+    } catch (error) {
+      debugLog("HuntarrApi", `Error configuring Prowlarr: ${error}`)
+    }
+    return false
   }
 }
