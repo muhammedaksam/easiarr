@@ -326,14 +326,17 @@ export const APPS: Record<AppId, AppDefinition> = {
     secondaryPorts: ["5031:5031", "50300:50300"],
     environment: {
       SLSKD_REMOTE_CONFIGURATION: "true",
-      // Web UI authentication
+      // Web UI authentication (use global credentials)
+      SLSKD_USERNAME: "${USERNAME_GLOBAL}",
+      SLSKD_PASSWORD: "${PASSWORD_GLOBAL}",
+      // Soulseek network credentials (separate account)
       SLSKD_SLSK_USERNAME: "${USERNAME_SOULSEEK}",
       SLSKD_SLSK_PASSWORD: "${PASSWORD_SOULSEEK}",
     },
     secrets: [
       {
         name: "USERNAME_SOULSEEK",
-        description: "Soulseek network username",
+        description: "Soulseek network username (your Soulseek account)",
         required: true,
       },
       {
@@ -342,18 +345,11 @@ export const APPS: Record<AppId, AppDefinition> = {
         required: true,
         mask: true,
       },
-      {
-        name: "API_KEY_SLSKD",
-        description: "Slskd API key (generate with: openssl rand -base64 48)",
-        required: true,
-        generate: true,
-      },
     ],
     homepage: { icon: "slskd.png", widget: "slskd" },
     autoSetup: {
-      type: "manual",
-      description:
-        "Add API key to slskd.yml under web > authentication > api_keys. Soulseek credentials are set via environment variables.",
+      type: "partial",
+      description: "Generates slskd.yml with API key for Homepage widget and Soularr integration",
     },
   },
 
