@@ -24,7 +24,7 @@ export function getHomepageConfigPath(config: EasiarrConfig): string {
  * Homepage service entry
  */
 interface HomepageService {
-  href: string
+  href?: string // Optional - cloudflared has no web UI
   icon?: string
   description?: string
   ping?: string
@@ -63,8 +63,20 @@ export async function generateServicesYaml(config: EasiarrConfig): Promise<strin
     const dockerUrl = `http://${appDef.id}:${internalPort}`
 
     const service: HomepageService = {
-      href: baseUrl,
       description: appDef.description,
+    }
+
+    // Special cases for href/ping
+    if (appDef.id === "cloudflared") {
+      // Cloudflared has no web UI - skip href/ping
+    } else if (appDef.id === "traefik") {
+      // Traefik dashboard is on port 8083 (secondary port), not 80 (proxy)
+      const dashboardUrl = `http://${localIp}:8083`
+      service.href = dashboardUrl
+      service.ping = dashboardUrl
+    } else {
+      service.href = baseUrl
+      service.ping = baseUrl
     }
 
     // Add icon if defined in homepage meta
@@ -74,9 +86,6 @@ export async function generateServicesYaml(config: EasiarrConfig): Promise<strin
       // Default to app ID as icon name
       service.icon = `${appDef.id}.png`
     }
-
-    // Add ping for monitoring
-    service.ping = baseUrl
 
     // Add widget if defined
     if (appDef.homepage?.widget) {
@@ -114,7 +123,10 @@ export async function generateServicesYaml(config: EasiarrConfig): Promise<strin
         // Skip widget if no API key
       }
       // Most widgets need API key - only add if available
-      else if (apiKey || ["qbittorrent", "gluetun", "traefik", "huntarr"].includes(appDef.id)) {
+      else if (
+        apiKey ||
+        ["qbittorrent", "gluetun", "traefik", "huntarr", "easiarr", "flaresolverr"].includes(appDef.id)
+      ) {
         service.widget = {
           type: widgetType,
           url: dockerUrl,
@@ -236,7 +248,10 @@ export async function generateServicesYaml(config: EasiarrConfig): Promise<strin
 
     for (const { name, service } of services) {
       yaml += `    - ${name}:\n`
-      yaml += `        href: ${service.href}\n`
+
+      if (service.href) {
+        yaml += `        href: ${service.href}\n`
+      }
 
       if (service.icon) {
         yaml += `        icon: ${service.icon}\n`
@@ -253,7 +268,9 @@ export async function generateServicesYaml(config: EasiarrConfig): Promise<strin
       if (service.widget) {
         yaml += `        widget:\n`
         yaml += `          type: ${service.widget.type}\n`
-        yaml += `          url: ${service.widget.url}\n`
+        if (service.widget.url) {
+          yaml += `          url: ${service.widget.url}\n`
+        }
 
         if (service.widget.key) {
           yaml += `          key: ${service.widget.key}\n`

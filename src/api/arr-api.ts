@@ -46,6 +46,7 @@ export interface RemotePathMapping {
 
 import type { AppId } from "../config/schema"
 import { getCategoryForApp, getCategoryFieldName } from "../utils/categories"
+import { TRASH_NAMING_CONFIG, type NamingConfig } from "./naming-config"
 
 // qBittorrent download client config
 export function createQBittorrentConfig(
@@ -239,9 +240,61 @@ export class ArrApiClient {
     })
   }
 
+  /**
+   * Set application URL for external access (e.g., from Jellyseerr/dashboard links)
+   * URL will be used when generating external links in the app
+   */
+  async setApplicationUrl(applicationUrl: string): Promise<HostConfig> {
+    const currentConfig = await this.getHostConfig()
+
+    const updatedConfig: HostConfig = {
+      ...currentConfig,
+      applicationUrl,
+    }
+
+    debugLog("ArrAPI", `Setting applicationUrl to: ${applicationUrl}`)
+
+    return this.request<HostConfig>("/config/host", {
+      method: "PUT",
+      body: JSON.stringify(updatedConfig),
+    })
+  }
+
   // Remote Path Mapping methods - for Docker path translation
+
   async getRemotePathMappings(): Promise<RemotePathMapping[]> {
     return this.request<RemotePathMapping[]>("/remotepathmapping")
+  }
+
+  // Naming Configuration methods
+  async getNamingConfig<T extends NamingConfig>(): Promise<T> {
+    return this.request<T>("/config/naming")
+  }
+
+  async updateNamingConfig<T extends NamingConfig>(config: T): Promise<T> {
+    return this.request<T>("/config/naming", {
+      method: "PUT",
+      body: JSON.stringify(config),
+    })
+  }
+
+  async configureTRaSHNaming(appType: "radarr" | "sonarr"): Promise<void> {
+    try {
+      // 1. Get current configuration to preserve ID and other fields
+      const currentConfig = await this.getNamingConfig<NamingConfig & { id?: number }>()
+
+      // 2. Merge with TRaSH defaults
+      const trashConfig = TRASH_NAMING_CONFIG[appType]
+      const newConfig = {
+        ...currentConfig,
+        ...trashConfig,
+      }
+
+      // 3. Update configuration
+      await this.updateNamingConfig(newConfig)
+    } catch (e) {
+      throw new Error(`Failed to configure naming: ${e}`)
+    }
   }
 
   async addRemotePathMapping(host: string, remotePath: string, localPath: string): Promise<RemotePathMapping> {

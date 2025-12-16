@@ -248,6 +248,17 @@ export const APPS: Record<AppId, AppDefinition> = {
       LOG_HTML: "false",
       CAPTCHA_SOLVER: "none",
     },
+    homepage: {
+      icon: "flaresolverr.png",
+      widget: "customapi",
+      widgetFields: {
+        url: "http://flaresolverr:8191",
+        mappings: JSON.stringify([
+          { field: "msg", label: "Status" },
+          { field: "version", label: "Version" },
+        ]),
+      },
+    },
   },
 
   // === DOWNLOAD CLIENTS ===
@@ -647,7 +658,10 @@ export const APPS: Record<AppId, AppDefinition> = {
       widget: "customapi",
       widgetFields: {
         url: "http://easiarr:8080/config.json",
-        mappings: JSON.stringify([{ field: "version", label: "Installed" }]),
+        mappings: JSON.stringify([
+          { field: "version", label: "Version" },
+          { field: "apps.length", label: "Apps" },
+        ]),
       },
     },
   },

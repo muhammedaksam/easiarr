@@ -12,6 +12,7 @@ import { ProwlarrClient, type ArrAppType } from "../../api/prowlarr-api"
 import { QBittorrentClient, type QBittorrentCategory } from "../../api/qbittorrent-api"
 import { PortainerApiClient } from "../../api/portainer-api"
 import { JellyfinClient } from "../../api/jellyfin-api"
+import { QualityProfileClient } from "../../api/quality-profile-api"
 import { JellyseerrClient } from "../../api/jellyseerr-api"
 import { CloudflareApi, setupCloudflaredTunnel } from "../../api/cloudflare-api"
 import { PlexApiClient } from "../../api/plex-api"
@@ -29,6 +30,7 @@ import { getApp } from "../../apps/registry"
 import { getCategoriesForApps } from "../../utils/categories"
 import { readEnvSync, updateEnv } from "../../utils/env"
 import { debugLog } from "../../utils/debug"
+import { getApplicationUrl } from "../../utils/url-utils"
 
 interface SetupStep {
   name: string
@@ -90,7 +92,10 @@ export class FullAutoSetup extends BoxRenderable {
   private initSteps(): void {
     this.steps = [
       { name: "Root Folders", status: "pending" },
+      { name: "Naming Scheme", status: "pending" },
+      { name: "Quality Settings", status: "pending" },
       { name: "Authentication", status: "pending" },
+      { name: "External URLs", status: "pending" },
       { name: "Prowlarr Apps", status: "pending" },
       { name: "FlareSolverr", status: "pending" },
       { name: "qBittorrent", status: "pending" },
@@ -140,55 +145,64 @@ export class FullAutoSetup extends BoxRenderable {
     // Step 1: Root folders
     await this.setupRootFolders()
 
-    // Step 2: Authentication
+    // Step 2: Naming Scheme
+    await this.setupNaming()
+
+    // Step 2b: Quality Settings
+    await this.setupQuality()
+
+    // Step 3: Authentication
     await this.setupAuthentication()
 
-    // Step 3: Prowlarr apps
+    // Step 3: External URLs
+    await this.setupExternalUrls()
+
+    // Step 4: Prowlarr apps
     await this.setupProwlarrApps()
 
-    // Step 4: FlareSolverr
+    // Step 5: FlareSolverr
     await this.setupFlareSolverr()
 
-    // Step 5: qBittorrent
+    // Step 6: qBittorrent
     await this.setupQBittorrent()
 
-    // Step 6: Portainer
+    // Step 7: Portainer
     await this.setupPortainer()
 
-    // Step 7: Jellyfin
+    // Step 8: Jellyfin
     await this.setupJellyfin()
 
-    // Step 8: Jellyseerr
+    // Step 9: Jellyseerr
     await this.setupJellyseerr()
 
-    // Step 9: Plex
+    // Step 10: Plex
     await this.setupPlex()
 
-    // Step 10: Overseerr (requires Plex)
+    // Step 11: Overseerr (requires Plex)
     await this.setupOverseerr()
 
-    // Step 11: Tautulli (Plex monitoring)
+    // Step 12: Tautulli (Plex monitoring)
     await this.setupTautulli()
 
-    // Step 12: Bazarr (subtitles)
+    // Step 13: Bazarr (subtitles)
     await this.setupBazarr()
 
-    // Step 13: Uptime Kuma (monitors)
+    // Step 14: Uptime Kuma (monitors)
     await this.setupUptimeKuma()
 
-    // Step 14: Grafana (dashboards)
+    // Step 15: Grafana (dashboards)
     await this.setupGrafana()
 
-    // Step 15: Homarr (dashboard)
+    // Step 16: Homarr (dashboard)
     await this.setupHomarr()
 
-    // Step 16: Heimdall (dashboard)
+    // Step 17: Heimdall (dashboard)
     await this.setupHeimdall()
 
-    // Step 17: Huntarr (*arr app manager)
+    // Step 18: Huntarr (*arr app manager)
     await this.setupHuntarr()
 
-    // Step 18: Cloudflare Tunnel
+    // Step 19: Cloudflare Tunnel
     await this.setupCloudflare()
 
     this.isRunning = false
@@ -231,6 +245,74 @@ export class FullAutoSetup extends BoxRenderable {
       this.updateStep("Root Folders", "success")
     } catch (e) {
       this.updateStep("Root Folders", "error", `${e}`)
+    }
+    this.refreshContent()
+  }
+
+  private async setupNaming(): Promise<void> {
+    this.updateStep("Naming Scheme", "running")
+    this.refreshContent()
+
+    try {
+      const arrApps = this.config.apps.filter((a) => {
+        return a.enabled && (a.id === "radarr" || a.id === "sonarr")
+      })
+
+      for (const app of arrApps) {
+        const apiKey = this.env[`API_KEY_${app.id.toUpperCase()}`]
+        if (!apiKey) continue
+
+        const def = getApp(app.id)
+        if (!def) continue
+
+        const port = app.port || def.defaultPort
+        const client = new ArrApiClient("localhost", port, apiKey, def.rootFolder?.apiVersion || "v3")
+
+        try {
+          await client.configureTRaSHNaming(app.id as "radarr" | "sonarr")
+          debugLog("FullAutoSetup", `Configured naming for ${app.id}`)
+        } catch (e) {
+          debugLog("FullAutoSetup", `Failed to configure naming for ${app.id}: ${e}`)
+        }
+      }
+
+      this.updateStep("Naming Scheme", "success")
+    } catch (e) {
+      this.updateStep("Naming Scheme", "error", `${e}`)
+    }
+    this.refreshContent()
+  }
+
+  private async setupQuality(): Promise<void> {
+    this.updateStep("Quality Settings", "running")
+    this.refreshContent()
+
+    try {
+      const arrApps = this.config.apps.filter((a) => {
+        return a.enabled && (a.id === "radarr" || a.id === "sonarr")
+      })
+
+      for (const app of arrApps) {
+        const apiKey = this.env[`API_KEY_${app.id.toUpperCase()}`]
+        if (!apiKey) continue
+
+        const def = getApp(app.id)
+        if (!def) continue
+
+        const port = app.port || def.defaultPort
+        const client = new QualityProfileClient("localhost", port, apiKey)
+
+        try {
+          await client.updateTrashQualityDefinitions(app.id as "radarr" | "sonarr")
+          debugLog("FullAutoSetup", `Configured quality settings for ${app.id}`)
+        } catch (e) {
+          debugLog("FullAutoSetup", `Failed to configure quality settings for ${app.id}: ${e}`)
+        }
+      }
+
+      this.updateStep("Quality Settings", "success")
+    } catch (e) {
+      this.updateStep("Quality Settings", "error", `${e}`)
     }
     this.refreshContent()
   }
@@ -317,12 +399,66 @@ export class FullAutoSetup extends BoxRenderable {
               debugLog("FullAutoSetup", "Failed to configure Bazarr -> Sonarr connection")
             }
           }
+
+          // TRaSH Recommended Settings
+          await bazarrClient.configureGeneralSettings()
+          await bazarrClient.configureDefaultLanguageProfile()
         }
       }
 
       this.updateStep("Authentication", "success")
     } catch (e) {
       this.updateStep("Authentication", "error", `${e}`)
+    }
+    this.refreshContent()
+  }
+
+  private async setupExternalUrls(): Promise<void> {
+    this.updateStep("External URLs", "running")
+    this.refreshContent()
+
+    let configured = 0
+
+    try {
+      // Configure *arr apps (Radarr, Sonarr, Lidarr, Readarr, Whisparr, Prowlarr)
+      const arrApps = this.config.apps.filter((a) => {
+        const def = getApp(a.id)
+        return a.enabled && (def?.rootFolder || a.id === "prowlarr")
+      })
+
+      for (const app of arrApps) {
+        const def = getApp(app.id)
+        if (!def) continue
+
+        const apiKey = this.env[`API_KEY_${app.id.toUpperCase()}`]
+        if (!apiKey) {
+          continue
+        }
+
+        const port = app.port || def.defaultPort
+        const apiVersion = app.id === "prowlarr" ? "v1" : def.rootFolder?.apiVersion || "v3"
+        const client = new ArrApiClient("localhost", port, apiKey, apiVersion)
+
+        try {
+          const applicationUrl = getApplicationUrl(app.id, port, this.config)
+          await client.setApplicationUrl(applicationUrl)
+          debugLog("FullAutoSetup", `Set applicationUrl for ${app.id}: ${applicationUrl}`)
+          configured++
+        } catch (e) {
+          debugLog("FullAutoSetup", `Failed to set applicationUrl for ${app.id}: ${e}`)
+        }
+      }
+
+      // Note: Jellyseerr and Overseerr are handled in their own setup steps
+      // (setupJellyseerr/setupOverseerr) because they require authentication first
+
+      if (configured > 0) {
+        this.updateStep("External URLs", "success", `${configured} apps configured`)
+      } else {
+        this.updateStep("External URLs", "skipped", "No apps with API keys")
+      }
+    } catch (e) {
+      this.updateStep("External URLs", "error", `${e}`)
     }
     this.refreshContent()
   }
@@ -581,12 +717,16 @@ export class FullAutoSetup extends BoxRenderable {
         if (radarrConfig && this.env["API_KEY_RADARR"]) {
           try {
             const radarrDef = getApp("radarr")
+            const radarrPort = radarrConfig.port || radarrDef?.defaultPort || 7878
+            const radarrExternalUrl = getApplicationUrl("radarr", radarrPort, this.config)
             await client.configureRadarr(
               "radarr",
-              radarrConfig.port || radarrDef?.defaultPort || 7878,
+              radarrPort,
               this.env["API_KEY_RADARR"],
-              radarrDef?.rootFolder?.path || "/data/media/movies"
+              radarrDef?.rootFolder?.path || "/data/media/movies",
+              radarrExternalUrl
             )
+            debugLog("FullAutoSetup", `Jellyseerr: Radarr externalUrl set to ${radarrExternalUrl}`)
           } catch {
             /* Radarr config failed */
           }
@@ -596,15 +736,41 @@ export class FullAutoSetup extends BoxRenderable {
         if (sonarrConfig && this.env["API_KEY_SONARR"]) {
           try {
             const sonarrDef = getApp("sonarr")
+            const sonarrPort = sonarrConfig.port || sonarrDef?.defaultPort || 8989
+            const sonarrExternalUrl = getApplicationUrl("sonarr", sonarrPort, this.config)
             await client.configureSonarr(
               "sonarr",
-              sonarrConfig.port || sonarrDef?.defaultPort || 8989,
+              sonarrPort,
               this.env["API_KEY_SONARR"],
-              sonarrDef?.rootFolder?.path || "/data/media/tv"
+              sonarrDef?.rootFolder?.path || "/data/media/tv",
+              sonarrExternalUrl
             )
+            debugLog("FullAutoSetup", `Jellyseerr: Sonarr externalUrl set to ${sonarrExternalUrl}`)
           } catch {
             /* Sonarr config failed */
           }
+        }
+
+        // Set Jellyfin's externalHostname for navigation links
+        const jellyfinConfig = this.config.apps.find((a) => a.id === "jellyfin" && a.enabled)
+        if (jellyfinConfig) {
+          try {
+            const jellyfinPort = jellyfinConfig.port || 8096
+            const jellyfinUrl = getApplicationUrl("jellyfin", jellyfinPort, this.config)
+            await client.updateJellyfinSettings({ externalHostname: jellyfinUrl })
+            debugLog("FullAutoSetup", `Jellyseerr: Jellyfin externalHostname set to ${jellyfinUrl}`)
+          } catch {
+            debugLog("FullAutoSetup", "Failed to set Jellyfin externalHostname in Jellyseerr")
+          }
+        }
+
+        // Set Jellyseerr's own applicationUrl (we're already authenticated from setup)
+        try {
+          const jellyseerrUrl = getApplicationUrl("jellyseerr", port, this.config)
+          await client.setApplicationUrl(jellyseerrUrl)
+          debugLog("FullAutoSetup", `Jellyseerr: applicationUrl set to ${jellyseerrUrl}`)
+        } catch {
+          debugLog("FullAutoSetup", "Failed to set Jellyseerr applicationUrl")
         }
 
         this.updateStep("Jellyseerr", "success", result.message)
@@ -874,6 +1040,16 @@ export class FullAutoSetup extends BoxRenderable {
           await updateEnv(result.envUpdates)
           Object.assign(this.env, result.envUpdates)
         }
+
+        // Set Overseerr's applicationUrl (we're already authenticated from setup)
+        try {
+          const overseerrUrl = getApplicationUrl("overseerr", port, this.config)
+          await client.setApplicationUrl(overseerrUrl)
+          debugLog("FullAutoSetup", `Overseerr: applicationUrl set to ${overseerrUrl}`)
+        } catch {
+          debugLog("FullAutoSetup", "Failed to set Overseerr applicationUrl")
+        }
+
         this.updateStep("Overseerr", "success", result.message)
       } else {
         this.updateStep("Overseerr", "skipped", result.message)

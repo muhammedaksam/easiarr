@@ -237,6 +237,15 @@ export class JellyseerrClient implements IAutoSetupClient {
     })
   }
 
+  /**
+   * Set application URL for external access
+   * URL will be used for links to Jellyseerr from other apps
+   */
+  async setApplicationUrl(applicationUrl: string): Promise<JellyseerrMainSettings> {
+    debugLog("Jellyseerr", `Setting applicationUrl to: ${applicationUrl}`)
+    return this.updateMainSettings({ applicationUrl })
+  }
+
   // ==========================================
   // Jellyfin Configuration
   // ==========================================
@@ -383,6 +392,13 @@ export class JellyseerrClient implements IAutoSetupClient {
     })
   }
 
+  async updateRadarr(id: number, settings: Partial<JellyseerrRadarrSettings>): Promise<JellyseerrRadarrSettings> {
+    return this.request<JellyseerrRadarrSettings>(`/settings/radarr/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(settings),
+    })
+  }
+
   // ==========================================
   // Sonarr Configuration
   // ==========================================
@@ -407,6 +423,13 @@ export class JellyseerrClient implements IAutoSetupClient {
   async addSonarr(settings: JellyseerrSonarrSettings): Promise<JellyseerrSonarrSettings> {
     return this.request<JellyseerrSonarrSettings>("/settings/sonarr", {
       method: "POST",
+      body: JSON.stringify(settings),
+    })
+  }
+
+  async updateSonarr(id: number, settings: Partial<JellyseerrSonarrSettings>): Promise<JellyseerrSonarrSettings> {
+    return this.request<JellyseerrSonarrSettings>(`/settings/sonarr/${id}`, {
+      method: "PUT",
       body: JSON.stringify(settings),
     })
   }
@@ -453,14 +476,32 @@ export class JellyseerrClient implements IAutoSetupClient {
 
   /**
    * Configure Radarr connection with auto-detection of profiles
+   * @param externalUrl - Optional external URL for navigation (e.g., https://radarr.example.com)
    */
   async configureRadarr(
     hostname: string,
     port: number,
     apiKey: string,
-    rootFolder: string
+    rootFolder: string,
+    externalUrl?: string
   ): Promise<JellyseerrRadarrSettings | null> {
     try {
+      // Check if Radarr is already configured
+      const existingConfigs = await this.getRadarrSettings()
+      const existingConfig = existingConfigs.find((c) => c.hostname === hostname && c.port === port)
+
+      if (existingConfig?.id) {
+        // Update existing configuration (just update externalUrl)
+        // Note: id must be excluded from body - it's read-only in the API
+        debugLog("Jellyseerr", `Updating existing Radarr config (id: ${existingConfig.id})`)
+        const { id, ...configWithoutId } = existingConfig
+        return await this.updateRadarr(id, {
+          ...configWithoutId,
+          externalUrl,
+        })
+      }
+
+      // Test connection and get profiles
       const testResult = await this.testRadarr({
         hostname,
         port,
@@ -487,6 +528,7 @@ export class JellyseerrClient implements IAutoSetupClient {
         is4k: false,
         minimumAvailability: "announced",
         isDefault: true,
+        externalUrl,
       })
     } catch (e) {
       debugLog("Jellyseerr", `Radarr config failed: ${e}`)
@@ -496,14 +538,32 @@ export class JellyseerrClient implements IAutoSetupClient {
 
   /**
    * Configure Sonarr connection with auto-detection of profiles
+   * @param externalUrl - Optional external URL for navigation (e.g., https://sonarr.example.com)
    */
   async configureSonarr(
     hostname: string,
     port: number,
     apiKey: string,
-    rootFolder: string
+    rootFolder: string,
+    externalUrl?: string
   ): Promise<JellyseerrSonarrSettings | null> {
     try {
+      // Check if Sonarr is already configured
+      const existingConfigs = await this.getSonarrSettings()
+      const existingConfig = existingConfigs.find((c) => c.hostname === hostname && c.port === port)
+
+      if (existingConfig?.id) {
+        // Update existing configuration (just update externalUrl)
+        // Note: id must be excluded from body - it's read-only in the API
+        debugLog("Jellyseerr", `Updating existing Sonarr config (id: ${existingConfig.id})`)
+        const { id, ...configWithoutId } = existingConfig
+        return await this.updateSonarr(id, {
+          ...configWithoutId,
+          externalUrl,
+        })
+      }
+
+      // Test connection and get profiles
       const testResult = await this.testSonarr({
         hostname,
         port,
@@ -530,6 +590,7 @@ export class JellyseerrClient implements IAutoSetupClient {
         is4k: false,
         enableSeasonFolders: true,
         isDefault: true,
+        externalUrl,
       })
     } catch (e) {
       debugLog("Jellyseerr", `Sonarr config failed: ${e}`)
@@ -550,10 +611,27 @@ export class JellyseerrClient implements IAutoSetupClient {
         return { success: false, message: "Jellyseerr not reachable" }
       }
 
+      // Get Jellyfin connection details from env
+      const jellyfinHost = env["JELLYFIN_HOST"] || "jellyfin"
+      const jellyfinPort = parseInt(env["JELLYFIN_PORT"] || "8096", 10)
+
       // Check if already initialized
       const initialized = await this.isInitialized()
       if (initialized) {
-        // Get API key from settings
+        // Authenticate first to get session cookie (needed for protected endpoints)
+        try {
+          await this.authenticateJellyfin(username, password, jellyfinHost, jellyfinPort)
+          debugLog("Jellyseerr", "Authenticated to already-initialized instance")
+        } catch (authError) {
+          debugLog("Jellyseerr", `Auth failed on initialized instance: ${authError}`)
+          // Still return success, just without API key access
+          return {
+            success: true,
+            message: "Already configured (could not authenticate)",
+          }
+        }
+
+        // Now we can access protected endpoints with our session cookie
         const settings = await this.getMainSettings()
         return {
           success: true,
@@ -563,11 +641,7 @@ export class JellyseerrClient implements IAutoSetupClient {
         }
       }
 
-      // Get Jellyfin connection details from env
-      const jellyfinHost = env["JELLYFIN_HOST"] || "jellyfin"
-      const jellyfinPort = parseInt(env["JELLYFIN_PORT"] || "8096", 10)
-
-      // Run the setup wizard
+      // Run the setup wizard (authenticates as part of setup)
       const apiKey = await this.runJellyfinSetup(jellyfinHost, jellyfinPort, username, password)
 
       // Mark as initialized

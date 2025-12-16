@@ -3,6 +3,9 @@
  * Manages Quality Profiles and Custom Format scoring for Radarr/Sonarr
  */
 
+import { debugLog } from "../utils/debug"
+import { TRASH_RADARR_QUALITY_DEFINITIONS, TRASH_SONARR_QUALITY_DEFINITIONS } from "../config/trash-quality-definitions"
+
 export interface QualityItem {
   id?: number
   name?: string
@@ -112,10 +115,23 @@ export class QualityProfileClient {
   }
 
   async updateQualityDefinitions(definitions: QualityDefinition[]): Promise<QualityDefinition[]> {
-    return this.request<QualityDefinition[]>("/qualitydefinition/update", {
-      method: "PUT",
-      body: JSON.stringify(definitions),
-    })
+    const updated: QualityDefinition[] = []
+
+    // Update each definition individually as bulk update is not reliably supported across all versions
+    for (const def of definitions) {
+      if (!def.id) continue
+
+      try {
+        const result = await this.request<QualityDefinition>(`/qualitydefinition/${def.id}`, {
+          method: "PUT",
+          body: JSON.stringify(def),
+        })
+        updated.push(result)
+      } catch (e) {
+        debugLog("QualityProfile", `Failed to update definition ${def.id}: ${e}`)
+      }
+    }
+    return updated
   }
 
   // Helper: Get quality by name from existing profiles
@@ -201,5 +217,39 @@ export class QualityProfileClient {
     }))
 
     return this.updateQualityProfile(profileId, profile)
+  }
+
+  // Apply TRaSH Quality Definitions (File Size Limits)
+  async updateTrashQualityDefinitions(appType: "radarr" | "sonarr"): Promise<void> {
+    try {
+      debugLog("QualityProfile", `Updating Quality Definitions for ${appType}`)
+      const definitions = await this.getQualityDefinitions()
+      const trashDefs = appType === "radarr" ? TRASH_RADARR_QUALITY_DEFINITIONS : TRASH_SONARR_QUALITY_DEFINITIONS
+      let updatedCount = 0
+
+      const newDefinitions = definitions.map((def) => {
+        const trashDef = trashDefs.find((t) => t.quality === def.quality.name)
+        if (trashDef) {
+          updatedCount++
+          return {
+            ...def,
+            minSize: trashDef.min,
+            maxSize: trashDef.max,
+            preferredSize: trashDef.preferred,
+          }
+        }
+        return def
+      })
+
+      if (updatedCount > 0) {
+        await this.updateQualityDefinitions(newDefinitions)
+        debugLog("QualityProfile", `Successfully updated ${updatedCount} quality definitions`)
+      } else {
+        debugLog("QualityProfile", "No matching quality definitions found to update")
+      }
+    } catch (e) {
+      debugLog("QualityProfile", `Failed to update quality definitions: ${e}`)
+      throw e
+    }
   }
 }

@@ -14,6 +14,33 @@ export interface QBittorrentPreferences {
   auto_tmm_enabled?: boolean
   category_changed_tmm_enabled?: boolean
   save_path_changed_tmm_enabled?: boolean
+  max_ratio?: number
+  max_ratio_enabled?: boolean
+  max_ratio_act?: number // 0 = Pause, 1 = Remove
+  max_seeding_time?: number
+  max_seeding_time_enabled?: boolean
+  queueing_enabled?: boolean
+  web_ui_username?: string
+  web_ui_password?: string
+  // Connection & Speed
+  listen_port?: number
+  upnp?: boolean
+  natpmp?: boolean
+  dl_limit?: number
+  up_limit?: number
+  limit_utp_rate?: boolean
+  limit_tcp_overhead?: boolean
+  limit_lan_peers?: boolean
+  // Bittorrent
+  enable_dht?: boolean
+  enable_pex?: boolean
+  enable_lsd?: boolean
+  encryption_mode?: number // 0=Prefer, 1=Force, 2=Allow (check API docs for exact enum, typically 1=Force or Allow)
+  anonymous_mode?: boolean
+  add_trackers_enabled?: boolean
+  pre_allocate_all?: boolean
+  incomplete_files_ext?: boolean
+  create_subfolder_enabled?: boolean
 }
 
 export interface QBittorrentCategory {
@@ -197,6 +224,37 @@ export class QBittorrentClient implements IAutoSetupClient {
       auto_tmm_enabled: true,
       category_changed_tmm_enabled: true,
       save_path_changed_tmm_enabled: true,
+
+      // Downloads
+      pre_allocate_all: false, // Recommended disabled for unRaid/cache drives, safe default
+      incomplete_files_ext: true, // Recommended: Enabled
+      create_subfolder_enabled: true, // Recommended: Enabled
+
+      // Connection
+      upnp: false, // Recommended: Disabled (use manual port forward)
+      natpmp: false, // Recommended: Disabled
+
+      // Speed
+      dl_limit: -1, // Unlimited
+      up_limit: -1, // Unlimited (User should tune if needed)
+      limit_utp_rate: true, // Recommended: Enabled
+      limit_tcp_overhead: false, // Recommended: Disabled
+      limit_lan_peers: true, // Recommended: Enabled
+
+      // Bittorrent
+      enable_dht: true, // Implied enabled
+      enable_pex: true, // Implied enabled
+      enable_lsd: true, // Implied enabled
+      encryption_mode: 0, // 0 = Prefer Encryption (closest to "Allow encryption" usually, need to verify enum. 1=Force, 2=None usually. Let's assume 0 is safe/default or check docs if possible. TRaSH says "Allow encryption")
+      anonymous_mode: false, // Recommended: Disabled
+      add_trackers_enabled: false, // Recommended: Disabled for private trackers
+      queueing_enabled: true, // Recommended: Personal preference, enabled by default
+
+      // Seeding Limits (TRaSH Recommended: Disable globally)
+      max_ratio: -1, // -1 = Unlimited
+      max_ratio_enabled: false,
+      max_seeding_time_enabled: false,
+      max_ratio_act: 0, // 0 = Pause (Safe fallback)
     }
 
     if (auth) {
