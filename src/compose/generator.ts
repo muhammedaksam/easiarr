@@ -25,6 +25,8 @@ export interface ComposeService {
   devices?: string[]
   cap_add?: string[]
   command?: string
+  /** Docker user directive (e.g., "1000:1000") for apps that don't support PUID/PGID */
+  user?: string
 }
 
 export interface ComposeFile {
@@ -156,6 +158,15 @@ function buildService(appDef: ReturnType<typeof getApp>, appConfig: AppConfig, c
 
   // Add command (e.g., cloudflared)
   if (appDef.command) service.command = appDef.command
+
+  // Use Docker user directive for apps that don't support PUID/PGID (e.g., slskd)
+  if (appDef.useDockerUser) {
+    service.user = "${PUID}:${PGID}"
+    // Remove PUID/PGID env vars since they're not used
+    delete service.environment.PUID
+    delete service.environment.PGID
+    delete service.environment.UMASK
+  }
 
   // Plex uses network_mode: host
   if (appDef.id === "plex") {

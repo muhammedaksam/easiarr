@@ -60,6 +60,11 @@ export function generateServiceYaml(name: string, service: ComposeService): stri
     }
   }
 
+  // User directive (for apps like slskd that don't support PUID/PGID)
+  if (service.user) {
+    yaml += `    user: ${service.user}\n`
+  }
+
   yaml += `    restart: ${service.restart}\n\n`
 
   return yaml
