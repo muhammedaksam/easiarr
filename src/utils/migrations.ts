@@ -6,7 +6,7 @@
  * Each migration exports: name, up()
  */
 
-import { existsSync, readFileSync, writeFileSync } from "node:fs"
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
 import { homedir } from "node:os"
 import { debugLog } from "./debug"
@@ -24,6 +24,15 @@ interface Migration {
   name: string
   up: () => boolean
   down: () => boolean
+}
+
+/**
+ * Ensure the easiarr directory exists
+ */
+function ensureEasiarrDir(): void {
+  if (!existsSync(EASIARR_DIR)) {
+    mkdirSync(EASIARR_DIR, { recursive: true })
+  }
 }
 
 /**
@@ -46,6 +55,7 @@ function getMigrationState(): MigrationState {
  * Save the migration state
  */
 function saveMigrationState(state: MigrationState): void {
+  ensureEasiarrDir()
   state.lastRun = new Date().toISOString()
   writeFileSync(MIGRATIONS_FILE, JSON.stringify(state, null, 2), "utf-8")
 }
