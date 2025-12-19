@@ -723,6 +723,29 @@ export const APPS: Record<AppId, AppDefinition> = {
     },
   },
 
+  recyclarr: {
+    id: "recyclarr",
+    name: "Recyclarr",
+    description: "Automatic TRaSH Guides profile sync for *arr apps",
+    category: "utility",
+    defaultPort: 0, // No web UI - runs as cron job
+    image: "ghcr.io/recyclarr/recyclarr:latest",
+    puid: 0, // Uses Docker user: directive
+    pgid: 0,
+    useDockerUser: true,
+    volumes: (root) => [`${root}/config/recyclarr:/config`],
+    environment: {
+      RECYCLARR_CREATE_CONFIG: "false", // We generate the config ourselves
+      CRON_SCHEDULE: "@daily", // Run sync daily at midnight
+    },
+    dependsOn: ["radarr", "sonarr"],
+    autoSetup: {
+      type: "full",
+      description: "Generate recyclarr.yml config for enabled *arr apps with TRaSH profiles",
+      requires: ["radarr", "sonarr"],
+    },
+  },
+
   // === VPN ===
   gluetun: {
     id: "gluetun",
