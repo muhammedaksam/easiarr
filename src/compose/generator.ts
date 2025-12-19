@@ -187,7 +187,7 @@ function buildService(appDef: ReturnType<typeof getApp>, appConfig: AppConfig, c
     }
   }
 
-  if (config.traefik?.enabled && appDef.id !== "plex" && appDef.id !== "cloudflared") {
+  if (config.traefik?.enabled && appDef.id !== "plex" && appDef.id !== "cloudflared" && appDef.defaultPort !== 0) {
     if (appDef.id === "traefik") {
       // Special labels for Traefik dashboard (accessible via traefik.domain on port 8080)
       service.labels = generateTraefikLabels("traefik", 8080, config.traefik)

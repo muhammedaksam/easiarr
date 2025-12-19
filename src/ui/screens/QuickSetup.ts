@@ -58,6 +58,8 @@ export class QuickSetup {
   private traefikDomain: string = "CLOUDFLARE_DNS_ZONE"
   private traefikEntrypoint: string = "web"
   private traefikMiddlewares: string[] = []
+  // Log mount config
+  private logMount: boolean = false
 
   constructor(renderer: CliRenderer, container: BoxRenderable, app: App) {
     this.renderer = renderer
@@ -524,6 +526,38 @@ export class QuickSetup {
     const tzInput = createField("input-tz", "Timezone:", this.timezone, "Europe/London", 30)
     const umaskInput = createField("input-umask", "Umask:", this.umask, "002", 10)
 
+    // Log mount toggle
+    const logMountRow = new BoxRenderable(this.renderer, {
+      width: "100%",
+      height: 1,
+      flexDirection: "row",
+      marginBottom: 1,
+    })
+    logMountRow.add(
+      new TextRenderable(this.renderer, {
+        content: "Bind Logs:".padEnd(16),
+        fg: "#aaaaaa",
+      })
+    )
+    const logMountToggle = new SelectRenderable(this.renderer, {
+      id: "toggle-logmount",
+      width: 30,
+      height: 1,
+      options: [
+        {
+          name: this.logMount ? "✓ Enabled" : "○ Disabled",
+          description: "Bind-mount container logs to ${ROOT_DIR}/logs/",
+        },
+      ],
+    })
+    logMountToggle.on(SelectRenderableEvents.ITEM_SELECTED, () => {
+      this.logMount = !this.logMount
+      // Rebuild the step to update toggle state
+      this.renderStep()
+    })
+    logMountRow.add(logMountToggle)
+    formBox.add(logMountRow)
+
     content.add(new TextRenderable(this.renderer, { content: " " }))
 
     // Navigation Menu (Continue / Back)
@@ -536,7 +570,7 @@ export class QuickSetup {
     content.add(navMenu)
 
     // Focus management
-    const inputs = [rootInput, puidInput, pgidInput, tzInput, umaskInput, navMenu]
+    const inputs = [rootInput, puidInput, pgidInput, tzInput, umaskInput, logMountToggle, navMenu]
     let focusIndex = 0
     inputs[0].focus()
 
@@ -1135,6 +1169,9 @@ export class QuickSetup {
         middlewares: this.traefikMiddlewares,
       }
     }
+
+    // Add logMount config
+    config.logMount = this.logMount
 
     // Save config
     await saveConfig(config)
