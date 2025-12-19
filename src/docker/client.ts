@@ -45,6 +45,22 @@ export async function composeDown(): Promise<{
   }
 }
 
+/**
+ * Run a one-off container with docker compose run --rm
+ */
+export async function composeRun(service: string, command: string): Promise<{ success: boolean; output: string }> {
+  try {
+    const composePath = getComposePath()
+    debugLog("Docker", `compose run --rm ${service} ${command}`)
+    const result = await $`docker compose -f ${composePath} run --rm ${service} ${command}`.text()
+    debugLog("Docker", `compose run success`)
+    return { success: true, output: result }
+  } catch (error) {
+    debugLog("Docker", `compose run failed: ${error}`)
+    return { success: false, output: String(error) }
+  }
+}
+
 export async function composeRestart(service?: string): Promise<{ success: boolean; output: string }> {
   try {
     const composePath = getComposePath()

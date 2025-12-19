@@ -24,6 +24,7 @@ import { JellyseerrSetup } from "./JellyseerrSetup"
 import { SettingsScreen } from "./SettingsScreen"
 import { CloudflaredSetup } from "./CloudflaredSetup"
 import { LogsViewer } from "./LogsViewer"
+import { RecyclarrSetup } from "./RecyclarrSetup"
 
 type MenuItem = { name: string; description: string; action: () => void | Promise<void> }
 
@@ -116,6 +117,13 @@ export class MainMenu {
         name: "⚡ qBittorrent Setup",
         description: "Configure TRaSH-compliant paths and categories",
         action: () => this.showScreen(QBittorrentSetup),
+      })
+    }
+    if (this.isAppEnabled("recyclarr")) {
+      items.push({
+        name: "♻️ Recyclarr Setup",
+        description: "Configure TRaSH Guide profiles and run sync",
+        action: () => this.showScreen(RecyclarrSetup),
       })
     }
 
