@@ -14,11 +14,23 @@ export interface EasiarrConfig {
   umask: string
   apps: AppConfig[]
   network?: NetworkConfig
+  /** Which reverse proxy to use: traefik, caddy, or none */
+  reverseProxy?: "traefik" | "caddy" | "none"
   traefik?: TraefikConfig
+  caddy?: CaddyConfig
   vpn?: VpnConfig
   monitor?: MonitorConfig
   createdAt: string
   updatedAt: string
+}
+
+export type ReverseProxyType = "traefik" | "caddy" | "none"
+
+export interface CaddyConfig {
+  enabled: boolean
+  domain: string
+  /** Email for ACME/Let's Encrypt */
+  email?: string
 }
 
 export type VpnMode = "full" | "mini" | "none"
@@ -141,6 +153,7 @@ export type AppId =
   // Reverse Proxy
   | "traefik"
   | "traefik-certs-dumper"
+  | "caddy"
   | "cloudflared"
   | "crowdsec"
   // Network/VPN

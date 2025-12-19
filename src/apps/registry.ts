@@ -864,6 +864,25 @@ export const APPS: Record<AppId, AppDefinition> = {
     homepage: { icon: "traefik.png", widget: "traefik" },
   },
 
+  caddy: {
+    id: "caddy",
+    name: "Caddy",
+    description: "Web server with automatic HTTPS and reverse proxy",
+    category: "infrastructure",
+    defaultPort: 80,
+    internalPort: 80,
+    secondaryPorts: ["443:443"],
+    image: "caddy:latest",
+    puid: 0,
+    pgid: 0,
+    volumes: (root) => [
+      `${root}/config/caddy/Caddyfile:/etc/caddy/Caddyfile`,
+      `${root}/config/caddy/data:/data`,
+      `${root}/config/caddy/config:/config`,
+    ],
+    homepage: { icon: "caddy.png" },
+  },
+
   cloudflared: {
     id: "cloudflared",
     name: "Cloudflared",

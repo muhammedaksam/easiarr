@@ -10,6 +10,7 @@ import { getApp } from "../apps/registry"
 import { generateServiceYaml } from "./templates"
 import { updateEnv, getLocalIp } from "../utils/env"
 import { saveTraefikConfig } from "./traefik-config"
+import { saveCaddyConfig } from "./caddy-config"
 import { debugLog } from "../utils/debug"
 
 export interface ComposeService {
@@ -236,6 +237,9 @@ export async function saveCompose(config: EasiarrConfig): Promise<string> {
 
   // Generate Traefik config files if Traefik is enabled
   await saveTraefikConfig(config)
+
+  // Generate Caddy config files if Caddy is enabled
+  await saveCaddyConfig(config)
 
   return path
 }
