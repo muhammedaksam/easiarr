@@ -775,7 +775,21 @@ export const APPS: Record<AppId, AppDefinition> = {
       requires: ["radarr", "sonarr"],
     },
   },
-
+  profilarr: {
+    id: "profilarr",
+    name: "Profilarr",
+    description: "Web UI for managing TRaSH Guides profiles (alternative to Recyclarr)",
+    category: "utility",
+    defaultPort: 6868,
+    image: "santiagosayshey/profilarr:latest",
+    puid: 1000,
+    pgid: 1000,
+    volumes: (root) => [`${root}/config/profilarr:/config`],
+    dependsOn: ["radarr", "sonarr"],
+    homepage: {
+      icon: "profilarr",
+    },
+  },
   // === VPN ===
   gluetun: {
     id: "gluetun",

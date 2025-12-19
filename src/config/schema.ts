@@ -144,6 +144,7 @@ export type AppId =
   | "ddns-updater"
   | "easiarr"
   | "recyclarr"
+  | "profilarr"
   // VPN
   | "gluetun"
   // Monitoring & Infra
