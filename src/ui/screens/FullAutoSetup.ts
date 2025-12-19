@@ -23,6 +23,7 @@ import { TautulliClient } from "../../api/tautulli-api"
 import { HomarrClient } from "../../api/homarr-api"
 import { HeimdallClient } from "../../api/heimdall-api"
 import { HuntarrClient } from "../../api/huntarr-api"
+import { ProfilarrApiClient } from "../../api/profilarr-api"
 import { saveConfig } from "../../config"
 import { saveCompose } from "../../compose"
 import { generateSlskdConfig, getSlskdConfigPath } from "../../config/slskd-config"
@@ -120,6 +121,7 @@ export class FullAutoSetup extends BoxRenderable {
       { name: "Slskd", status: "pending" },
       { name: "Soularr", status: "pending" },
       { name: "Recyclarr", status: "pending" },
+      { name: "Profilarr", status: "pending" },
       { name: "Cloudflare Tunnel", status: "pending" },
     ]
   }
@@ -219,6 +221,9 @@ export class FullAutoSetup extends BoxRenderable {
 
     // Step 21: Recyclarr (TRaSH Guides sync)
     await this.setupRecyclarr()
+
+    // Step 22: Profilarr (Alternative TRaSH Guides sync)
+    await this.setupProfilarr()
 
     // Step 22: Cloudflare Tunnel
     await this.setupCloudflare()
@@ -1416,6 +1421,87 @@ export class FullAutoSetup extends BoxRenderable {
       this.updateStep("Recyclarr", "success", "Config generated")
     } catch (e) {
       this.updateStep("Recyclarr", "error", `${e}`)
+    }
+    this.refreshContent()
+  }
+
+  private async setupProfilarr(): Promise<void> {
+    this.updateStep("Profilarr", "running")
+    this.refreshContent()
+
+    const profilarrConfig = this.config.apps.find((a) => a.id === "profilarr" && a.enabled)
+    if (!profilarrConfig) {
+      this.updateStep("Profilarr", "skipped", "Not enabled")
+      this.refreshContent()
+      return
+    }
+
+    try {
+      const port = profilarrConfig.port || 6868
+      const url = getApplicationUrl("profilarr", port, this.config)
+
+      this.updateStep("Profilarr", "running", "Waiting for Profilarr...")
+      this.refreshContent()
+
+      const client = new ProfilarrApiClient("localhost", port)
+
+      // Wait for health
+      let healthy = false
+      for (let i = 0; i < 12; i++) {
+        if (await client.isHealthy()) {
+          healthy = true
+          break
+        }
+        await new Promise((resolve) => setTimeout(resolve, 5000))
+      }
+
+      if (!healthy) {
+        throw new Error("Timed out waiting for Profilarr API")
+      }
+
+      this.updateStep("Profilarr", "running", "Configuring...")
+
+      const result = await client.setup({
+        username: this.globalUsername,
+        password: this.globalPassword,
+        env: this.env,
+      })
+
+      if (!result.success) {
+        throw new Error(result.message)
+      }
+
+      // Save API key
+      if (result.envUpdates) {
+        await updateEnv(result.envUpdates)
+        Object.assign(this.env, result.envUpdates)
+      }
+
+      // Configure Radarr/Sonarr connections after auth setup
+      const radarrConfig = this.config.apps.find((a) => a.id === "radarr" && a.enabled)
+      if (radarrConfig && this.env["API_KEY_RADARR"]) {
+        try {
+          await client.configureRadarr("radarr", radarrConfig.port || 7878, this.env["API_KEY_RADARR"])
+          debugLog("FullAutoSetup", "Profilarr: Radarr configured")
+        } catch {
+          /* Radarr config failed */
+        }
+      }
+
+      const sonarrConfig = this.config.apps.find((a) => a.id === "sonarr" && a.enabled)
+      if (sonarrConfig && this.env["API_KEY_SONARR"]) {
+        try {
+          await client.configureSonarr("sonarr", sonarrConfig.port || 8989, this.env["API_KEY_SONARR"])
+          debugLog("FullAutoSetup", "Profilarr: Sonarr configured")
+        } catch {
+          /* Sonarr config failed */
+        }
+      }
+
+      this.updateStep("Profilarr", "success", `Configured - ${url}`)
+    } catch (e) {
+      debugLog("FullAutoSetup", `Profilarr setup error: ${e}`)
+      this.updateStep("Profilarr", "error", `${e}`)
     }
     this.refreshContent()
   }
