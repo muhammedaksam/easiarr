@@ -2,7 +2,6 @@
  * Quick Setup Wizard
  * First-time setup flow for easiarr
  */
-import { homedir } from "node:os"
 
 import type { CliRenderer, KeyEvent } from "@opentui/core"
 import {
@@ -22,6 +21,7 @@ import { ensureDirectoryStructure } from "../../structure/manager"
 import { SecretsEditor } from "./SecretsEditor"
 import { getApp } from "../../apps"
 import { ApplicationSelector } from "../components/ApplicationSelector"
+import { isUnraid, getDefaultRootDir, getUnraidInfo } from "../../utils/unraid"
 
 type WizardStep = "welcome" | "apps" | "system" | "vpn" | "traefik" | "secrets" | "confirm"
 
@@ -44,7 +44,7 @@ export class QuickSetup {
     "easiarr",
   ])
 
-  private rootDir: string = `${homedir()}/media`
+  private rootDir: string = getDefaultRootDir()
   private timezone: string = Intl.DateTimeFormat().resolvedOptions().timeZone || "Europe/London"
   private puid: string = process.getuid?.().toString() || "1000"
   private pgid: string = process.getgid?.().toString() || "1000"
@@ -188,6 +188,18 @@ export class QuickSetup {
         fg: "#00cc66",
       })
     )
+
+    // Show Unraid detection if applicable
+    if (isUnraid()) {
+      const unraidInfo = getUnraidInfo()
+      content.add(
+        new TextRenderable(this.renderer, {
+          id: "unraid-detected",
+          content: `  🟢 Unraid OS detected ${unraidInfo.hasComposeManager ? "(Compose Manager found)" : ""}`,
+          fg: "#ff8c00",
+        })
+      )
+    }
 
     // Spacer
     content.add(
