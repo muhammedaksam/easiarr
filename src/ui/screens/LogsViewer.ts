@@ -25,6 +25,7 @@ export class LogsViewer extends BoxRenderable {
   private logContent: string[] = []
   private scrollOffset = 0
   private lineCount = 100 // Number of log lines to fetch
+  private visibleLines = 35 // Number of visible lines in log view
   private isLoading = false
   private statusMessage = ""
   private savedLogs: Array<{ filename: string; path: string; date: Date; size: number }> = []
@@ -149,7 +150,7 @@ export class LogsViewer extends BoxRenderable {
     const menu = new SelectRenderable(this.renderer, {
       id: "container-select",
       width: "100%",
-      height: Math.min(this.containers.length + 2, 15),
+      flexGrow: 1,
       options: this.containers.map((c) => ({
         name: `🐳 ${c.name}`,
         description: c.ports ? `Ports: ${c.ports.split(",")[0]}` : "",
@@ -189,7 +190,7 @@ export class LogsViewer extends BoxRenderable {
     header.add(
       new TextRenderable(this.renderer, {
         id: "log-info",
-        content: `  (${this.lineCount} lines, scroll: ${this.scrollOffset}/${Math.max(0, this.logContent.length - 20)})`,
+        content: `  (${this.lineCount} lines, scroll: ${this.scrollOffset}/${Math.max(0, this.logContent.length - this.visibleLines)})`,
         fg: "#666666",
       })
     )
@@ -227,9 +228,9 @@ export class LogsViewer extends BoxRenderable {
       )
     } else {
       // Show visible lines based on scroll offset
-      const visibleLines = this.logContent.slice(this.scrollOffset, this.scrollOffset + 20)
+      const lines = this.logContent.slice(this.scrollOffset, this.scrollOffset + this.visibleLines)
 
-      visibleLines.forEach((line, idx) => {
+      lines.forEach((line, idx) => {
         // Colorize log levels
         let fg = "#888888"
         if (line.includes("ERROR") || line.includes("error")) fg = "#ff5555"
@@ -287,7 +288,7 @@ export class LogsViewer extends BoxRenderable {
     const menu = new SelectRenderable(this.renderer, {
       id: "saved-select",
       width: "100%",
-      height: Math.min(this.savedLogs.length + 2, 15),
+      flexGrow: 1,
       options: this.savedLogs.map((log) => ({
         name: `📄 ${log.filename}`,
         description: `${formatBytes(log.size)} - ${formatRelativeTime(log.date)}`,
@@ -389,7 +390,7 @@ export class LogsViewer extends BoxRenderable {
   }
 
   private async handleLogsModeKey(k: KeyEvent): Promise<void> {
-    const maxScroll = Math.max(0, this.logContent.length - 20)
+    const maxScroll = Math.max(0, this.logContent.length - this.visibleLines)
 
     switch (k.name) {
       case "up":
