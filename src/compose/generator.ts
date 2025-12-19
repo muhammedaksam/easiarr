@@ -10,6 +10,7 @@ import { getApp } from "../apps/registry"
 import { generateServiceYaml } from "./templates"
 import { updateEnv, getLocalIp } from "../utils/env"
 import { saveTraefikConfig } from "./traefik-config"
+import { saveCaddyConfig } from "./caddy-config"
 import { debugLog } from "../utils/debug"
 
 export interface ComposeService {
@@ -111,6 +112,11 @@ function buildService(appDef: ReturnType<typeof getApp>, appConfig: AppConfig, c
   // Use ${ROOT_DIR} for volumes
   const volumes = [...appDef.volumes("${ROOT_DIR}"), ...(appConfig.customVolumes ?? [])]
 
+  // Add log volume mount if logMount is enabled and app has logVolume defined
+  if (config.logMount && appDef.logVolume) {
+    volumes.push(`\${ROOT_DIR}/logs/${appDef.id}:${appDef.logVolume}`)
+  }
+
   // Build environment
   const environment: Record<string, string | number> = {
     TZ: "${TIMEZONE}",
@@ -181,7 +187,7 @@ function buildService(appDef: ReturnType<typeof getApp>, appConfig: AppConfig, c
     }
   }
 
-  if (config.traefik?.enabled && appDef.id !== "plex" && appDef.id !== "cloudflared") {
+  if (config.traefik?.enabled && appDef.id !== "plex" && appDef.id !== "cloudflared" && appDef.defaultPort !== 0) {
     if (appDef.id === "traefik") {
       // Special labels for Traefik dashboard (accessible via traefik.domain on port 8080)
       service.labels = generateTraefikLabels("traefik", 8080, config.traefik)
@@ -236,6 +242,9 @@ export async function saveCompose(config: EasiarrConfig): Promise<string> {
 
   // Generate Traefik config files if Traefik is enabled
   await saveTraefikConfig(config)
+
+  // Generate Caddy config files if Caddy is enabled
+  await saveCaddyConfig(config)
 
   return path
 }

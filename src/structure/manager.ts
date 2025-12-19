@@ -1,6 +1,7 @@
 import { mkdir } from "node:fs/promises"
 import { join } from "node:path"
 import type { EasiarrConfig, AppId } from "../config/schema"
+import { getApp } from "../apps/registry"
 
 const BASE_DIRS = ["torrents", "usenet", "media"]
 
@@ -17,9 +18,11 @@ const CONTENT_TYPE_MAP: Partial<Record<AppId, string>> = {
 export async function ensureDirectoryStructure(config: EasiarrConfig): Promise<void> {
   try {
     const dataRoot = join(config.rootDir, "data")
+    const configRoot = join(config.rootDir, "config")
 
-    // Create base data directory
+    // Create base directories
     await mkdir(dataRoot, { recursive: true })
+    await mkdir(configRoot, { recursive: true })
 
     // 1. Create Base Directories (torrents, usenet, media)
     for (const dir of BASE_DIRS) {
@@ -73,6 +76,43 @@ export async function ensureDirectoryStructure(config: EasiarrConfig): Promise<v
       // Audiobookshelf usually resides in media/audiobooks and media/podcasts
       await mkdir(join(dataRoot, "media", "audiobooks"), { recursive: true })
       await mkdir(join(dataRoot, "media", "podcasts"), { recursive: true })
+    }
+
+    // 4. Create config directories for enabled apps
+    // Dynamically check each app's volume definitions to see if it needs a config dir
+    for (const appConfig of config.apps) {
+      if (appConfig.enabled) {
+        const appDef = getApp(appConfig.id)
+        if (appDef) {
+          // Check if app has volume that maps to config dir
+          const volumes = appDef.volumes("$ROOT")
+          const hasConfigVolume = volumes.some((v) => v.includes("/config/"))
+          if (hasConfigVolume) {
+            await mkdir(join(configRoot, appConfig.id), { recursive: true })
+          }
+        }
+      }
+    }
+
+    // Special: Traefik needs letsencrypt subdirectory
+    if (enabledApps.has("traefik")) {
+      await mkdir(join(configRoot, "traefik", "letsencrypt"), { recursive: true })
+    }
+
+    // 5. Create log directories if logMount is enabled
+    if (config.logMount) {
+      const logsRoot = join(config.rootDir, "logs")
+      await mkdir(logsRoot, { recursive: true })
+
+      // Create log directory for each enabled app that has logVolume defined
+      for (const appConfig of config.apps) {
+        if (appConfig.enabled) {
+          const appDef = getApp(appConfig.id)
+          if (appDef?.logVolume) {
+            await mkdir(join(logsRoot, appConfig.id), { recursive: true })
+          }
+        }
+      }
     }
   } catch (error: unknown) {
     const err = error as { code?: string; message: string }

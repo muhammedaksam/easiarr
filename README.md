@@ -10,7 +10,7 @@
 
 > ⚠️ **Work In Progress** - This project is in early experimental development. Features may be incomplete, unstable, or change without notice.
 
-TUI tool for generating docker-compose files for the \*arr media ecosystem with 47 apps, TRaSH Guides best practices, VPN routing, and Traefik reverse proxy support.
+TUI tool for generating docker-compose files for the \*arr media ecosystem with 49 apps, TRaSH Guides best practices, VPN routing, and Traefik/Caddy reverse proxy support.
 
 A terminal-based wizard that helps you set up Radarr, Sonarr, Prowlarr, and other \*arr applications with Docker Compose, following best practices from [TRaSH Guides](https://trash-guides.info/).
 
@@ -19,9 +19,13 @@ A terminal-based wizard that helps you set up Radarr, Sonarr, Prowlarr, and othe
 - 📦 **Quick Setup Wizard** - Get started in minutes with a guided setup flow
 - 🐳 **Docker Compose Generation** - Automatically generates optimized `docker-compose.yml`
 - ✅ **TRaSH Guides Compliant** - Follows best practices for folder structure and hardlinks
+- 🔄 **Recyclarr & Profilarr** - Automated TRaSH Guides profile sync
 - 🎮 **Container Control** - Start, stop, and restart containers directly from the TUI
+- 📋 **Container Logs Viewer** - View and save Docker container logs from the TUI
 - ⚙️ **App Management** - Add or remove apps from your stack with ease
 - 💾 **Persistent Configuration** - Settings saved to `~/.easiarr/config.json`
+- 🔀 **Reverse Proxy** - Traefik or Caddy support with automatic SSL
+- 🖥️ **Unraid Support** - Automatic OS detection and compatibility
 
 ## Quick Start
 
@@ -52,7 +56,7 @@ bun run start
 - [Bun](https://bun.sh/) >= 1.0
 - [Docker](https://www.docker.com/) with Docker Compose v2
 
-## Supported Applications (47 apps across 10 categories)
+## Supported Applications (49 apps across 10 categories)
 
 ### Media Management (Servarr)
 
@@ -99,6 +103,8 @@ bun run start
 - **Portainer** - Docker container management UI
 - **Huntarr** - Missing content manager for \*arr apps
 - **Unpackerr** - Archive extraction for \*arr apps
+- **Recyclarr** - TRaSH Guides profile sync (CLI-based)
+- **Profilarr** - TRaSH Guides profile sync (Web UI)
 - **FileBot** - Media file renaming and automator
 - **Chromium** - Web browser for secure remote browsing
 - **Guacamole** - Clientless remote desktop gateway
@@ -118,6 +124,7 @@ bun run start
 ### Infrastructure
 
 - **Traefik** - Reverse proxy and load balancer
+- **Caddy** - Automatic HTTPS reverse proxy
 - **Cloudflared** - Cloudflare Tunnel for secure external access
 - **Traefik Certs Dumper** - Extracts certificates from Traefik
 - **CrowdSec** - Intrusion prevention system

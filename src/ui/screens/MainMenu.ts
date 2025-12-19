@@ -23,6 +23,8 @@ import { JellyfinSetup } from "./JellyfinSetup"
 import { JellyseerrSetup } from "./JellyseerrSetup"
 import { SettingsScreen } from "./SettingsScreen"
 import { CloudflaredSetup } from "./CloudflaredSetup"
+import { LogsViewer } from "./LogsViewer"
+import { RecyclarrSetup } from "./RecyclarrSetup"
 
 type MenuItem = { name: string; description: string; action: () => void | Promise<void> }
 
@@ -70,6 +72,11 @@ export class MainMenu {
       action: () => this.app.navigateTo("containerControl"),
     })
     items.push({
+      name: "📋 View Container Logs",
+      description: "Stream and save container logs",
+      action: () => this.showScreen(LogsViewer),
+    })
+    items.push({
       name: "⚙️  Advanced Settings",
       description: "Customize ports, volumes, env",
       action: () => this.app.navigateTo("advancedSettings"),
@@ -110,6 +117,13 @@ export class MainMenu {
         name: "⚡ qBittorrent Setup",
         description: "Configure TRaSH-compliant paths and categories",
         action: () => this.showScreen(QBittorrentSetup),
+      })
+    }
+    if (this.isAppEnabled("recyclarr")) {
+      items.push({
+        name: "♻️ Recyclarr Setup",
+        description: "Configure TRaSH Guide profiles and run sync",
+        action: () => this.showScreen(RecyclarrSetup),
       })
     }
 

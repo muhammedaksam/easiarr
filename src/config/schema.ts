@@ -14,11 +14,25 @@ export interface EasiarrConfig {
   umask: string
   apps: AppConfig[]
   network?: NetworkConfig
+  /** Which reverse proxy to use: traefik, caddy, or none */
+  reverseProxy?: "traefik" | "caddy" | "none"
   traefik?: TraefikConfig
+  caddy?: CaddyConfig
   vpn?: VpnConfig
   monitor?: MonitorConfig
+  /** Bind-mount container logs to host for external log aggregation */
+  logMount?: boolean
   createdAt: string
   updatedAt: string
+}
+
+export type ReverseProxyType = "traefik" | "caddy" | "none"
+
+export interface CaddyConfig {
+  enabled: boolean
+  domain: string
+  /** Email for ACME/Let's Encrypt */
+  email?: string
 }
 
 export type VpnMode = "full" | "mini" | "none"
@@ -129,6 +143,8 @@ export type AppId =
   | "guacd"
   | "ddns-updater"
   | "easiarr"
+  | "recyclarr"
+  | "profilarr"
   // VPN
   | "gluetun"
   // Monitoring & Infra
@@ -141,6 +157,7 @@ export type AppId =
   // Reverse Proxy
   | "traefik"
   | "traefik-certs-dumper"
+  | "caddy"
   | "cloudflared"
   | "crowdsec"
   // Network/VPN
@@ -212,6 +229,8 @@ export interface AppDefinition {
   autoSetup?: AutoSetupCapability
   /** Use Docker's user: directive instead of PUID/PGID env vars (e.g., slskd) */
   useDockerUser?: boolean
+  /** Path inside container where logs are stored (e.g., "/config/logs"), for bind-mounting */
+  logVolume?: string
 }
 
 /** Auto-setup capability for an app */
