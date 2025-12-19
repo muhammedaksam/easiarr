@@ -41,6 +41,7 @@ export class SettingsScreen extends BoxRenderable {
   private pgid: string
   private timezone: string
   private umask: string
+  private logMount: boolean
 
   constructor(renderer: CliRenderer, config: EasiarrConfig, onBack: () => void) {
     super(renderer, {
@@ -66,6 +67,7 @@ export class SettingsScreen extends BoxRenderable {
     this.pgid = config.gid.toString()
     this.timezone = config.timezone
     this.umask = config.umask
+    this.logMount = config.logMount ?? false
 
     this.renderContent()
   }
@@ -427,6 +429,37 @@ export class SettingsScreen extends BoxRenderable {
     tzInput.on(InputRenderableEvents.CHANGE, (v) => (this.timezone = v))
     umaskInput.on(InputRenderableEvents.CHANGE, (v) => (this.umask = v))
 
+    // Log mount toggle
+    const logMountRow = new BoxRenderable(this.cliRenderer, {
+      width: "100%",
+      height: 1,
+      flexDirection: "row",
+      marginBottom: 1,
+    })
+    logMountRow.add(
+      new TextRenderable(this.cliRenderer, {
+        content: "Bind Logs:".padEnd(16),
+        fg: "#aaaaaa",
+      })
+    )
+    const logMountToggle = new SelectRenderable(this.cliRenderer, {
+      id: "settings-sys-logmount",
+      width: 30,
+      height: 1,
+      options: [
+        {
+          name: this.logMount ? "✓ Enabled" : "○ Disabled",
+          description: "Bind-mount container logs to ${ROOT_DIR}/logs/",
+        },
+      ],
+    })
+    logMountToggle.on(SelectRenderableEvents.ITEM_SELECTED, () => {
+      this.logMount = !this.logMount
+      this.renderContent()
+    })
+    logMountRow.add(logMountToggle)
+    content.add(logMountRow)
+
     content.add(new TextRenderable(this.cliRenderer, { content: " " }))
 
     const navMenu = new SelectRenderable(this.cliRenderer, {
@@ -450,7 +483,7 @@ export class SettingsScreen extends BoxRenderable {
 
     content.add(navMenu)
 
-    const inputs = [rootInput, puidInput, pgidInput, tzInput, umaskInput, navMenu]
+    const inputs = [rootInput, puidInput, pgidInput, tzInput, umaskInput, logMountToggle, navMenu]
     let focusIndex = 0
     inputs[0].focus()
 
@@ -549,6 +582,7 @@ export class SettingsScreen extends BoxRenderable {
     this.config.gid = parseInt(this.pgid, 10) || 1000
     this.config.timezone = this.timezone
     this.config.umask = this.umask
+    this.config.logMount = this.logMount
     this.config.updatedAt = new Date().toISOString()
 
     await saveConfig(this.config)
