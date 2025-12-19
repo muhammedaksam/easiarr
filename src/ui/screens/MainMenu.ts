@@ -23,6 +23,7 @@ import { JellyfinSetup } from "./JellyfinSetup"
 import { JellyseerrSetup } from "./JellyseerrSetup"
 import { SettingsScreen } from "./SettingsScreen"
 import { CloudflaredSetup } from "./CloudflaredSetup"
+import { LogsViewer } from "./LogsViewer"
 
 type MenuItem = { name: string; description: string; action: () => void | Promise<void> }
 
@@ -68,6 +69,11 @@ export class MainMenu {
       name: "🐳 Container Control",
       description: "Start, stop, restart containers",
       action: () => this.app.navigateTo("containerControl"),
+    })
+    items.push({
+      name: "📋 View Container Logs",
+      description: "Stream and save container logs",
+      action: () => this.showScreen(LogsViewer),
     })
     items.push({
       name: "⚙️  Advanced Settings",
