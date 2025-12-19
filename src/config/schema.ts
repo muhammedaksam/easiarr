@@ -129,6 +129,7 @@ export type AppId =
   | "guacd"
   | "ddns-updater"
   | "easiarr"
+  | "recyclarr"
   // VPN
   | "gluetun"
   // Monitoring & Infra

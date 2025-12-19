@@ -27,6 +27,7 @@ import { saveConfig } from "../../config"
 import { saveCompose } from "../../compose"
 import { generateSlskdConfig, getSlskdConfigPath } from "../../config/slskd-config"
 import { generateSoularrConfig, getSoularrConfigPath } from "../../config/soularr-config"
+import { saveRecyclarrConfig } from "../../config/recyclarr-config"
 import { writeFile, mkdir } from "fs/promises"
 import { dirname } from "path"
 import { existsSync } from "fs"
@@ -118,6 +119,7 @@ export class FullAutoSetup extends BoxRenderable {
       { name: "Huntarr", status: "pending" },
       { name: "Slskd", status: "pending" },
       { name: "Soularr", status: "pending" },
+      { name: "Recyclarr", status: "pending" },
       { name: "Cloudflare Tunnel", status: "pending" },
     ]
   }
@@ -215,7 +217,10 @@ export class FullAutoSetup extends BoxRenderable {
     // Step 20: Soularr (Lidarr -> Slskd bridge)
     await this.setupSoularr()
 
-    // Step 21: Cloudflare Tunnel
+    // Step 21: Recyclarr (TRaSH Guides sync)
+    await this.setupRecyclarr()
+
+    // Step 22: Cloudflare Tunnel
     await this.setupCloudflare()
 
     this.isRunning = false
@@ -1380,6 +1385,37 @@ export class FullAutoSetup extends BoxRenderable {
       this.updateStep("Soularr", "success", "Config generated")
     } catch (e) {
       this.updateStep("Soularr", "error", `${e}`)
+    }
+    this.refreshContent()
+  }
+
+  private async setupRecyclarr(): Promise<void> {
+    this.updateStep("Recyclarr", "running")
+    this.refreshContent()
+
+    const recyclarrConfig = this.config.apps.find((a) => a.id === "recyclarr" && a.enabled)
+    if (!recyclarrConfig) {
+      this.updateStep("Recyclarr", "skipped", "Not enabled")
+      this.refreshContent()
+      return
+    }
+
+    // Check if we have at least one *arr app with API key
+    const radarrApiKey = this.env["API_KEY_RADARR"]
+    const sonarrApiKey = this.env["API_KEY_SONARR"]
+
+    if (!radarrApiKey && !sonarrApiKey) {
+      this.updateStep("Recyclarr", "skipped", "No Radarr/Sonarr API keys")
+      this.refreshContent()
+      return
+    }
+
+    try {
+      const configPath = await saveRecyclarrConfig(this.config)
+      debugLog("FullAutoSetup", `Generated recyclarr.yml at ${configPath}`)
+      this.updateStep("Recyclarr", "success", "Config generated")
+    } catch (e) {
+      this.updateStep("Recyclarr", "error", `${e}`)
     }
     this.refreshContent()
   }
