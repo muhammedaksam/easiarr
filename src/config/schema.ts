@@ -20,6 +20,8 @@ export interface EasiarrConfig {
   caddy?: CaddyConfig
   vpn?: VpnConfig
   monitor?: MonitorConfig
+  /** Bind-mount container logs to host for external log aggregation */
+  logMount?: boolean
   createdAt: string
   updatedAt: string
 }
@@ -226,6 +228,8 @@ export interface AppDefinition {
   autoSetup?: AutoSetupCapability
   /** Use Docker's user: directive instead of PUID/PGID env vars (e.g., slskd) */
   useDockerUser?: boolean
+  /** Path inside container where logs are stored (e.g., "/config/logs"), for bind-mounting */
+  logVolume?: string
 }
 
 /** Auto-setup capability for an app */

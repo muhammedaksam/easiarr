@@ -112,6 +112,11 @@ function buildService(appDef: ReturnType<typeof getApp>, appConfig: AppConfig, c
   // Use ${ROOT_DIR} for volumes
   const volumes = [...appDef.volumes("${ROOT_DIR}"), ...(appConfig.customVolumes ?? [])]
 
+  // Add log volume mount if logMount is enabled and app has logVolume defined
+  if (config.logMount && appDef.logVolume) {
+    volumes.push(`\${ROOT_DIR}/logs/${appDef.id}:${appDef.logVolume}`)
+  }
+
   // Build environment
   const environment: Record<string, string | number> = {
     TZ: "${TIMEZONE}",
