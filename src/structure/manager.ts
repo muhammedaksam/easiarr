@@ -98,6 +98,22 @@ export async function ensureDirectoryStructure(config: EasiarrConfig): Promise<v
     if (enabledApps.has("traefik")) {
       await mkdir(join(configRoot, "traefik", "letsencrypt"), { recursive: true })
     }
+
+    // 5. Create log directories if logMount is enabled
+    if (config.logMount) {
+      const logsRoot = join(config.rootDir, "logs")
+      await mkdir(logsRoot, { recursive: true })
+
+      // Create log directory for each enabled app that has logVolume defined
+      for (const appConfig of config.apps) {
+        if (appConfig.enabled) {
+          const appDef = getApp(appConfig.id)
+          if (appDef?.logVolume) {
+            await mkdir(join(logsRoot, appConfig.id), { recursive: true })
+          }
+        }
+      }
+    }
   } catch (error: unknown) {
     const err = error as { code?: string; message: string }
     if (err.code === "EACCES") {

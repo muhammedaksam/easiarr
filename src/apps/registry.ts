@@ -31,6 +31,7 @@ export const APPS: Record<AppId, AppDefinition> = {
     },
     prowlarrCategoryIds: [2000, 2010, 2020, 2030, 2040, 2045, 2050, 2060, 2070, 2080, 2090], // Movies + all sub-categories
     homepage: { icon: "radarr.png", widget: "radarr" },
+    logVolume: "/config/logs",
   },
 
   sonarr: {
@@ -56,6 +57,7 @@ export const APPS: Record<AppId, AppDefinition> = {
     },
     prowlarrCategoryIds: [5000, 5010, 5020, 5030, 5040, 5045, 5050, 5060, 5070, 5080, 5090], // TV + all sub-categories
     homepage: { icon: "sonarr.png", widget: "sonarr" },
+    logVolume: "/config/logs",
   },
 
   lidarr: {
@@ -79,6 +81,7 @@ export const APPS: Record<AppId, AppDefinition> = {
     },
     prowlarrCategoryIds: [3000, 3010, 3020, 3030, 3040, 3050, 3060], // Audio + all sub-categories
     homepage: { icon: "lidarr.png", widget: "lidarr" },
+    logVolume: "/config/logs",
   },
 
   readarr: {
@@ -106,6 +109,7 @@ export const APPS: Record<AppId, AppDefinition> = {
       warning: "Readarr is deprecated - no ARM64 support (project abandoned by upstream)",
     },
     homepage: { icon: "readarr.png", widget: "readarr" },
+    logVolume: "/config/logs",
   },
 
   bazarr: {
@@ -127,6 +131,7 @@ export const APPS: Record<AppId, AppDefinition> = {
       selector: "auth.apikey",
     },
     homepage: { icon: "bazarr.png", widget: "bazarr" },
+    logVolume: "/config/log",
   },
 
   mylar3: {
@@ -149,6 +154,7 @@ export const APPS: Record<AppId, AppDefinition> = {
     },
     prowlarrCategoryIds: [7030], // Comics
     homepage: { icon: "mylar.png", widget: "mylar" },
+    logVolume: "/app/mylar/logs",
     // Note: Mylar3 is NOT an *arr app - has different API format (?cmd=<endpoint>)
     // Root folder is configured via Web UI settings, not API
   },
@@ -174,6 +180,7 @@ export const APPS: Record<AppId, AppDefinition> = {
     },
     prowlarrCategoryIds: [6000, 6010, 6020, 6030, 6040, 6045, 6050, 6060, 6070, 6080, 6090], // XXX + all sub-categories
     homepage: { icon: "whisparr.png", widget: "sonarr" }, // Uses sonarr widget type
+    logVolume: "/config/logs",
   },
 
   audiobookshelf: {
@@ -192,6 +199,7 @@ export const APPS: Record<AppId, AppDefinition> = {
       `${root}/data/media/audiobookshelf-metadata:/metadata`,
     ],
     homepage: { icon: "audiobookshelf.png", widget: "audiobookshelf" },
+    logVolume: "/config/metadata/logs",
   },
 
   // === INDEXERS ===
@@ -213,6 +221,7 @@ export const APPS: Record<AppId, AppDefinition> = {
       selector: "<ApiKey>(.*?)</ApiKey>",
     },
     homepage: { icon: "prowlarr.png", widget: "prowlarr" },
+    logVolume: "/config/logs",
   },
 
   jackett: {
@@ -231,6 +240,7 @@ export const APPS: Record<AppId, AppDefinition> = {
       selector: "APIKey",
     },
     homepage: { icon: "jackett.png", widget: "jackett" },
+    logVolume: "/config/logs",
   },
 
   flaresolverr: {
@@ -290,6 +300,7 @@ export const APPS: Record<AppId, AppDefinition> = {
     ],
     trashGuide: "docs/Downloaders/qBittorrent/",
     homepage: { icon: "qbittorrent.png", widget: "qbittorrent" },
+    logVolume: "/config/qBittorrent/logs",
   },
 
   sabnzbd: {
@@ -311,6 +322,7 @@ export const APPS: Record<AppId, AppDefinition> = {
       selector: "api_key\\s*=\\s*(.+)",
     },
     homepage: { icon: "sabnzbd.png", widget: "sabnzbd" },
+    logVolume: "/config/logs",
   },
 
   slskd: {
@@ -352,6 +364,7 @@ export const APPS: Record<AppId, AppDefinition> = {
       type: "partial",
       description: "Generates slskd.yml with API key for Homepage widget and Soularr integration",
     },
+    logVolume: "/app/logs",
   },
 
   soularr: {
@@ -390,6 +403,7 @@ export const APPS: Record<AppId, AppDefinition> = {
       selector: 'PlexOnlineToken="([^"]+)"',
     },
     homepage: { icon: "plex.png", widget: "plex" },
+    logVolume: "/config/Library/Application Support/Plex Media Server/Logs",
     autoSetup: {
       type: "full",
       description: "Claim server with token, create media libraries",
@@ -408,6 +422,7 @@ export const APPS: Record<AppId, AppDefinition> = {
     pgid: 13000,
     volumes: (root) => [`${root}/config/jellyfin:/config`, `${root}/data/media:/data/media`],
     homepage: { icon: "jellyfin.png", widget: "jellyfin" },
+    logVolume: "/config/log",
   },
 
   tautulli: {
@@ -432,6 +447,7 @@ export const APPS: Record<AppId, AppDefinition> = {
       description: "Connect to Plex, enable API",
       requires: ["plex"],
     },
+    logVolume: "/config/logs",
   },
 
   tdarr: {
@@ -451,6 +467,7 @@ export const APPS: Record<AppId, AppDefinition> = {
     ],
     environment: { serverIP: "0.0.0.0", internalNode: "true" },
     homepage: { icon: "tdarr.png", widget: "tdarr" },
+    logVolume: "/app/logs",
   },
 
   // === REQUEST MANAGEMENT ===
@@ -476,6 +493,7 @@ export const APPS: Record<AppId, AppDefinition> = {
       description: "Connect to Plex, configure Radarr/Sonarr",
       requires: ["plex"],
     },
+    logVolume: "/app/config/logs",
   },
 
   jellyseerr: {
@@ -495,6 +513,7 @@ export const APPS: Record<AppId, AppDefinition> = {
       selector: "main.apiKey",
     },
     homepage: { icon: "jellyseerr.png", widget: "jellyseerr" },
+    logVolume: "/app/config/logs",
   },
 
   // === DASHBOARDS ===
@@ -514,6 +533,7 @@ export const APPS: Record<AppId, AppDefinition> = {
       "/var/run/docker.sock:/var/run/docker.sock",
     ],
     homepage: { icon: "homarr.png" }, // No widget, just icon (it's a dashboard itself)
+    logVolume: "/app/data/logs",
   },
 
   heimdall: {
@@ -527,6 +547,7 @@ export const APPS: Record<AppId, AppDefinition> = {
     pgid: 13000,
     volumes: (root) => [`${root}/config/heimdall:/config`],
     homepage: { icon: "heimdall.png" }, // No widget, just icon (it's a dashboard itself)
+    logVolume: "/config/log",
   },
 
   homepage: {
@@ -544,6 +565,7 @@ export const APPS: Record<AppId, AppDefinition> = {
       HOMEPAGE_ALLOWED_HOSTS:
         "homepage,homepage.${CLOUDFLARE_DNS_ZONE},${CLOUDFLARE_DNS_ZONE},localhost,${LOCAL_DOCKER_IP},${LOCAL_DOCKER_IP}:3009",
     },
+    logVolume: "/app/config/logs",
   },
 
   // === UTILITIES ===
@@ -559,6 +581,7 @@ export const APPS: Record<AppId, AppDefinition> = {
     volumes: (root) => [`${root}/config/portainer:/data`, "/var/run/docker.sock:/var/run/docker.sock"],
     minPasswordLength: 12, // Portainer requires minimum 12 character password
     homepage: { icon: "portainer.png", widget: "portainer" },
+    logVolume: "/data/logs",
   },
 
   huntarr: {
@@ -591,6 +614,7 @@ export const APPS: Record<AppId, AppDefinition> = {
       description: "Test connections to Sonarr, Radarr, Lidarr, Readarr, Whisparr",
       requires: ["sonarr", "radarr"],
     },
+    logVolume: "/config/logs",
   },
 
   unpackerr: {
@@ -603,6 +627,7 @@ export const APPS: Record<AppId, AppDefinition> = {
     puid: 0,
     pgid: 13000,
     volumes: (root) => [`${root}/config/unpackerr:/config`, `${root}/data:/data`],
+    logVolume: "/config/logs",
   },
 
   filebot: {
@@ -616,6 +641,7 @@ export const APPS: Record<AppId, AppDefinition> = {
     pgid: 13000,
     volumes: (root) => [`${root}/config/filebot:/data`, `${root}/data:/data`],
     environment: { DARK_MODE: "1" },
+    logVolume: "/data/logs",
   },
 
   chromium: {
@@ -629,6 +655,7 @@ export const APPS: Record<AppId, AppDefinition> = {
     pgid: 13000,
     volumes: (root) => [`${root}/config/chromium:/config`],
     environment: { TITLE: "Chromium" },
+    logVolume: "/config/logs",
   },
 
   guacamole: {
@@ -664,6 +691,7 @@ export const APPS: Record<AppId, AppDefinition> = {
         mask: true,
       },
     ],
+    logVolume: "/guacamole/logs",
   },
 
   guacd: {
@@ -677,6 +705,7 @@ export const APPS: Record<AppId, AppDefinition> = {
     pgid: 13000,
     volumes: (root) => [`${root}/config/guacd:/config`], // Not really used but keeps structure
     dependsOn: ["postgresql"],
+    logVolume: "/guacd/logs",
   },
 
   "ddns-updater": {
@@ -689,6 +718,7 @@ export const APPS: Record<AppId, AppDefinition> = {
     puid: 13000,
     pgid: 13000,
     volumes: (root) => [`${root}/config/ddns-updater:/data`],
+    logVolume: "/data/logs",
   },
 
   easiarr: {
@@ -793,6 +823,7 @@ export const APPS: Record<AppId, AppDefinition> = {
       },
     ],
     homepage: { icon: "gluetun.png", widget: "gluetun" },
+    logVolume: "/gluetun",
   },
 
   // === MONITORING ===
@@ -812,6 +843,7 @@ export const APPS: Record<AppId, AppDefinition> = {
       description: "Setup admin user, configure Prometheus datasource",
       requires: ["prometheus"],
     },
+    logVolume: "/var/log/grafana",
   },
 
   prometheus: {
@@ -825,6 +857,7 @@ export const APPS: Record<AppId, AppDefinition> = {
     pgid: 13000,
     volumes: (root) => [`${root}/config/prometheus:/prometheus`],
     homepage: { icon: "prometheus.png", widget: "prometheus" },
+    logVolume: "/prometheus/logs",
   },
 
   dozzle: {
@@ -857,6 +890,7 @@ export const APPS: Record<AppId, AppDefinition> = {
       type: "full",
       description: "Create admin user, add monitors for enabled apps",
     },
+    logVolume: "/app/data/logs",
   },
 
   // === INFRASTRUCTURE ===
@@ -885,6 +919,7 @@ export const APPS: Record<AppId, AppDefinition> = {
       },
     ],
     homepage: { icon: "traefik.png", widget: "traefik" },
+    logVolume: "/etc/traefik/logs",
   },
 
   caddy: {
@@ -904,6 +939,7 @@ export const APPS: Record<AppId, AppDefinition> = {
       `${root}/config/caddy/config:/config`,
     ],
     homepage: { icon: "caddy.png" },
+    logVolume: "/data/logs",
   },
 
   cloudflared: {
