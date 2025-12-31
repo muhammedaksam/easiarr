@@ -1,6 +1,6 @@
 {
   "name": "@muhammedaksam/easiarr",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "description": "TUI tool for generating docker-compose files for the *arr media ecosystem with 41 apps, TRaSH Guides best practices, VPN routing, and Traefik reverse proxy support",
   "module": "src/index.ts",
   "type": "module",
@@ -61,15 +61,15 @@
     "jiti": "^2.6.1",
     "prettier": "^3.7.4",
     "ts-jest": "^29.4.6",
-    "typescript-eslint": "^8.50.1"
+    "typescript-eslint": "^8.51.0"
   },
   "peerDependencies": {
     "typescript": "^5.9.3"
   },
   "dependencies": {
-    "@opentui/core": "^0.1.63",
+    "@opentui/core": "^0.1.67",
     "bcrypt": "^6.0.0",
-    "socket.io-client": "^4.8.2",
+    "socket.io-client": "^4.8.3",
     "yaml": "^2.8.2"
   },
   "engines": {
