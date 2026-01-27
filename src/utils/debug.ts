@@ -2,12 +2,13 @@
  * Debug logging utility for easiarr
  *
  * Enable debug logging via:
- * - CLI flag: easiarr --debug
- * - Environment variable: EASIARR_DEBUG=1 bun run dev
+ * - CLI flag: easiarr --debug or -d
+ * - Environment variable: EASIARR_DEBUG=1 bun dev
  */
 
-import { appendFileSync, writeFileSync } from "fs"
-import { join } from "path"
+import { appendFileSync, writeFileSync } from "node:fs"
+import { homedir } from "node:os"
+import { join } from "node:path"
 
 // Check CLI args for --debug flag
 const hasDebugFlag = process.argv.includes("--debug") || process.argv.includes("-d")
@@ -15,8 +16,14 @@ const hasEnvDebug = process.env.EASIARR_DEBUG === "1" || process.env.EASIARR_DEB
 
 export const DEBUG_ENABLED = hasDebugFlag || hasEnvDebug
 
-// Save debug log to ~/.easiarr/ like other config files
-const easiarrDir = join(process.env.HOME || "~", ".easiarr")
+// Compute XDG path locally to avoid circular dependency with manager.ts
+function getXdgConfigDir(): string {
+  const xdgConfigHome = process.env.XDG_CONFIG_HOME || join(homedir(), ".config")
+  return join(xdgConfigHome, "easiarr")
+}
+
+// Save debug log to XDG config dir like other config files
+const easiarrDir = getXdgConfigDir()
 const logFile = join(easiarrDir, "debug.log")
 
 /**
