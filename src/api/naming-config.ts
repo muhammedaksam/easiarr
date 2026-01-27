@@ -12,7 +12,14 @@ export interface SonarrNamingConfig {
   renameEpisodes: boolean
   replaceIllegalCharacters: boolean
   colonReplacementFormat: "dash" | "spaceDash" | "spaceDashSpace" | "smart" | "delete" | number
-  multiEpisodeStyle: "extend" | "duplicate" | "repeat" | "scene" | "range" | "prefixedRange" | number
+  multiEpisodeStyle:
+    | "extend"
+    | "duplicate"
+    | "repeat"
+    | "scene"
+    | "range"
+    | "prefixedRange"
+    | number
   dailyEpisodeFormat: string
   animeEpisodeFormat: string
   seriesFolderFormat: string
@@ -81,7 +88,8 @@ export const TRASH_NAMING_CONFIG = {
     replaceIllegalCharacters: true,
     colonReplacementFormat: 4, // 4 = Smart Replace (Dash or Space Dash depending on name)
     // Standard track format: Artist - Album (Year) - Track# - Title
-    standardTrackFormat: "{Artist CleanName} - {Album CleanTitle} ({Release Year}) - {track:00} - {Track CleanTitle}",
+    standardTrackFormat:
+      "{Artist CleanName} - {Album CleanTitle} ({Release Year}) - {track:00} - {Track CleanTitle}",
     // Multi-disc format includes disc number
     multiDiscTrackFormat:
       "{Artist CleanName} - {Album CleanTitle} ({Release Year}) - {medium:00}-{track:00} - {Track CleanTitle}",

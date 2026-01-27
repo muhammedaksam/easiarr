@@ -3,12 +3,13 @@
  * Generates Caddyfile for automatic HTTPS reverse proxy
  */
 
-import { mkdir, writeFile } from "node:fs/promises"
 import { existsSync } from "node:fs"
+import { mkdir, writeFile } from "node:fs/promises"
 import { join } from "node:path"
-import type { EasiarrConfig } from "../config/schema"
-import { getApp } from "../apps/registry"
-import { debugLog } from "../utils/debug"
+
+import type { EasiarrConfig } from "~/config/schema"
+import { getApp } from "~/apps/registry"
+import { debugLog } from "~/utils/debug"
 
 /**
  * Generate Caddyfile content for enabled apps

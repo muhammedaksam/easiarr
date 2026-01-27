@@ -4,9 +4,10 @@
  */
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs"
-import { writeFile, readFile } from "node:fs/promises"
+import { readFile, writeFile } from "node:fs/promises"
 import { networkInterfaces } from "node:os"
-import { getComposePath } from "../config/manager"
+
+import { getComposePath } from "~/config/manager"
 
 /**
  * Get the local IP address of the Docker host

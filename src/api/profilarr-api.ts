@@ -3,8 +3,8 @@
  * Handles authentication and *arr instance configuration
  */
 
-import { debugLog } from "../utils/debug"
-import type { IAutoSetupClient, AutoSetupOptions, AutoSetupResult } from "./auto-setup-types"
+import type { AutoSetupOptions, AutoSetupResult, IAutoSetupClient } from "./auto-setup-types"
+import { debugLog } from "~/utils/debug"
 
 // ==========================================
 // Types
@@ -207,7 +207,11 @@ export class ProfilarrApiClient implements IAutoSetupClient {
    * Configure Radarr connection
    * @returns The created/existing config, or null if failed
    */
-  async configureRadarr(hostname: string, port: number, apiKey: string): Promise<ProfilarrConfig | null> {
+  async configureRadarr(
+    hostname: string,
+    port: number,
+    apiKey: string
+  ): Promise<ProfilarrConfig | null> {
     try {
       const existingConfigs = await this.getConfigs()
       const existingConfig = existingConfigs.find((c) => c.type === "radarr")
@@ -239,7 +243,11 @@ export class ProfilarrApiClient implements IAutoSetupClient {
    * Configure Sonarr connection
    * @returns The created/existing config, or null if failed
    */
-  async configureSonarr(hostname: string, port: number, apiKey: string): Promise<ProfilarrConfig | null> {
+  async configureSonarr(
+    hostname: string,
+    port: number,
+    apiKey: string
+  ): Promise<ProfilarrConfig | null> {
     try {
       const existingConfigs = await this.getConfigs()
       const existingConfig = existingConfigs.find((c) => c.type === "sonarr")
@@ -316,7 +324,10 @@ export class ProfilarrApiClient implements IAutoSetupClient {
         method: "POST",
         body: JSON.stringify({}),
       })
-      debugLog("ProfilarrApi", `Sync config ${configId}: ${response.success ? "success" : "failed"}`)
+      debugLog(
+        "ProfilarrApi",
+        `Sync config ${configId}: ${response.success ? "success" : "failed"}`
+      )
       return response.success
     } catch (e) {
       debugLog("ProfilarrApi", `Sync config ${configId} failed: ${e}`)

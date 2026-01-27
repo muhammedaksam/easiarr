@@ -3,7 +3,7 @@
  * Interfaces for auto-setup capability metadata and clients
  */
 
-import type { AppId } from "../config/schema"
+import type { AppId } from "~/config/schema"
 
 /**
  * Describes an app's auto-setup capability

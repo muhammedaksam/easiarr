@@ -3,7 +3,7 @@
  * Functions for generating app URLs based on Traefik configuration
  */
 
-import type { EasiarrConfig } from "../config/schema"
+import type { EasiarrConfig } from "~/config/schema"
 import { getLocalIp } from "./env"
 
 /**

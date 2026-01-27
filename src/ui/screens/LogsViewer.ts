@@ -3,12 +3,20 @@
  * Full-screen log viewer with streaming, search, and save functionality
  */
 
-import type { RenderContext, CliRenderer, KeyEvent } from "@opentui/core"
-import { BoxRenderable, TextRenderable, SelectRenderable, SelectRenderableEvents } from "@opentui/core"
-import type { EasiarrConfig } from "../../config/schema"
-import { getContainerLogs, getContainerStatuses, type ContainerStatus } from "../../docker"
-import { createPageLayout } from "../components/PageLayout"
-import { saveLog, listSavedLogs, formatBytes, formatRelativeTime } from "../../utils/logs"
+import type { CliRenderer, KeyEvent, RenderContext } from "@opentui/core"
+
+import {
+  BoxRenderable,
+  SelectRenderable,
+  SelectRenderableEvents,
+  TextRenderable,
+} from "@opentui/core"
+
+import type { EasiarrConfig } from "~/config/schema"
+import type { ContainerStatus } from "~/docker"
+import { getContainerLogs, getContainerStatuses } from "~/docker"
+import { createPageLayout } from "~/ui/components/PageLayout"
+import { formatBytes, formatRelativeTime, listSavedLogs, saveLog } from "~/utils/logs"
 
 type ViewMode = "select" | "logs" | "saved"
 
@@ -77,7 +85,9 @@ export class LogsViewer extends BoxRenderable {
     this.add(page)
   }
 
-  private getFooterHints(): Array<{ type: "key"; key: string; value: string } | { type: "separator" }> {
+  private getFooterHints(): Array<
+    { type: "key"; key: string; value: string } | { type: "separator" }
+  > {
     switch (this.mode) {
       case "select":
         return [

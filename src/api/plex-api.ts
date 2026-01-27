@@ -3,8 +3,8 @@
  * Handles Plex Media Server auto-setup including server claiming and library creation
  */
 
-import { debugLog } from "../utils/debug"
-import type { IAutoSetupClient, AutoSetupOptions, AutoSetupResult } from "./auto-setup-types"
+import type { AutoSetupOptions, AutoSetupResult, IAutoSetupClient } from "./auto-setup-types"
+import { debugLog } from "~/utils/debug"
 
 // Plex client identifier for API requests
 const PLEX_CLIENT_ID = "easiarr"
@@ -256,7 +256,9 @@ export class PlexApiClient implements IAutoSetupClient {
     ]
 
     // Filter to only libraries for enabled apps (or all if no enabledApps provided)
-    const libraries = enabledApps ? libraryMap.filter((lib) => enabledApps.includes(lib.app)) : libraryMap
+    const libraries = enabledApps
+      ? libraryMap.filter((lib) => enabledApps.includes(lib.app))
+      : libraryMap
 
     let librariesCreated = 0
     for (const lib of libraries) {
@@ -302,7 +304,9 @@ export class PlexApiClient implements IAutoSetupClient {
         return {
           success: true,
           message:
-            librariesCreated > 0 ? `Already claimed, ${librariesCreated} libraries configured` : "Already claimed",
+            librariesCreated > 0
+              ? `Already claimed, ${librariesCreated} libraries configured`
+              : "Already claimed",
           data: {
             machineIdentifier: serverInfo.machineIdentifier,
             version: serverInfo.version,

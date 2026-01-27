@@ -118,7 +118,14 @@ export const RADARR_PRESETS: TRaSHProfilePreset[] = [
     description: "High-Quality HD Encodes (Bluray-720p/1080p). Size: 6-15 GB",
     app: "radarr",
     cutoffQuality: "Bluray-1080p",
-    allowedQualities: ["Bluray-1080p", "Bluray-720p", "WEBDL-1080p", "WEBDL-720p", "WEBRip-1080p", "WEBRip-720p"],
+    allowedQualities: [
+      "Bluray-1080p",
+      "Bluray-720p",
+      "WEBDL-1080p",
+      "WEBDL-720p",
+      "WEBRip-1080p",
+      "WEBRip-720p",
+    ],
     cfScores: {
       "BR-DISK": -10000,
       LQ: -10000,

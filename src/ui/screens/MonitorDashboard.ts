@@ -4,19 +4,32 @@
  */
 
 import type { CliRenderer, KeyEvent } from "@opentui/core"
-import { BoxRenderable, TextRenderable, TabSelectRenderable, TabSelectRenderableEvents } from "@opentui/core"
-import type { EasiarrConfig, AppCategory, AppId, MonitorOptions, MonitorConfig } from "../../config/schema"
-import { APP_CATEGORIES } from "../../config/schema"
-import { createPageLayout } from "../components/PageLayout"
-import { APPS } from "../../apps/registry"
-import { saveConfig } from "../../config/manager"
+
 import {
-  ArrApiClient,
-  type HealthResource,
-  type DiskSpaceResource,
-  type SystemResource,
-  type QueueStatusResource,
-} from "../../api/arr-api"
+  BoxRenderable,
+  TabSelectRenderable,
+  TabSelectRenderableEvents,
+  TextRenderable,
+} from "@opentui/core"
+
+import type {
+  DiskSpaceResource,
+  HealthResource,
+  QueueStatusResource,
+  SystemResource,
+} from "~/api/arr-api"
+import type {
+  AppCategory,
+  AppId,
+  EasiarrConfig,
+  MonitorConfig,
+  MonitorOptions,
+} from "~/config/schema"
+import { ArrApiClient } from "~/api/arr-api"
+import { APPS } from "~/apps/registry"
+import { saveConfig } from "~/config/manager"
+import { APP_CATEGORIES } from "~/config/schema"
+import { createPageLayout } from "~/ui/components/PageLayout"
 
 // Default monitoring options
 const DEFAULT_CHECKS: MonitorOptions = {
@@ -390,7 +403,9 @@ export class MonitorDashboard extends BoxRenderable {
 
     // Check toggles
     const checks: (keyof MonitorOptions)[] = ["health", "diskspace", "status", "queue"]
-    const effectiveChecks = cfg.override ? cfg.checks : this.categoryConfigs.get(selectedCat)!.checks
+    const effectiveChecks = cfg.override
+      ? cfg.checks
+      : this.categoryConfigs.get(selectedCat)!.checks
 
     checks.forEach((check, idx) => {
       const isEnabled = effectiveChecks[check]
@@ -621,7 +636,7 @@ export class MonitorDashboard extends BoxRenderable {
     if (!selectedApp) return
 
     // Read API key from env file
-    const { readEnv } = await import("../../utils/env")
+    const { readEnv } = await import("~/utils/env")
     const env = await readEnv()
     const apiKey = env[`API_KEY_${selectedApp.id.toUpperCase()}`]
 

@@ -3,16 +3,24 @@
  * Add, remove, or configure apps
  */
 
-import type { RenderContext, CliRenderer, KeyEvent } from "@opentui/core"
-import { BoxRenderable, TextRenderable, SelectRenderable, SelectRenderableEvents, RGBA } from "@opentui/core"
-import type { App } from "../App"
-import type { AppId, EasiarrConfig } from "../../config/schema"
-import { saveConfig } from "../../config"
-import { saveCompose } from "../../compose"
-import { createPageLayout } from "../components/PageLayout"
-import { ensureDirectoryStructure } from "../../structure/manager"
-import { ApplicationSelector } from "../components/ApplicationSelector"
-import { getApp } from "../../apps/registry"
+import type { CliRenderer, KeyEvent, RenderContext } from "@opentui/core"
+
+import {
+  BoxRenderable,
+  RGBA,
+  SelectRenderable,
+  SelectRenderableEvents,
+  TextRenderable,
+} from "@opentui/core"
+
+import type { AppId, EasiarrConfig } from "~/config/schema"
+import type { App } from "~/ui"
+import { getApp } from "~/apps/registry"
+import { saveCompose } from "~/compose"
+import { saveConfig } from "~/config"
+import { ensureDirectoryStructure } from "~/structure/manager"
+import { ApplicationSelector } from "~/ui/components/ApplicationSelector"
+import { createPageLayout } from "~/ui/components/PageLayout"
 import { SecretsEditor } from "./SecretsEditor"
 
 export class AppManager {

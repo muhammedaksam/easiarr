@@ -3,12 +3,14 @@
  * Generates traefik.yml (static config) and dynamic.yml (middlewares)
  */
 
-import { writeFile, mkdir } from "node:fs/promises"
 import { existsSync } from "node:fs"
+import { mkdir, writeFile } from "node:fs/promises"
 import { join } from "node:path"
+
 import { hashSync } from "bcrypt"
-import type { EasiarrConfig } from "../config/schema"
-import { debugLog } from "../utils/debug"
+
+import type { EasiarrConfig } from "~/config/schema"
+import { debugLog } from "~/utils/debug"
 
 export interface TraefikStaticConfig {
   entrypoints: {

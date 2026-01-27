@@ -3,32 +3,43 @@
  * Central navigation hub for easiarr
  */
 
-import type { RenderContext, CliRenderer } from "@opentui/core"
-import { BoxRenderable, TextRenderable, SelectRenderable, SelectRenderableEvents } from "@opentui/core"
-import type { App } from "../App"
-import type { EasiarrConfig } from "../../config/schema"
-import { createPageLayout } from "../components/PageLayout"
-import { saveCompose } from "../../compose"
-import { saveBookmarks } from "../../config/bookmarks-generator"
-import { openUrl } from "../../utils/browser"
-import { ApiKeyViewer } from "./ApiKeyViewer"
-import { AppConfigurator } from "./AppConfigurator"
-import { TRaSHProfileSetup } from "./TRaSHProfileSetup"
-import { ProwlarrSetup } from "./ProwlarrSetup"
-import { QBittorrentSetup } from "./QBittorrentSetup"
-import { FullAutoSetup } from "./FullAutoSetup"
-import { MonitorDashboard } from "./MonitorDashboard"
-import { HomepageSetup } from "./HomepageSetup"
-import { JellyfinSetup } from "./JellyfinSetup"
-import { JellyseerrSetup } from "./JellyseerrSetup"
-import { SettingsScreen } from "./SettingsScreen"
-import { CloudflaredSetup } from "./CloudflaredSetup"
-import { LogsViewer } from "./LogsViewer"
-import { RecyclarrSetup } from "./RecyclarrSetup"
+import type { CliRenderer, RenderContext } from "@opentui/core"
+
+import {
+  BoxRenderable,
+  SelectRenderable,
+  SelectRenderableEvents,
+  TextRenderable,
+} from "@opentui/core"
+
+import type { EasiarrConfig } from "~/config/schema"
+import type { App } from "~/ui/App"
+import { saveCompose } from "~/compose"
+import { saveBookmarks } from "~/config/bookmarks-generator"
+import { createPageLayout } from "~/ui/components/PageLayout"
+import { ApiKeyViewer } from "~/ui/screens/ApiKeyViewer"
+import { AppConfigurator } from "~/ui/screens/AppConfigurator"
+import { LogsViewer } from "~/ui/screens/LogsViewer"
+import { MonitorDashboard } from "~/ui/screens/MonitorDashboard"
+import { SettingsScreen } from "~/ui/screens/SettingsScreen"
+import { CloudflaredSetup } from "~/ui/screens/setup/CloudflaredSetup"
+import { FullAutoSetup } from "~/ui/screens/setup/FullAutoSetup"
+import { HomepageSetup } from "~/ui/screens/setup/HomepageSetup"
+import { JellyfinSetup } from "~/ui/screens/setup/JellyfinSetup"
+import { JellyseerrSetup } from "~/ui/screens/setup/JellyseerrSetup"
+import { ProwlarrSetup } from "~/ui/screens/setup/ProwlarrSetup"
+import { QBittorrentSetup } from "~/ui/screens/setup/QBittorrentSetup"
+import { RecyclarrSetup } from "~/ui/screens/setup/RecyclarrSetup"
+import { TRaSHProfileSetup } from "~/ui/screens/setup/TRaSHProfileSetup"
+import { openUrl } from "~/utils/browser"
 
 type MenuItem = { name: string; description: string; action: () => void | Promise<void> }
 
-type ScreenConstructor = new (renderer: CliRenderer, config: EasiarrConfig, onBack: () => void) => BoxRenderable
+type ScreenConstructor = new (
+  renderer: CliRenderer,
+  config: EasiarrConfig,
+  onBack: () => void
+) => BoxRenderable
 
 export class MainMenu {
   private renderer: RenderContext

@@ -3,9 +3,9 @@
  * Handles Portainer-specific API calls for initialization and management
  */
 
-import { debugLog } from "../utils/debug"
-import { ensureMinPasswordLength } from "../utils/password"
-import type { IAutoSetupClient, AutoSetupOptions, AutoSetupResult } from "./auto-setup-types"
+import type { AutoSetupOptions, AutoSetupResult, IAutoSetupClient } from "./auto-setup-types"
+import { debugLog } from "~/utils/debug"
+import { ensureMinPasswordLength } from "~/utils/password"
 
 // Portainer requires minimum 12 character password
 export const PORTAINER_MIN_PASSWORD_LENGTH = 12
@@ -109,7 +109,9 @@ export class PortainerApiClient implements IAutoSetupClient {
     }
 
     if (!response.ok) {
-      throw new Error(`Portainer API request failed: ${response.status} ${response.statusText} - ${text}`)
+      throw new Error(
+        `Portainer API request failed: ${response.status} ${response.statusText} - ${text}`
+      )
     }
 
     if (!text) return {} as T
@@ -176,7 +178,10 @@ export class PortainerApiClient implements IAutoSetupClient {
     const wasPadded = safePassword !== password
 
     if (wasPadded) {
-      debugLog("PortainerAPI", `Password padded from ${password.length} to ${safePassword.length} characters`)
+      debugLog(
+        "PortainerAPI",
+        `Password padded from ${password.length} to ${safePassword.length} characters`
+      )
     }
 
     const user = await this.request<PortainerUser>("/users/admin/init", {
@@ -206,7 +211,11 @@ export class PortainerApiClient implements IAutoSetupClient {
    * @param password - User password for confirmation
    * @returns Raw API key to save to .env as API_KEY_PORTAINER
    */
-  async generateApiKey(password: string, description: string = "easiarr-api-key", userId: number = 1): Promise<string> {
+  async generateApiKey(
+    password: string,
+    description: string = "easiarr-api-key",
+    userId: number = 1
+  ): Promise<string> {
     if (!this.jwtToken) {
       throw new Error("Must be logged in to generate API key. Call login() first.")
     }
@@ -292,7 +301,9 @@ export class PortainerApiClient implements IAutoSetupClient {
    * Get all containers for an endpoint
    */
   async getContainers(endpointId: number = 1): Promise<PortainerContainer[]> {
-    return this.request<PortainerContainer[]>(`/endpoints/${endpointId}/docker/containers/json?all=true`)
+    return this.request<PortainerContainer[]>(
+      `/endpoints/${endpointId}/docker/containers/json?all=true`
+    )
   }
 
   /**
@@ -336,13 +347,18 @@ export class PortainerApiClient implements IAutoSetupClient {
       stderr: String(stderr),
       tail: String(tail),
     })
-    return this.request<string>(`/endpoints/${endpointId}/docker/containers/${containerId}/logs?${params}`)
+    return this.request<string>(
+      `/endpoints/${endpointId}/docker/containers/${containerId}/logs?${params}`
+    )
   }
 
   /**
    * Get container stats (CPU, Memory usage)
    */
-  async getContainerStats(containerId: string, endpointId: number = 1): Promise<PortainerContainerStats> {
+  async getContainerStats(
+    containerId: string,
+    endpointId: number = 1
+  ): Promise<PortainerContainerStats> {
     return this.request<PortainerContainerStats>(
       `/endpoints/${endpointId}/docker/containers/${containerId}/stats?stream=false`
     )

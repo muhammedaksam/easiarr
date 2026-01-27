@@ -7,7 +7,7 @@
  * Uses the same CustomFormat interface from custom-format-api.ts for compatibility.
  */
 
-import type { CustomFormat } from "../api/custom-format-api"
+import type { CustomFormat } from "~/api/custom-format-api"
 
 /**
  * Preferred Groups - Release groups that are consistently high quality

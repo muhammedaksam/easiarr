@@ -4,12 +4,19 @@
  * Moves config from ~/.easiarr to $XDG_CONFIG_HOME/easiarr
  */
 
-import { existsSync, lstatSync, readdirSync, rmSync } from "node:fs"
-import { copyFileSync, cpSync, mkdirSync } from "node:fs"
+import {
+  copyFileSync,
+  cpSync,
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  readdirSync,
+  rmSync,
+} from "node:fs"
 import { homedir } from "node:os"
 import { join } from "node:path"
 
-import { debugLog } from "../debug"
+import { debugLog } from "~/utils/debug"
 
 export const name = "migrate_to_xdg"
 

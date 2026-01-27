@@ -4,24 +4,26 @@
  */
 
 import type { CliRenderer, KeyEvent } from "@opentui/core"
+
 import {
   BoxRenderable,
-  TextRenderable,
-  SelectRenderable,
-  SelectRenderableEvents,
   InputRenderable,
   InputRenderableEvents,
+  SelectRenderable,
+  SelectRenderableEvents,
+  TextRenderable,
 } from "@opentui/core"
-import type { App } from "../App"
-import type { AppConfig, AppId, VpnMode } from "../../config/schema"
-import { createDefaultConfig, saveConfig } from "../../config"
-import { saveCompose } from "../../compose"
-import { createPageLayout } from "../components/PageLayout"
-import { ensureDirectoryStructure } from "../../structure/manager"
-import { SecretsEditor } from "./SecretsEditor"
-import { getApp } from "../../apps"
-import { ApplicationSelector } from "../components/ApplicationSelector"
-import { isUnraid, getDefaultRootDir, getUnraidInfo } from "../../utils/unraid"
+
+import type { AppConfig, AppId, VpnMode } from "~/config/schema"
+import type { App } from "~/ui"
+import { getApp } from "~/apps"
+import { saveCompose } from "~/compose"
+import { createDefaultConfig, saveConfig } from "~/config"
+import { ensureDirectoryStructure } from "~/structure/manager"
+import { SecretsEditor } from "~/ui"
+import { ApplicationSelector } from "~/ui/components/ApplicationSelector"
+import { createPageLayout } from "~/ui/components/PageLayout"
+import { getDefaultRootDir, getUnraidInfo, isUnraid } from "~/utils/unraid"
 
 type WizardStep = "welcome" | "apps" | "system" | "vpn" | "traefik" | "secrets" | "confirm"
 
@@ -493,7 +495,13 @@ export class QuickSetup {
     })
     content.add(formBox)
 
-    const createField = (id: string, label: string, value: string, placeholder: string, width: number = 40) => {
+    const createField = (
+      id: string,
+      label: string,
+      value: string,
+      placeholder: string,
+      width: number = 40
+    ) => {
       const row = new BoxRenderable(this.renderer, {
         width: "100%",
         height: 1,

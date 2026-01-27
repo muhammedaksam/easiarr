@@ -6,18 +6,19 @@
 import {
   BoxRenderable,
   CliRenderer,
-  TextRenderable,
   InputRenderable,
   InputRenderableEvents,
   KeyEvent,
+  TextRenderable,
 } from "@opentui/core"
-import { createPageLayout } from "../components/PageLayout"
-import { EasiarrConfig, AppId } from "../../config/schema"
-import { getApp } from "../../apps/registry"
-import { ArrApiClient, createQBittorrentConfig, createSABnzbdConfig } from "../../api/arr-api"
-import { QBittorrentClient } from "../../api/qbittorrent-api"
-import { getCategoriesForApps } from "../../utils/categories"
-import { readEnvSync, updateEnv } from "../../utils/env"
+
+import { ArrApiClient, createQBittorrentConfig, createSABnzbdConfig } from "~/api/arr-api"
+import { QBittorrentClient } from "~/api/qbittorrent-api"
+import { getApp } from "~/apps/registry"
+import { AppId, EasiarrConfig } from "~/config/schema"
+import { createPageLayout } from "~/ui/components/PageLayout"
+import { getCategoriesForApps } from "~/utils/categories"
+import { readEnvSync, updateEnv } from "~/utils/env"
 
 interface ConfigResult {
   appId: AppId
@@ -141,7 +142,9 @@ export class AppConfigurator extends BoxRenderable {
     content.add(new BoxRenderable(this.cliRenderer, { width: 1, height: 1 })) // Spacer
 
     // Email input (for Cloudflare Access, notifications, etc.)
-    content.add(new TextRenderable(this.cliRenderer, { content: "Email (optional):", fg: "#aaaaaa" }))
+    content.add(
+      new TextRenderable(this.cliRenderer, { content: "Email (optional):", fg: "#aaaaaa" })
+    )
     const emailInput = new InputRenderable(this.cliRenderer, {
       id: "global-email-input",
       width: 40,
@@ -284,7 +287,11 @@ export class AppConfigurator extends BoxRenderable {
         const client = new ArrApiClient("localhost", port, apiKey, "v1")
 
         try {
-          await client.updateHostConfig(this.globalUsername, this.globalPassword, this.overrideExisting)
+          await client.updateHostConfig(
+            this.globalUsername,
+            this.globalPassword,
+            this.overrideExisting
+          )
         } catch {
           // Auth setup for these apps is best-effort
         }
@@ -359,7 +366,11 @@ export class AppConfigurator extends BoxRenderable {
     // Set up authentication if credentials provided
     if (this.globalPassword) {
       try {
-        await client.updateHostConfig(this.globalUsername, this.globalPassword, this.overrideExisting)
+        await client.updateHostConfig(
+          this.globalUsername,
+          this.globalPassword,
+          this.overrideExisting
+        )
       } catch {
         // Ignore auth setup errors - not critical
       }
@@ -605,10 +616,21 @@ export class AppConfigurator extends BoxRenderable {
         if (alreadyExists) continue
 
         if (type === "qbittorrent") {
-          const config = createQBittorrentConfig(this.qbHost, this.qbPort, this.qbUser, this.qbPass, appConfig.id)
+          const config = createQBittorrentConfig(
+            this.qbHost,
+            this.qbPort,
+            this.qbUser,
+            this.qbPass,
+            appConfig.id
+          )
           await client.addDownloadClient(config)
         } else {
-          const config = createSABnzbdConfig(this.sabHost, this.sabPort, this.sabApiKey, appConfig.id)
+          const config = createSABnzbdConfig(
+            this.sabHost,
+            this.sabPort,
+            this.sabApiKey,
+            appConfig.id
+          )
           await client.addDownloadClient(config)
         }
       } catch {
@@ -684,7 +706,12 @@ export class AppConfigurator extends BoxRenderable {
     // Show results summary
     for (const result of this.results) {
       const icon = result.status === "success" ? "✓" : result.status === "skipped" ? "⏭" : "✗"
-      const color = result.status === "success" ? "#50fa7b" : result.status === "skipped" ? "#6272a4" : "#ff5555"
+      const color =
+        result.status === "success"
+          ? "#50fa7b"
+          : result.status === "skipped"
+            ? "#6272a4"
+            : "#ff5555"
       const message = result.message ? ` - ${result.message}` : ""
 
       content.add(

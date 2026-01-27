@@ -3,8 +3,9 @@
  * Open URLs in the default browser
  */
 
-import { $ } from "bun"
 import { platform } from "node:os"
+
+import { $ } from "bun"
 
 /**
  * Open a URL in the default browser

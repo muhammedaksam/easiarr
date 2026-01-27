@@ -1,17 +1,18 @@
 import {
-  BoxRenderable,
   BoxOptions,
+  BoxRenderable,
   CliRenderer,
-  RenderContext,
-  TabSelectRenderable,
-  SelectRenderable,
-  TextRenderable,
-  SelectRenderableEvents,
   KeyEvent,
+  RenderContext,
+  SelectRenderable,
+  SelectRenderableEvents,
+  TabSelectRenderable,
+  TextRenderable,
 } from "@opentui/core"
-import { AppId } from "../../config/schema"
-import { CATEGORY_ORDER } from "../../apps/categories"
-import { getAppsByCategory, getArchWarning } from "../../apps"
+
+import { getAppsByCategory, getArchWarning } from "~/apps"
+import { CATEGORY_ORDER } from "~/apps/categories"
+import { AppId } from "~/config/schema"
 
 export interface ApplicationSelectorOptions extends BoxOptions {
   selectedApps: Set<AppId>
@@ -145,7 +146,9 @@ export class ApplicationSelector extends BoxRenderable {
       const warnIcon = archWarning ? " ⚠️" : ""
       return {
         name: `${checkmark} ${app.name}${warnIcon}`,
-        description: archWarning ? `⚠️ ${archWarning}` : `Port ${app.defaultPort} - ${app.description}`,
+        description: archWarning
+          ? `⚠️ ${archWarning}`
+          : `Port ${app.defaultPort} - ${app.description}`,
       }
     })
 

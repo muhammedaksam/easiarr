@@ -1,18 +1,20 @@
-import {
-  BoxRenderable,
-  InputRenderable,
-  TextRenderable,
-  CliRenderer,
-  RenderContext,
-  BoxOptions,
-  RGBA,
-  KeyEvent,
-} from "@opentui/core"
-import { EasiarrConfig, AppSecret } from "../../config/schema"
-import { getApp } from "../../apps/registry"
-import { readEnv, updateEnv, getEnvPath } from "../../utils/env"
 import { mkdir } from "node:fs/promises"
 import { dirname } from "node:path"
+
+import {
+  BoxOptions,
+  BoxRenderable,
+  CliRenderer,
+  InputRenderable,
+  KeyEvent,
+  RenderContext,
+  RGBA,
+  TextRenderable,
+} from "@opentui/core"
+
+import { getApp } from "~/apps/registry"
+import { AppSecret, EasiarrConfig } from "~/config/schema"
+import { getEnvPath, readEnv, updateEnv } from "~/utils/env"
 
 export interface SecretsEditorOptions extends BoxOptions {
   config: EasiarrConfig

@@ -3,17 +3,19 @@
  * Manages navigation between screens
  */
 
-import type { KeyEvent, CliRenderer } from "@opentui/core"
+import type { CliRenderer, KeyEvent } from "@opentui/core"
+
 import { BoxRenderable } from "@opentui/core"
-import { loadConfig, configExists, saveConfig } from "../config"
-import type { EasiarrConfig } from "../config/schema"
-import { MainMenu } from "./screens/MainMenu"
-import { QuickSetup } from "./screens/QuickSetup"
-import { AppManager } from "./screens/AppManager"
-import { ContainerControl } from "./screens/ContainerControl"
-import { AdvancedSettings } from "./screens/AdvancedSettings"
-import { checkForUpdates } from "../utils/update-checker"
-import { UpdateNotification } from "./components/UpdateNotification"
+
+import type { EasiarrConfig } from "~/config/schema"
+import { configExists, loadConfig, saveConfig } from "~/config"
+import { UpdateNotification } from "~/ui/components/UpdateNotification"
+import { AdvancedSettings } from "~/ui/screens/AdvancedSettings"
+import { AppManager } from "~/ui/screens/AppManager"
+import { ContainerControl } from "~/ui/screens/ContainerControl"
+import { MainMenu } from "~/ui/screens/MainMenu"
+import { QuickSetup } from "~/ui/screens/setup/QuickSetup"
+import { checkForUpdates } from "~/utils/update-checker"
 
 export type Screen = "main" | "quickSetup" | "appManager" | "containerControl" | "advancedSettings"
 

@@ -3,8 +3,8 @@
  * Handles setup wizard automation and media library management
  */
 
-import { debugLog } from "../utils/debug"
-import type { IAutoSetupClient, AutoSetupOptions, AutoSetupResult } from "./auto-setup-types"
+import type { AutoSetupOptions, AutoSetupResult, IAutoSetupClient } from "./auto-setup-types"
+import { debugLog } from "~/utils/debug"
 
 // ==========================================
 // Startup Wizard Types
@@ -156,7 +156,9 @@ export class JellyfinClient implements IAutoSetupClient {
     }
 
     if (!response.ok) {
-      throw new Error(`Jellyfin API request failed: ${response.status} ${response.statusText} - ${text}`)
+      throw new Error(
+        `Jellyfin API request failed: ${response.status} ${response.statusText} - ${text}`
+      )
     }
 
     if (!text) return {} as T

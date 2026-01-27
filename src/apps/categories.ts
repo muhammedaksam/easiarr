@@ -1,4 +1,4 @@
-import type { AppCategory } from "../config/schema"
+import type { AppCategory } from "~/config/schema"
 
 export const CATEGORY_ORDER: { id: AppCategory; short: string }[] = [
   { id: "servarr", short: "Media" },

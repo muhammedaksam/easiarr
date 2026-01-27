@@ -1,7 +1,8 @@
 import { mkdir } from "node:fs/promises"
 import { join } from "node:path"
-import type { EasiarrConfig, AppId } from "../config/schema"
-import { getApp } from "../apps/registry"
+
+import type { AppId, EasiarrConfig } from "~/config/schema"
+import { getApp } from "~/apps/registry"
 
 const BASE_DIRS = ["torrents", "usenet", "media"]
 

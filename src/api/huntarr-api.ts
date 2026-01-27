@@ -4,9 +4,9 @@
  * Configures Sonarr, Radarr, Lidarr, Readarr, Whisparr instances automatically
  */
 
-import { debugLog } from "../utils/debug"
-import type { IAutoSetupClient, AutoSetupOptions, AutoSetupResult } from "./auto-setup-types"
-import type { AppConfig } from "../config/schema"
+import type { AutoSetupOptions, AutoSetupResult, IAutoSetupClient } from "./auto-setup-types"
+import type { AppConfig } from "~/config/schema"
+import { debugLog } from "~/utils/debug"
 
 interface HuntarrVersion {
   version: string
@@ -313,7 +313,11 @@ export class HuntarrClient implements IAutoSetupClient {
   /**
    * Test connection to an *arr app via Huntarr
    */
-  async testConnection(appType: HuntarrAppType, apiUrl: string, apiKey: string): Promise<TestConnectionResult> {
+  async testConnection(
+    appType: HuntarrAppType,
+    apiUrl: string,
+    apiKey: string
+  ): Promise<TestConnectionResult> {
     try {
       const response = await fetch(`${this.baseUrl}/api/${appType}/test-connection`, {
         method: "POST",
@@ -390,7 +394,12 @@ export class HuntarrClient implements IAutoSetupClient {
    * Add an *arr app instance to Huntarr
    * Gets current settings, adds new instance if not exists, saves
    */
-  async addArrInstance(appType: HuntarrAppType, name: string, apiUrl: string, apiKey: string): Promise<boolean> {
+  async addArrInstance(
+    appType: HuntarrAppType,
+    name: string,
+    apiUrl: string,
+    apiKey: string
+  ): Promise<boolean> {
     try {
       // Get current settings (preserve all other app settings)
       const settings = await this.getSettings(appType)

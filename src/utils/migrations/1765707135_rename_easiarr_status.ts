@@ -6,9 +6,10 @@
  */
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs"
-import { join } from "node:path"
 import { homedir } from "node:os"
-import { debugLog } from "../debug"
+import { join } from "node:path"
+
+import { debugLog } from "~/utils/debug"
 
 const CONFIG_FILE = join(homedir(), ".easiarr", "config.json")
 

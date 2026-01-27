@@ -3,15 +3,16 @@
  * Handles reading and writing config to ~/.easiarr/
  */
 
-import { mkdir, readFile, writeFile, copyFile } from "node:fs/promises"
 import { existsSync } from "node:fs"
+import { copyFile, mkdir, readFile, writeFile } from "node:fs/promises"
 import { homedir } from "node:os"
 import { join } from "node:path"
+
 import type { EasiarrConfig } from "./schema"
+import { debugLog } from "~/utils/debug"
+import { VersionInfo } from "~/VersionInfo"
+import { detectGid, detectTimezone, detectUid } from "./defaults"
 import { DEFAULT_CONFIG } from "./schema"
-import { detectTimezone, detectUid, detectGid } from "./defaults"
-import { VersionInfo } from "../VersionInfo"
-import { debugLog } from "../utils/debug"
 
 const CONFIG_DIR_NAME = "easiarr"
 const CONFIG_FILE_NAME = "config.json"

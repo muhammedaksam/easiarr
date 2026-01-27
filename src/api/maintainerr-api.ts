@@ -4,8 +4,8 @@
  * API docs: https://github.com/Maintainerr/Maintainerr
  */
 
-import { debugLog } from "../utils/debug"
-import type { IAutoSetupClient, AutoSetupOptions, AutoSetupResult } from "./auto-setup-types"
+import type { AutoSetupOptions, AutoSetupResult, IAutoSetupClient } from "./auto-setup-types"
+import { debugLog } from "~/utils/debug"
 
 // === Response Types ===
 
@@ -203,7 +203,9 @@ export class MaintainerrClient implements IAutoSetupClient {
    */
   async getCollections(libraryId?: number): Promise<MaintainerrCollection[]> {
     try {
-      const url = libraryId ? this.buildApiUrl(`/collections?libraryId=${libraryId}`) : this.buildApiUrl("/collections")
+      const url = libraryId
+        ? this.buildApiUrl(`/collections?libraryId=${libraryId}`)
+        : this.buildApiUrl("/collections")
       const response = await fetch(url, { method: "GET" })
       if (response.ok) {
         return (await response.json()) as MaintainerrCollection[]
@@ -242,7 +244,9 @@ export class MaintainerrClient implements IAutoSetupClient {
       if (activeOnly) params.set("activeOnly", "true")
       if (libraryId) params.set("libraryId", libraryId.toString())
       const queryString = params.toString()
-      const url = queryString ? this.buildApiUrl(`/rules?${queryString}`) : this.buildApiUrl("/rules")
+      const url = queryString
+        ? this.buildApiUrl(`/rules?${queryString}`)
+        : this.buildApiUrl("/rules")
       const response = await fetch(url, { method: "GET" })
       if (response.ok) {
         return (await response.json()) as MaintainerrRuleGroup[]
@@ -328,7 +332,9 @@ export class MaintainerrClient implements IAutoSetupClient {
   /**
    * Get status of a specific task
    */
-  async getTaskStatus(taskName: "rule-executor" | "collection-handler"): Promise<MaintainerrTaskStatus | null> {
+  async getTaskStatus(
+    taskName: "rule-executor" | "collection-handler"
+  ): Promise<MaintainerrTaskStatus | null> {
     try {
       const response = await fetch(this.buildApiUrl(`/tasks/${taskName}/status`), {
         method: "GET",
@@ -585,7 +591,12 @@ export class MaintainerrClient implements IAutoSetupClient {
    * Configure Plex server with hostname, port, and name
    * This must be called after setPlexToken to complete Plex setup
    */
-  async configurePlexServer(hostname: string, port: number, name: string, ssl: boolean = false): Promise<boolean> {
+  async configurePlexServer(
+    hostname: string,
+    port: number,
+    name: string,
+    ssl: boolean = false
+  ): Promise<boolean> {
     try {
       debugLog("MaintainerrApi", `Configuring Plex server: ${name} at ${hostname}:${port}`)
       const result = await this.updateSettings({
@@ -697,12 +708,22 @@ export class MaintainerrClient implements IAutoSetupClient {
           if (servers && servers.length > 0) {
             const server = servers[0]
             // Find a local connection (prefer local addresses)
-            const localConn = server.connection.find((c) => c.local && c.address.startsWith("192.168"))
+            const localConn = server.connection.find(
+              (c) => c.local && c.address.startsWith("192.168")
+            )
             const conn = localConn || server.connection[0]
 
             if (conn) {
-              await this.configurePlexServer(conn.address, conn.port, server.name, conn.protocol === "https")
-              debugLog("MaintainerrApi", `Configured Plex server: ${server.name} at ${conn.address}:${conn.port}`)
+              await this.configurePlexServer(
+                conn.address,
+                conn.port,
+                server.name,
+                conn.protocol === "https"
+              )
+              debugLog(
+                "MaintainerrApi",
+                `Configured Plex server: ${server.name} at ${conn.address}:${conn.port}`
+              )
             }
           }
 
