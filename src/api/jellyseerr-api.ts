@@ -8,8 +8,8 @@
  * - Login mode: only requires username and password (when server already configured)
  */
 
-import { debugLog } from "../utils/debug"
-import type { IAutoSetupClient, AutoSetupOptions, AutoSetupResult } from "./auto-setup-types"
+import type { AutoSetupOptions, AutoSetupResult, IAutoSetupClient } from "./auto-setup-types"
+import { debugLog } from "~/utils/debug"
 
 // ==========================================
 // Enums (from Jellyseerr server/constants/server.ts)
@@ -220,7 +220,9 @@ export class JellyseerrClient implements IAutoSetupClient {
     return this.request<JellyseerrMainSettings>("/settings/main")
   }
 
-  async updateMainSettings(settings: Partial<JellyseerrMainSettings>): Promise<JellyseerrMainSettings> {
+  async updateMainSettings(
+    settings: Partial<JellyseerrMainSettings>
+  ): Promise<JellyseerrMainSettings> {
     return this.request<JellyseerrMainSettings>("/settings/main", {
       method: "POST",
       body: JSON.stringify(settings),
@@ -254,7 +256,9 @@ export class JellyseerrClient implements IAutoSetupClient {
     return this.request<JellyseerrJellyfinSettings>("/settings/jellyfin")
   }
 
-  async updateJellyfinSettings(settings: Partial<JellyseerrJellyfinSettings>): Promise<JellyseerrJellyfinSettings> {
+  async updateJellyfinSettings(
+    settings: Partial<JellyseerrJellyfinSettings>
+  ): Promise<JellyseerrJellyfinSettings> {
     return this.request<JellyseerrJellyfinSettings>("/settings/jellyfin", {
       method: "POST",
       body: JSON.stringify(settings),
@@ -267,7 +271,9 @@ export class JellyseerrClient implements IAutoSetupClient {
 
   async enableLibraries(libraryIds: string[]): Promise<JellyseerrLibrary[]> {
     const enable = libraryIds.join(",")
-    return this.request<JellyseerrLibrary[]>(`/settings/jellyfin/library?enable=${encodeURIComponent(enable)}`)
+    return this.request<JellyseerrLibrary[]>(
+      `/settings/jellyfin/library?enable=${encodeURIComponent(enable)}`
+    )
   }
 
   // ==========================================
@@ -320,7 +326,10 @@ export class JellyseerrClient implements IAutoSetupClient {
       const message = err instanceof Error ? err.message : String(err)
 
       // Check if server is already configured
-      if (message.includes("already configured") || message.includes("hostname already configured")) {
+      if (
+        message.includes("already configured") ||
+        message.includes("hostname already configured")
+      ) {
         debugLog("Jellyseerr", "Server already configured, retrying with login-only payload")
 
         // Attempt 2: Login-only payload (server already configured)
@@ -347,7 +356,9 @@ export class JellyseerrClient implements IAutoSetupClient {
       }
 
       if (message.includes("InvalidUrl") || message.includes("INVALID_URL")) {
-        throw new Error(`Cannot reach Jellyfin at ${hostname}:${port}. Check the hostname and port.`)
+        throw new Error(
+          `Cannot reach Jellyfin at ${hostname}:${port}. Check the hostname and port.`
+        )
       }
 
       throw err
@@ -392,7 +403,10 @@ export class JellyseerrClient implements IAutoSetupClient {
     })
   }
 
-  async updateRadarr(id: number, settings: Partial<JellyseerrRadarrSettings>): Promise<JellyseerrRadarrSettings> {
+  async updateRadarr(
+    id: number,
+    settings: Partial<JellyseerrRadarrSettings>
+  ): Promise<JellyseerrRadarrSettings> {
     return this.request<JellyseerrRadarrSettings>(`/settings/radarr/${id}`, {
       method: "PUT",
       body: JSON.stringify(settings),
@@ -427,7 +441,10 @@ export class JellyseerrClient implements IAutoSetupClient {
     })
   }
 
-  async updateSonarr(id: number, settings: Partial<JellyseerrSonarrSettings>): Promise<JellyseerrSonarrSettings> {
+  async updateSonarr(
+    id: number,
+    settings: Partial<JellyseerrSonarrSettings>
+  ): Promise<JellyseerrSonarrSettings> {
     return this.request<JellyseerrSonarrSettings>(`/settings/sonarr/${id}`, {
       method: "PUT",
       body: JSON.stringify(settings),

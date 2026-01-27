@@ -2,7 +2,7 @@
  * Cloudflare API client for tunnel and DNS management
  */
 
-import { debugLog } from "../utils/debug"
+import { debugLog } from "~/utils/debug"
 
 const CLOUDFLARE_API_BASE = "https://api.cloudflare.com/client/v4"
 
@@ -54,7 +54,11 @@ export class CloudflareApi {
     debugLog("CloudflareAPI", "Client initialized")
   }
 
-  private async request<T>(method: string, endpoint: string, body?: unknown): Promise<CloudflareResponse<T>> {
+  private async request<T>(
+    method: string,
+    endpoint: string,
+    body?: unknown
+  ): Promise<CloudflareResponse<T>> {
     debugLog("CloudflareAPI", `${method} ${endpoint}`)
     if (body) {
       debugLog("CloudflareAPI", `Request body: ${JSON.stringify(body)}`)
@@ -167,7 +171,10 @@ export class CloudflareApi {
    */
   async getTunnelToken(tunnelId: string): Promise<string> {
     const accountId = await this.getAccountId()
-    const response = await this.request<string>("GET", `/accounts/${accountId}/cfd_tunnel/${tunnelId}/token`)
+    const response = await this.request<string>(
+      "GET",
+      `/accounts/${accountId}/cfd_tunnel/${tunnelId}/token`
+    )
     return response.result
   }
 
@@ -207,7 +214,12 @@ export class CloudflareApi {
   /**
    * Create a CNAME DNS record pointing to the tunnel
    */
-  async createDnsRecord(zoneId: string, name: string, tunnelId: string, proxied = true): Promise<DnsRecord> {
+  async createDnsRecord(
+    zoneId: string,
+    name: string,
+    tunnelId: string,
+    proxied = true
+  ): Promise<DnsRecord> {
     const target = `${tunnelId}.cfargotunnel.com`
 
     // Check if record already exists
@@ -219,12 +231,16 @@ export class CloudflareApi {
     if (existing.result.length > 0) {
       // Update existing record
       const recordId = existing.result[0].id
-      const response = await this.request<DnsRecord>("PATCH", `/zones/${zoneId}/dns_records/${recordId}`, {
-        type: "CNAME",
-        name,
-        content: target,
-        proxied,
-      })
+      const response = await this.request<DnsRecord>(
+        "PATCH",
+        `/zones/${zoneId}/dns_records/${recordId}`,
+        {
+          type: "CNAME",
+          name,
+          content: target,
+          proxied,
+        }
+      )
       return response.result
     }
 
@@ -253,25 +269,34 @@ export class CloudflareApi {
    * Add a private network route to a tunnel (for WARP VPN access)
    * This allows WARP clients to access the specified network through the tunnel
    */
-  async addTunnelRoute(tunnelId: string, networkCidr: string, comment = "easiarr private network"): Promise<string> {
+  async addTunnelRoute(
+    tunnelId: string,
+    networkCidr: string,
+    comment = "easiarr private network"
+  ): Promise<string> {
     const accountId = await this.getAccountId()
-    const response = await this.request<{ id: string }>("POST", `/accounts/${accountId}/teamnet/routes`, {
-      network: networkCidr,
-      tunnel_id: tunnelId,
-      comment,
-    })
+    const response = await this.request<{ id: string }>(
+      "POST",
+      `/accounts/${accountId}/teamnet/routes`,
+      {
+        network: networkCidr,
+        tunnel_id: tunnelId,
+        comment,
+      }
+    )
     return response.result.id
   }
 
   /**
    * List existing tunnel routes for the account
    */
-  async listTunnelRoutes(): Promise<Array<{ id: string; network: string; tunnel_id: string; comment?: string }>> {
+  async listTunnelRoutes(): Promise<
+    Array<{ id: string; network: string; tunnel_id: string; comment?: string }>
+  > {
     const accountId = await this.getAccountId()
-    const response = await this.request<Array<{ id: string; network: string; tunnel_id: string; comment?: string }>>(
-      "GET",
-      `/accounts/${accountId}/teamnet/routes`
-    )
+    const response = await this.request<
+      Array<{ id: string; network: string; tunnel_id: string; comment?: string }>
+    >("GET", `/accounts/${accountId}/teamnet/routes`)
     return response.result
   }
 
@@ -286,7 +311,9 @@ export class CloudflareApi {
   /**
    * Check if a tunnel route already exists for the given network
    */
-  async getTunnelRouteForNetwork(networkCidr: string): Promise<{ id: string; tunnel_id: string } | null> {
+  async getTunnelRouteForNetwork(
+    networkCidr: string
+  ): Promise<{ id: string; tunnel_id: string } | null> {
     const routes = await this.listTunnelRoutes()
     return routes.find((r) => r.network === networkCidr) || null
   }
@@ -309,19 +336,25 @@ export class CloudflareApi {
       `/accounts/${accountId}/access/apps`
     )
 
-    const existingApp = existing.result.find((app) => app.name === name || app.domain === `*.${domain}`)
+    const existingApp = existing.result.find(
+      (app) => app.name === name || app.domain === `*.${domain}`
+    )
     if (existingApp) {
       return { id: existingApp.id, name: existingApp.name }
     }
 
     // Create new application
-    const response = await this.request<{ id: string; name: string }>("POST", `/accounts/${accountId}/access/apps`, {
-      name,
-      domain: `*.${domain}`,
-      type: "self_hosted",
-      session_duration: sessionDuration,
-      auto_redirect_to_identity: true,
-    })
+    const response = await this.request<{ id: string; name: string }>(
+      "POST",
+      `/accounts/${accountId}/access/apps`,
+      {
+        name,
+        domain: `*.${domain}`,
+        type: "self_hosted",
+        session_duration: sessionDuration,
+        auto_redirect_to_identity: true,
+      }
+    )
 
     return response.result
   }
@@ -457,11 +490,15 @@ export class CloudflareApi {
 
     if (!warpApp) {
       // Create WARP enrollment app
-      const response = await this.request<{ id: string; name: string }>("POST", `/accounts/${accountId}/access/apps`, {
-        type: "warp",
-        name: "Device Enrollment",
-        session_duration: "24h",
-      })
+      const response = await this.request<{ id: string; name: string }>(
+        "POST",
+        `/accounts/${accountId}/access/apps`,
+        {
+          type: "warp",
+          name: "Device Enrollment",
+          session_duration: "24h",
+        }
+      )
       warpApp = response.result
     }
 

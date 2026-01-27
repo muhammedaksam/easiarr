@@ -4,9 +4,10 @@
  * Source: https://github.com/slskd/slskd/blob/master/docs/config.md
  */
 
-import type { EasiarrConfig } from "./schema"
-import { readEnvSync } from "../utils/env"
 import { randomBytes } from "crypto"
+
+import type { EasiarrConfig } from "./schema"
+import { readEnvSync } from "~/utils/env"
 
 /**
  * Generate a random API key (base64, 48 bytes = ~64 chars)

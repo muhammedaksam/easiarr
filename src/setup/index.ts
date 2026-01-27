@@ -6,7 +6,7 @@
  *
  * @example
  * ```ts
- * import { runJellyseerrFullSetup, createSetupContext } from "../setup"
+ * import { runJellyseerrFullSetup, createSetupContext } from "~/setup"
  *
  * const ctx = createSetupContext(config, env)
  * const result = await runJellyseerrFullSetup(ctx)
@@ -44,7 +44,12 @@ export {
 } from "./actions/jellyseerr"
 
 // Prowlarr actions
-export { createProwlarrClient, setupProwlarrApps, setupFlareSolverr, runProwlarrFullSetup } from "./actions/prowlarr"
+export {
+  createProwlarrClient,
+  setupProwlarrApps,
+  setupFlareSolverr,
+  runProwlarrFullSetup,
+} from "./actions/prowlarr"
 
 // Download client actions
 export { setupQBittorrent } from "./actions/download-clients"

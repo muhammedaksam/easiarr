@@ -3,7 +3,7 @@
  * Detects system architecture and checks app compatibility
  */
 
-import type { AppDefinition, Architecture } from "../config/schema"
+import type { AppDefinition, Architecture } from "~/config/schema"
 
 /**
  * Get the current system architecture

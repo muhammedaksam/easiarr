@@ -5,11 +5,11 @@
  * Can be called from FullAutoSetup or JellyseerrSetup screen.
  */
 
-import { SetupContext, SetupResult, reportStep, getEnabledAppConfig } from "../types"
-import { JellyseerrClient } from "../../api/jellyseerr-api"
-import { getApp } from "../../apps/registry"
-import { getApplicationUrl } from "../../utils/url-utils"
-import { debugLog } from "../../utils/debug"
+import { JellyseerrClient } from "~/api/jellyseerr-api"
+import { getApp } from "~/apps/registry"
+import { getEnabledAppConfig, reportStep, SetupContext, SetupResult } from "~/setup/types"
+import { debugLog } from "~/utils/debug"
+import { getApplicationUrl } from "~/utils/url-utils"
 
 // ============================================
 // LOW-LEVEL ACTIONS (individual operations)
@@ -99,7 +99,13 @@ export async function configureJellyseerrRadarr(ctx: SetupContext): Promise<Setu
   const rootFolder = radarrDef?.rootFolder?.path || "/data/media/movies"
 
   try {
-    const result = await client.configureRadarr("radarr", radarrPort, radarrApiKey, rootFolder, radarrExternalUrl)
+    const result = await client.configureRadarr(
+      "radarr",
+      radarrPort,
+      radarrApiKey,
+      rootFolder,
+      radarrExternalUrl
+    )
 
     if (result) {
       debugLog("JellyseerrSetup", `Radarr configured: ${result.activeProfileName}`)
@@ -137,7 +143,13 @@ export async function configureJellyseerrSonarr(ctx: SetupContext): Promise<Setu
   const rootFolder = sonarrDef?.rootFolder?.path || "/data/media/tv"
 
   try {
-    const result = await client.configureSonarr("sonarr", sonarrPort, sonarrApiKey, rootFolder, sonarrExternalUrl)
+    const result = await client.configureSonarr(
+      "sonarr",
+      sonarrPort,
+      sonarrApiKey,
+      rootFolder,
+      sonarrExternalUrl
+    )
 
     if (result) {
       debugLog("JellyseerrSetup", `Sonarr configured: ${result.activeProfileName}`)
@@ -257,7 +269,12 @@ export async function runJellyseerrFullSetup(
   reportStep(ctx, "Setup wizard", "running")
   const wizard = await runJellyseerrWizard(ctx)
   if (!wizard.success) {
-    reportStep(ctx, "Setup wizard", wizard.message === "Already configured" ? "success" : "error", wizard.message)
+    reportStep(
+      ctx,
+      "Setup wizard",
+      wizard.message === "Already configured" ? "success" : "error",
+      wizard.message
+    )
     // If already configured, we can still continue with arr apps
     if (wizard.message !== "Already configured") {
       return wizard
@@ -288,12 +305,22 @@ export async function runJellyseerrFullSetup(
     // Set Jellyfin's external hostname for navigation
     reportStep(ctx, "Jellyfin URL", "running")
     const jellyfinUrl = await setJellyseerrJellyfinUrl(ctx)
-    reportStep(ctx, "Jellyfin URL", jellyfinUrl.success ? "success" : "skipped", jellyfinUrl.message)
+    reportStep(
+      ctx,
+      "Jellyfin URL",
+      jellyfinUrl.success ? "success" : "skipped",
+      jellyfinUrl.message
+    )
 
     // Set Jellyseerr's own applicationUrl
     reportStep(ctx, "Jellyseerr URL", "running")
     const jellyseerrUrl = await setJellyseerrExternalUrl(ctx)
-    reportStep(ctx, "Jellyseerr URL", jellyseerrUrl.success ? "success" : "skipped", jellyseerrUrl.message)
+    reportStep(
+      ctx,
+      "Jellyseerr URL",
+      jellyseerrUrl.success ? "success" : "skipped",
+      jellyseerrUrl.message
+    )
   }
 
   return {

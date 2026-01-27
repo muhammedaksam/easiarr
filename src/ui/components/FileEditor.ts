@@ -1,12 +1,12 @@
 import {
+  BoxOptions,
   BoxRenderable,
+  CliRenderer,
+  KeyEvent,
+  RenderContext,
+  RGBA,
   TextareaRenderable,
   TextRenderable,
-  CliRenderer,
-  RenderContext,
-  BoxOptions,
-  RGBA,
-  KeyEvent,
 } from "@opentui/core"
 
 export interface FileEditorOptions extends BoxOptions {

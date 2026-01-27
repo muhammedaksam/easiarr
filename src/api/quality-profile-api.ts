@@ -3,12 +3,12 @@
  * Manages Quality Profiles and Custom Format scoring for Radarr/Sonarr/Lidarr
  */
 
-import { debugLog } from "../utils/debug"
 import {
+  TRASH_LIDARR_QUALITY_DEFINITIONS,
   TRASH_RADARR_QUALITY_DEFINITIONS,
   TRASH_SONARR_QUALITY_DEFINITIONS,
-  TRASH_LIDARR_QUALITY_DEFINITIONS,
-} from "../config/trash-quality-definitions"
+} from "~/config/trash-quality-definitions"
+import { debugLog } from "~/utils/debug"
 
 export interface QualityItem {
   id?: number
@@ -212,7 +212,10 @@ export class QualityProfileClient {
   }
 
   // Update CF scores on existing profile
-  async updateProfileCFScores(profileId: number, cfScores: Record<string, number>): Promise<QualityProfile> {
+  async updateProfileCFScores(
+    profileId: number,
+    cfScores: Record<string, number>
+  ): Promise<QualityProfile> {
     const profile = await this.getQualityProfile(profileId)
 
     profile.formatItems = profile.formatItems.map((fi) => ({

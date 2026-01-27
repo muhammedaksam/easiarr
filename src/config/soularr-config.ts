@@ -5,7 +5,7 @@
  */
 
 import type { EasiarrConfig } from "./schema"
-import { readEnvSync } from "../utils/env"
+import { readEnvSync } from "~/utils/env"
 
 /**
  * Generate Soularr config.ini content

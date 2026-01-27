@@ -3,8 +3,9 @@
  * Popup overlay showing new version available
  */
 
-import { BoxRenderable, TextRenderable, CliRenderer, KeyEvent } from "@opentui/core"
-import type { UpdateInfo } from "../../utils/update-checker"
+import { BoxRenderable, CliRenderer, KeyEvent, TextRenderable } from "@opentui/core"
+
+import type { UpdateInfo } from "~/utils/update-checker"
 
 export class UpdateNotification extends BoxRenderable {
   private cliRenderer: CliRenderer

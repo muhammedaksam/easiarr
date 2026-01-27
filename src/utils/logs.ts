@@ -3,9 +3,10 @@
  * Handles saving and managing container logs to ~/.easiarr/logs/
  */
 
-import { mkdir, writeFile, readdir, stat } from "node:fs/promises"
-import { join } from "node:path"
+import { mkdir, readdir, stat, writeFile } from "node:fs/promises"
 import { homedir } from "node:os"
+import { join } from "node:path"
+
 import { debugLog } from "./debug"
 
 const LOGS_DIR = join(homedir(), ".easiarr", "logs")

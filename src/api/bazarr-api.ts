@@ -3,8 +3,8 @@
  * Handles Bazarr-specific API calls for authentication and settings
  */
 
-import { debugLog } from "../utils/debug"
-import type { IAutoSetupClient, AutoSetupOptions, AutoSetupResult } from "./auto-setup-types"
+import type { AutoSetupOptions, AutoSetupResult, IAutoSetupClient } from "./auto-setup-types"
+import { debugLog } from "~/utils/debug"
 
 /**
  * Bazarr Language Profile Structure
@@ -148,7 +148,12 @@ export class BazarrApiClient implements IAutoSetupClient {
       const currentAuth = (currentSettings as { auth?: { type?: string } }).auth
 
       // Skip if auth is already configured and override is false
-      if (currentAuth?.type && currentAuth.type !== "None" && currentAuth.type !== null && !override) {
+      if (
+        currentAuth?.type &&
+        currentAuth.type !== "None" &&
+        currentAuth.type !== null &&
+        !override
+      ) {
         debugLog("Bazarr", `Auth already configured (type: ${currentAuth.type}), skipping`)
         return false
       }

@@ -5,13 +5,13 @@
  * Includes: root folders, naming, quality, authentication, external URLs.
  */
 
-import { SetupContext, SetupResult, getEnabledAppConfig } from "../types"
-import { ArrApiClient, AddRootFolderOptions } from "../../api/arr-api"
-import { QualityProfileClient } from "../../api/quality-profile-api"
-import { BazarrApiClient } from "../../api/bazarr-api"
-import { getApp } from "../../apps/registry"
-import { getApplicationUrl } from "../../utils/url-utils"
-import { debugLog } from "../../utils/debug"
+import { AddRootFolderOptions, ArrApiClient } from "~/api/arr-api"
+import { BazarrApiClient } from "~/api/bazarr-api"
+import { QualityProfileClient } from "~/api/quality-profile-api"
+import { getApp } from "~/apps/registry"
+import { getEnabledAppConfig, SetupContext, SetupResult } from "~/setup/types"
+import { debugLog } from "~/utils/debug"
+import { getApplicationUrl } from "~/utils/url-utils"
 
 type NamingAppId = "radarr" | "sonarr" | "lidarr"
 

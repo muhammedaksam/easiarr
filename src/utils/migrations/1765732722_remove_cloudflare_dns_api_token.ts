@@ -4,8 +4,9 @@
  */
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs"
-import { getEnvPath } from "../env"
-import { debugLog } from "../debug"
+
+import { debugLog } from "~/utils/debug"
+import { getEnvPath } from "~/utils/env"
 
 export const name = "remove_cloudflare_dns_api_token"
 

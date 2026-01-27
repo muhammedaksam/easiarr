@@ -4,9 +4,9 @@
  * Setup functions for Homarr, Heimdall, Homepage, and other dashboards.
  */
 
-import { SetupContext, SetupResult, getEnabledAppConfig } from "../types"
-import { HomarrClient } from "../../api/homarr-api"
-import { HeimdallClient } from "../../api/heimdall-api"
+import { HeimdallClient } from "~/api/heimdall-api"
+import { HomarrClient } from "~/api/homarr-api"
+import { getEnabledAppConfig, SetupContext, SetupResult } from "~/setup/types"
 
 /**
  * Setup Homarr dashboard

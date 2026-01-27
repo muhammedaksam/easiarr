@@ -4,8 +4,8 @@
  * Note: Initial Plex connection requires web wizard, but API key can be retrieved automatically
  */
 
-import { debugLog } from "../utils/debug"
-import type { IAutoSetupClient, AutoSetupOptions, AutoSetupResult } from "./auto-setup-types"
+import type { AutoSetupOptions, AutoSetupResult, IAutoSetupClient } from "./auto-setup-types"
+import { debugLog } from "~/utils/debug"
 
 interface TautulliServerInfo {
   pms_identifier?: string

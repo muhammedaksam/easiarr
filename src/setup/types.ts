@@ -5,7 +5,7 @@
  * These enable code reuse between FullAutoSetup and individual app screens.
  */
 
-import { EasiarrConfig } from "../config/schema"
+import { EasiarrConfig } from "~/config/schema"
 
 /**
  * Context passed to all setup actions.
@@ -89,7 +89,12 @@ export interface SetupResult {
  * reportStep(ctx, "Configure Radarr", result.success ? "success" : "error", result.message)
  * ```
  */
-export function reportStep(ctx: SetupContext, name: string, status: SetupStepStatus, message?: string): void {
+export function reportStep(
+  ctx: SetupContext,
+  name: string,
+  status: SetupStepStatus,
+  message?: string
+): void {
   if (status === "running") {
     ctx.onStepStart?.(name)
   }
@@ -131,6 +136,9 @@ export function isAppEnabled(ctx: SetupContext, appId: string): boolean {
 /**
  * Helper to get app config if enabled.
  */
-export function getEnabledAppConfig(ctx: SetupContext, appId: string): EasiarrConfig["apps"][number] | undefined {
+export function getEnabledAppConfig(
+  ctx: SetupContext,
+  appId: string
+): EasiarrConfig["apps"][number] | undefined {
   return ctx.config.apps.find((a) => a.id === appId && a.enabled)
 }

@@ -4,8 +4,8 @@
  * API docs: https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-4.1)
  */
 
-import { debugLog } from "../utils/debug"
-import type { IAutoSetupClient, AutoSetupOptions, AutoSetupResult } from "./auto-setup-types"
+import type { AutoSetupOptions, AutoSetupResult, IAutoSetupClient } from "./auto-setup-types"
+import { debugLog } from "~/utils/debug"
 
 export interface QBittorrentPreferences {
   save_path?: string

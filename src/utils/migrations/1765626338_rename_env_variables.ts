@@ -6,10 +6,11 @@
  */
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs"
-import { join } from "node:path"
 import { homedir } from "node:os"
-import { parseEnvFile, serializeEnv } from "../env"
-import { debugLog } from "../debug"
+import { join } from "node:path"
+
+import { debugLog } from "~/utils/debug"
+import { parseEnvFile, serializeEnv } from "~/utils/env"
 
 const ENV_FILE = join(homedir(), ".easiarr", ".env")
 

@@ -3,10 +3,10 @@
  * Handles Heimdall dashboard auto-setup with application tiles
  */
 
-import { debugLog } from "../utils/debug"
-import type { IAutoSetupClient, AutoSetupOptions, AutoSetupResult } from "./auto-setup-types"
-import type { AppConfig } from "../config/schema"
-import { getApp } from "../apps/registry"
+import type { AutoSetupOptions, AutoSetupResult, IAutoSetupClient } from "./auto-setup-types"
+import type { AppConfig } from "~/config/schema"
+import { getApp } from "~/apps/registry"
+import { debugLog } from "~/utils/debug"
 
 interface HeimdallApp {
   id?: number

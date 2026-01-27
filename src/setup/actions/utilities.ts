@@ -5,23 +5,24 @@
  * Huntarr, Slskd, Soularr, Recyclarr, Profilarr, Overseerr, and other utilities.
  */
 
-import { SetupContext, SetupResult, getEnabledAppConfig } from "../types"
-import { PortainerApiClient } from "../../api/portainer-api"
-import { CloudflareApi, setupCloudflaredTunnel } from "../../api/cloudflare-api"
-import { MaintainerrClient } from "../../api/maintainerr-api"
-import { BazarrApiClient } from "../../api/bazarr-api"
-import { HuntarrClient } from "../../api/huntarr-api"
-import { OverseerrClient } from "../../api/overseerr-api"
-import { ProfilarrApiClient } from "../../api/profilarr-api"
-import { generateSlskdConfig, getSlskdConfigPath } from "../../config/slskd-config"
-import { generateSoularrConfig, getSoularrConfigPath } from "../../config/soularr-config"
-import { saveRecyclarrConfig } from "../../config/recyclarr-config"
-import { getApp } from "../../apps/registry"
-import { getApplicationUrl } from "../../utils/url-utils"
-import { debugLog } from "../../utils/debug"
-import { writeFile, mkdir } from "fs/promises"
-import { dirname } from "path"
 import { existsSync } from "fs"
+import { mkdir, writeFile } from "fs/promises"
+import { dirname } from "path"
+
+import { BazarrApiClient } from "~/api/bazarr-api"
+import { CloudflareApi, setupCloudflaredTunnel } from "~/api/cloudflare-api"
+import { HuntarrClient } from "~/api/huntarr-api"
+import { MaintainerrClient } from "~/api/maintainerr-api"
+import { OverseerrClient } from "~/api/overseerr-api"
+import { PortainerApiClient } from "~/api/portainer-api"
+import { ProfilarrApiClient } from "~/api/profilarr-api"
+import { getApp } from "~/apps/registry"
+import { saveRecyclarrConfig } from "~/config/recyclarr-config"
+import { generateSlskdConfig, getSlskdConfigPath } from "~/config/slskd-config"
+import { generateSoularrConfig, getSoularrConfigPath } from "~/config/soularr-config"
+import { getEnabledAppConfig, SetupContext, SetupResult } from "~/setup/types"
+import { debugLog } from "~/utils/debug"
+import { getApplicationUrl } from "~/utils/url-utils"
 
 /**
  * Setup Portainer container management
@@ -262,7 +263,11 @@ export async function setupBazarr(ctx: SetupContext): Promise<SetupResult> {
       const radarrConfig = getEnabledAppConfig(ctx, "radarr")
       if (radarrConfig && ctx.env["API_KEY_RADARR"]) {
         try {
-          await client.configureRadarr("radarr", radarrConfig.port || 7878, ctx.env["API_KEY_RADARR"])
+          await client.configureRadarr(
+            "radarr",
+            radarrConfig.port || 7878,
+            ctx.env["API_KEY_RADARR"]
+          )
           configured++
         } catch {
           /* connection failed */
@@ -272,7 +277,11 @@ export async function setupBazarr(ctx: SetupContext): Promise<SetupResult> {
       const sonarrConfig = getEnabledAppConfig(ctx, "sonarr")
       if (sonarrConfig && ctx.env["API_KEY_SONARR"]) {
         try {
-          await client.configureSonarr("sonarr", sonarrConfig.port || 8989, ctx.env["API_KEY_SONARR"])
+          await client.configureSonarr(
+            "sonarr",
+            sonarrConfig.port || 8989,
+            ctx.env["API_KEY_SONARR"]
+          )
           configured++
         } catch {
           /* connection failed */

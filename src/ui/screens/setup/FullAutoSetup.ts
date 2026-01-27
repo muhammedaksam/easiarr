@@ -3,43 +3,44 @@
  * Runs all configuration steps in sequence
  */
 
-import { BoxRenderable, CliRenderer, TextRenderable, KeyEvent } from "@opentui/core"
-import { createPageLayout } from "../components/PageLayout"
-import type { EasiarrConfig } from "../../config/schema"
-import { saveConfig } from "../../config"
-import { saveCompose } from "../../compose"
-import { readEnvSync, updateEnv } from "../../utils/env"
-import { debugLog } from "../../utils/debug"
+import { BoxRenderable, CliRenderer, KeyEvent, TextRenderable } from "@opentui/core"
+
+import type { EasiarrConfig } from "~/config/schema"
+import { saveCompose } from "~/compose"
+import { saveConfig } from "~/config"
 import {
   createSetupContext,
   runJellyseerrFullSetup,
-  setupArrRootFolders,
+  setupArrAuthentication,
+  setupArrExternalUrls,
   setupArrNaming,
   setupArrQuality,
-  setupArrAuthentication,
+  setupArrRootFolders,
+  setupBazarr as setupBazarrAction,
   setupBazarrAuthentication,
-  setupArrExternalUrls,
-  setupProwlarrApps,
+  setupCloudflare as setupCloudflareAction,
   setupFlareSolverr,
-  setupQBittorrent as setupQBittorrentAction,
+  setupGrafana as setupGrafanaAction,
+  setupHeimdall as setupHeimdallAction,
+  setupHomarr as setupHomarrAction,
+  setupHuntarr as setupHuntarrAction,
   setupJellyfin as setupJellyfinAction,
+  setupMaintainerr as setupMaintainerrAction,
+  setupOverseerr as setupOverseerrAction,
   setupPlex as setupPlexAction,
   setupPortainer as setupPortainerAction,
-  setupUptimeKuma as setupUptimeKumaAction,
-  setupGrafana as setupGrafanaAction,
-  setupOverseerr as setupOverseerrAction,
-  setupTautulli as setupTautulliAction,
-  setupMaintainerr as setupMaintainerrAction,
-  setupBazarr as setupBazarrAction,
-  setupHomarr as setupHomarrAction,
-  setupHeimdall as setupHeimdallAction,
-  setupHuntarr as setupHuntarrAction,
+  setupProfilarr as setupProfilarrAction,
+  setupProwlarrApps,
+  setupQBittorrent as setupQBittorrentAction,
+  setupRecyclarr as setupRecyclarrAction,
   setupSlskd as setupSlskdAction,
   setupSoularr as setupSoularrAction,
-  setupRecyclarr as setupRecyclarrAction,
-  setupProfilarr as setupProfilarrAction,
-  setupCloudflare as setupCloudflareAction,
-} from "../../setup"
+  setupTautulli as setupTautulliAction,
+  setupUptimeKuma as setupUptimeKumaAction,
+} from "~/setup"
+import { createPageLayout } from "~/ui/components/PageLayout"
+import { debugLog } from "~/utils/debug"
+import { readEnvSync, updateEnv } from "~/utils/env"
 
 interface SetupStep {
   name: string

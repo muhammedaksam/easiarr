@@ -1,6 +1,9 @@
-import { BoxRenderable, TextRenderable, TextNodeRenderable, type CliRenderer } from "@opentui/core"
-import { getVersion } from "../../VersionInfo"
-import { type FooterHint } from "./FooterHint"
+import type { CliRenderer } from "@opentui/core"
+
+import { BoxRenderable, TextNodeRenderable, TextRenderable } from "@opentui/core"
+
+import type { FooterHint } from "./FooterHint"
+import { getVersion } from "~/VersionInfo"
 
 export interface PageLayoutOptions {
   title: string
@@ -13,7 +16,10 @@ export interface PageLayoutResult {
   content: BoxRenderable
 }
 
-export function createPageLayout(renderer: CliRenderer, options: PageLayoutOptions): PageLayoutResult {
+export function createPageLayout(
+  renderer: CliRenderer,
+  options: PageLayoutOptions
+): PageLayoutResult {
   const { title, stepInfo, footerHint } = options
   const idPrefix = title
     .replace(/[^a-zA-Z]/g, "")
@@ -124,7 +130,9 @@ export function createPageLayout(renderer: CliRenderer, options: PageLayoutOptio
       } else if (item.type === "key") {
         const keyDisplay = item.withBrackets ? `[${item.key}]` : item.key
         // Key part (styled)
-        hintContainer.add(styledText(keyDisplay, item.keyColor ?? DEFAULT_KEY_COLOR, item.keyBgColor))
+        hintContainer.add(
+          styledText(keyDisplay, item.keyColor ?? DEFAULT_KEY_COLOR, item.keyBgColor)
+        )
         // Colon + Value
         hintContainer.add(styledText(`: ${item.value}`, item.valueColor ?? DEFAULT_VALUE_COLOR))
         // Add spacing after (except last or before separator)

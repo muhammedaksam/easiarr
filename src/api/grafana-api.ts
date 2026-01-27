@@ -3,8 +3,8 @@
  * Handles Grafana auto-setup including admin password change and Prometheus datasource
  */
 
-import { debugLog } from "../utils/debug"
-import type { IAutoSetupClient, AutoSetupOptions, AutoSetupResult } from "./auto-setup-types"
+import type { AutoSetupOptions, AutoSetupResult, IAutoSetupClient } from "./auto-setup-types"
+import { debugLog } from "~/utils/debug"
 
 interface GrafanaDataSource {
   id?: number
@@ -31,7 +31,12 @@ export class GrafanaClient implements IAutoSetupClient {
   private username: string
   private password: string
 
-  constructor(host: string, port: number = 3000, username: string = "admin", password: string = "admin") {
+  constructor(
+    host: string,
+    port: number = 3000,
+    username: string = "admin",
+    password: string = "admin"
+  ) {
     this.host = host
     this.port = port
     this.username = username

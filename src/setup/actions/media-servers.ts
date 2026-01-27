@@ -4,9 +4,9 @@
  * Setup functions for Jellyfin, Plex, and related apps.
  */
 
-import { SetupContext, SetupResult, getEnabledAppConfig } from "../types"
-import { JellyfinClient } from "../../api/jellyfin-api"
-import { PlexApiClient } from "../../api/plex-api"
+import { JellyfinClient } from "~/api/jellyfin-api"
+import { PlexApiClient } from "~/api/plex-api"
+import { getEnabledAppConfig, SetupContext, SetupResult } from "~/setup/types"
 
 /**
  * Setup Jellyfin media server

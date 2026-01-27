@@ -4,10 +4,10 @@
  * Setup functions for Uptime Kuma, Grafana, Tautulli, and other monitoring apps.
  */
 
-import { SetupContext, SetupResult, getEnabledAppConfig } from "../types"
-import { UptimeKumaClient } from "../../api/uptime-kuma-api"
-import { GrafanaClient } from "../../api/grafana-api"
-import { TautulliClient } from "../../api/tautulli-api"
+import { GrafanaClient } from "~/api/grafana-api"
+import { TautulliClient } from "~/api/tautulli-api"
+import { UptimeKumaClient } from "~/api/uptime-kuma-api"
+import { getEnabledAppConfig, SetupContext, SetupResult } from "~/setup/types"
 
 /**
  * Setup Uptime Kuma monitoring

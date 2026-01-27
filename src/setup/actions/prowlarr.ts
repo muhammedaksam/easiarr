@@ -5,9 +5,9 @@
  * Includes: connecting *arr apps, FlareSolverr configuration.
  */
 
-import { SetupContext, SetupResult, getEnabledAppConfig } from "../types"
-import { ProwlarrClient, ArrAppType } from "../../api/prowlarr-api"
-import { getApp } from "../../apps/registry"
+import { ArrAppType, ProwlarrClient } from "~/api/prowlarr-api"
+import { getApp } from "~/apps/registry"
+import { getEnabledAppConfig, SetupContext, SetupResult } from "~/setup/types"
 
 const ARR_APP_TYPES: Record<string, ArrAppType> = {
   radarr: "Radarr",
@@ -64,7 +64,15 @@ export async function setupProwlarrApps(ctx: SetupContext): Promise<SetupResult>
     const port = app.port || def?.defaultPort || 7878
 
     try {
-      await prowlarr.addArrApp(appType, app.id, port, appApiKey, "prowlarr", prowlarrPort, def?.prowlarrCategoryIds)
+      await prowlarr.addArrApp(
+        appType,
+        app.id,
+        port,
+        appApiKey,
+        "prowlarr",
+        prowlarrPort,
+        def?.prowlarrCategoryIds
+      )
       configured++
     } catch {
       // Skip - may already exist
@@ -121,7 +129,9 @@ export async function runProwlarrFullSetup(ctx: SetupContext): Promise<SetupResu
     return appsResult
   }
 
-  const message = flaresolverrResult.success ? `${appsResult.message}, FlareSolverr enabled` : appsResult.message
+  const message = flaresolverrResult.success
+    ? `${appsResult.message}, FlareSolverr enabled`
+    : appsResult.message
 
   return { success: true, message }
 }

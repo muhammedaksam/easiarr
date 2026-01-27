@@ -5,10 +5,12 @@
 
 import { mkdir, writeFile } from "node:fs/promises"
 import { join } from "node:path"
+
 import YAML from "yaml"
-import type { EasiarrConfig, AppId } from "./schema"
-import { readEnv } from "../utils/env"
-import { debugLog } from "../utils/debug"
+
+import type { AppId, EasiarrConfig } from "./schema"
+import { debugLog } from "~/utils/debug"
+import { readEnv } from "~/utils/env"
 
 /**
  * Get API key for an app from the .env file

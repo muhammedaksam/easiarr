@@ -4,9 +4,9 @@
  * Setup functions for qBittorrent and other download clients.
  */
 
-import { SetupContext, SetupResult, getEnabledAppConfig } from "../types"
-import { QBittorrentClient, QBittorrentCategory } from "../../api/qbittorrent-api"
-import { getCategoriesForApps } from "../../utils/categories"
+import { QBittorrentCategory, QBittorrentClient } from "~/api/qbittorrent-api"
+import { getEnabledAppConfig, SetupContext, SetupResult } from "~/setup/types"
+import { getCategoriesForApps } from "~/utils/categories"
 
 /**
  * Setup qBittorrent with TRaSH-compliant settings

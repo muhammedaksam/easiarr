@@ -4,18 +4,20 @@
  */
 
 import type { CliRenderer, KeyEvent } from "@opentui/core"
+
 import {
   BoxRenderable,
-  TextRenderable,
-  SelectRenderable,
-  SelectRenderableEvents,
   InputRenderable,
   InputRenderableEvents,
+  SelectRenderable,
+  SelectRenderableEvents,
+  TextRenderable,
 } from "@opentui/core"
-import type { EasiarrConfig, VpnMode } from "../../config/schema"
-import { saveConfig } from "../../config"
-import { saveCompose } from "../../compose"
-import { createPageLayout } from "../components/PageLayout"
+
+import type { EasiarrConfig, VpnMode } from "~/config/schema"
+import { saveCompose } from "~/compose"
+import { saveConfig } from "~/config"
+import { createPageLayout } from "~/ui/components/PageLayout"
 
 type SettingsSection = "traefik" | "vpn" | "system"
 
@@ -291,7 +293,9 @@ export class SettingsScreen extends BoxRenderable {
       } else if (key.name === "tab" || key.name === "enter") {
         if (key.name === "enter" && focusIndex === inputs.length - 1) return
         inputs[focusIndex].blur()
-        focusIndex = key.shift ? (focusIndex - 1 + inputs.length) % inputs.length : (focusIndex + 1) % inputs.length
+        focusIndex = key.shift
+          ? (focusIndex - 1 + inputs.length) % inputs.length
+          : (focusIndex + 1) % inputs.length
         inputs[focusIndex].focus()
       }
     }
@@ -338,7 +342,10 @@ export class SettingsScreen extends BoxRenderable {
       width: "100%",
       height: 8,
       options: [
-        { name: "🛡️  Full VPN", description: "Route Downloaders, Indexers, and Media Servers through VPN" },
+        {
+          name: "🛡️  Full VPN",
+          description: "Route Downloaders, Indexers, and Media Servers through VPN",
+        },
         { name: "⚡ Mini VPN", description: "Route ONLY Downloaders through VPN (Recommended)" },
         { name: "❌ No VPN Routing", description: "Run container but don't route traffic" },
         { name: "◀ Previous: Traefik", description: "Go to Traefik settings" },
@@ -390,7 +397,13 @@ export class SettingsScreen extends BoxRenderable {
     )
     content.add(new TextRenderable(this.cliRenderer, { content: " " }))
 
-    const createField = (id: string, label: string, value: string, placeholder: string, width: number = 40) => {
+    const createField = (
+      id: string,
+      label: string,
+      value: string,
+      placeholder: string,
+      width: number = 40
+    ) => {
       const row = new BoxRenderable(this.cliRenderer, {
         width: "100%",
         height: 1,
@@ -417,7 +430,13 @@ export class SettingsScreen extends BoxRenderable {
       return input
     }
 
-    const rootInput = createField("settings-sys-root", "Root Path:", this.rootDir, "/home/user/media", 50)
+    const rootInput = createField(
+      "settings-sys-root",
+      "Root Path:",
+      this.rootDir,
+      "/home/user/media",
+      50
+    )
     const puidInput = createField("settings-sys-puid", "PUID:", this.puid, "1000", 10)
     const pgidInput = createField("settings-sys-pgid", "PGID:", this.pgid, "1000", 10)
     const tzInput = createField("settings-sys-tz", "Timezone:", this.timezone, "Europe/London", 30)
@@ -467,7 +486,10 @@ export class SettingsScreen extends BoxRenderable {
       width: "100%",
       height: 4,
       options: [
-        { name: "💾 Save All Changes", description: "Save config and regenerate docker-compose.yml" },
+        {
+          name: "💾 Save All Changes",
+          description: "Save config and regenerate docker-compose.yml",
+        },
         { name: "◀ Back", description: "Return to main menu" },
       ],
     })
@@ -496,14 +518,20 @@ export class SettingsScreen extends BoxRenderable {
       } else if (key.name === "tab" || key.name === "enter") {
         if (key.name === "enter" && focusIndex === inputs.length - 1) return
         inputs[focusIndex].blur()
-        focusIndex = key.shift ? (focusIndex - 1 + inputs.length) % inputs.length : (focusIndex + 1) % inputs.length
+        focusIndex = key.shift
+          ? (focusIndex - 1 + inputs.length) % inputs.length
+          : (focusIndex + 1) % inputs.length
         inputs[focusIndex].focus()
       }
     }
     ;(this.cliRenderer as CliRenderer).keyInput.on("keypress", this.keyHandler)
   }
 
-  private setupSectionNav(content: BoxRenderable, prev: SettingsSection, next: SettingsSection): void {
+  private setupSectionNav(
+    content: BoxRenderable,
+    prev: SettingsSection,
+    next: SettingsSection
+  ): void {
     const navMenu = new SelectRenderable(this.cliRenderer, {
       id: "settings-section-nav",
       width: "100%",

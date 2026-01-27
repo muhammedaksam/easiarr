@@ -8,8 +8,8 @@
  *   easiarr --debug   - Start with debug logging enabled
  *   easiarr -d        - Same as --debug
  */
-
 import { createCliRenderer } from "@opentui/core"
+
 import { App } from "./ui/App"
 import { initDebug } from "./utils/debug"
 import { runMigrations } from "./utils/migrations"

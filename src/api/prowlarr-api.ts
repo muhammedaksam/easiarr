@@ -3,8 +3,8 @@
  * Manages Indexer Proxies, Sync Profiles, and FlareSolverr integration
  */
 
-import { debugLog } from "../utils/debug"
-import type { IAutoSetupClient, AutoSetupOptions, AutoSetupResult } from "./auto-setup-types"
+import type { AutoSetupOptions, AutoSetupResult, IAutoSetupClient } from "./auto-setup-types"
+import { debugLog } from "~/utils/debug"
 
 export interface IndexerProxy {
   id?: number
@@ -99,7 +99,9 @@ export class ProwlarrClient implements IAutoSetupClient {
     }
 
     if (!response.ok) {
-      throw new Error(`Prowlarr API request failed: ${response.status} ${response.statusText} - ${text}`)
+      throw new Error(
+        `Prowlarr API request failed: ${response.status} ${response.statusText} - ${text}`
+      )
     }
 
     if (!text) return {} as T
@@ -194,7 +196,12 @@ export class ProwlarrClient implements IAutoSetupClient {
     })
   }
 
-  async addFlareSolverr(name: string, host: string, tags: number[] = [], requestTimeout = 60): Promise<IndexerProxy> {
+  async addFlareSolverr(
+    name: string,
+    host: string,
+    tags: number[] = [],
+    requestTimeout = 60
+  ): Promise<IndexerProxy> {
     const fields: { name: string; value: unknown }[] = [
       { name: "host", value: host },
       { name: "requestTimeout", value: requestTimeout },
@@ -251,7 +258,10 @@ export class ProwlarrClient implements IAutoSetupClient {
   }
 
   // Create TRaSH-recommended sync profiles for limited API indexers
-  async createLimitedAPISyncProfiles(): Promise<{ automatic: SyncProfile; interactive: SyncProfile }> {
+  async createLimitedAPISyncProfiles(): Promise<{
+    automatic: SyncProfile
+    interactive: SyncProfile
+  }> {
     const existingProfiles = await this.getSyncProfiles()
 
     const findByName = (name: string) => existingProfiles.find((p) => p.name === name)
@@ -420,7 +430,15 @@ export class ProwlarrClient implements IAutoSetupClient {
     }
 
     // Create new app
-    return this.addApplication(appType, appType, prowlarrUrl, appUrl, apiKey, "fullSync", syncCategories)
+    return this.addApplication(
+      appType,
+      appType,
+      prowlarrUrl,
+      appUrl,
+      apiKey,
+      "fullSync",
+      syncCategories
+    )
   }
 
   /**

@@ -3,7 +3,7 @@
  * Shared category mappings for *arr apps and download clients
  */
 
-import type { AppId } from "../config/schema"
+import type { AppId } from "~/config/schema"
 
 // Category info for each *arr app
 export interface CategoryInfo {
@@ -55,5 +55,7 @@ export function getCategoryInfo(appId: AppId): CategoryInfo | undefined {
  * Get all category infos for a list of enabled app IDs
  */
 export function getCategoriesForApps(appIds: AppId[]): CategoryInfo[] {
-  return appIds.map((id) => CATEGORY_MAP[id]).filter((info): info is CategoryInfo => info !== undefined)
+  return appIds
+    .map((id) => CATEGORY_MAP[id])
+    .filter((info): info is CategoryInfo => info !== undefined)
 }
