@@ -20,6 +20,7 @@ import { UptimeKumaClient } from "../../api/uptime-kuma-api"
 import { GrafanaClient } from "../../api/grafana-api"
 import { OverseerrClient } from "../../api/overseerr-api"
 import { TautulliClient } from "../../api/tautulli-api"
+import { MaintainerrClient } from "../../api/maintainerr-api"
 import { HomarrClient } from "../../api/homarr-api"
 import { HeimdallClient } from "../../api/heimdall-api"
 import { HuntarrClient } from "../../api/huntarr-api"
@@ -112,6 +113,7 @@ export class FullAutoSetup extends BoxRenderable {
       { name: "Plex", status: "pending" },
       { name: "Overseerr", status: "pending" },
       { name: "Tautulli", status: "pending" },
+      { name: "Maintainerr", status: "pending" },
       { name: "Bazarr", status: "pending" },
       { name: "Uptime Kuma", status: "pending" },
       { name: "Grafana", status: "pending" },
@@ -194,6 +196,9 @@ export class FullAutoSetup extends BoxRenderable {
 
     // Step 12: Tautulli (Plex monitoring)
     await this.setupTautulli()
+
+    // Step 12b: Maintainerr (Plex media management)
+    await this.setupMaintainerr()
 
     // Step 13: Bazarr (subtitles)
     await this.setupBazarr()
@@ -830,11 +835,13 @@ export class FullAutoSetup extends BoxRenderable {
         return
       }
 
-      // Run auto-setup
+      // Run auto-setup - pass enabled apps so Plex knows which libraries to create
+      const enabledApps = this.config.apps.filter((a) => a.enabled).map((a) => a.id)
       const result = await client.setup({
         username: this.globalUsername,
         password: this.globalPassword,
         env: this.env,
+        enabledApps,
       })
 
       if (result.success) {
@@ -1041,9 +1048,9 @@ export class FullAutoSetup extends BoxRenderable {
       return
     }
 
-    const plexToken = this.env["PLEX_TOKEN"]
+    const plexToken = this.env["API_KEY_PLEX"]
     if (!plexToken) {
-      this.updateStep("Overseerr", "skipped", "No PLEX_TOKEN in .env")
+      this.updateStep("Overseerr", "skipped", "No API_KEY_PLEX in .env")
       this.refreshContent()
       return
     }
@@ -1119,6 +1126,107 @@ export class FullAutoSetup extends BoxRenderable {
       }
     } catch (e) {
       this.updateStep("Tautulli", "error", `${e}`)
+    }
+    this.refreshContent()
+  }
+
+  private async setupMaintainerr(): Promise<void> {
+    this.updateStep("Maintainerr", "running")
+    this.refreshContent()
+
+    const maintainerrConfig = this.config.apps.find((a) => a.id === "maintainerr" && a.enabled)
+    if (!maintainerrConfig) {
+      this.updateStep("Maintainerr", "skipped", "Not enabled")
+      this.refreshContent()
+      return
+    }
+
+    // Requires Plex
+    const plexConfig = this.config.apps.find((a) => a.id === "plex" && a.enabled)
+    if (!plexConfig) {
+      this.updateStep("Maintainerr", "skipped", "Plex not enabled")
+      this.refreshContent()
+      return
+    }
+
+    try {
+      const port = maintainerrConfig.port || 6246
+      const client = new MaintainerrClient("localhost", port)
+
+      const result = await client.setup({
+        username: this.globalUsername,
+        password: this.globalPassword,
+        env: this.env,
+        plexToken: this.env["API_KEY_PLEX"],
+      })
+
+      if (result.success) {
+        if (result.envUpdates) {
+          await updateEnv(result.envUpdates)
+          Object.assign(this.env, result.envUpdates)
+        }
+
+        // Configure Radarr connection if enabled
+        // Use container name since Maintainerr runs in Docker
+        const radarrConfig = this.config.apps.find((a) => a.id === "radarr" && a.enabled)
+        if (radarrConfig && this.env["API_KEY_RADARR"]) {
+          try {
+            const radarrDef = getApp("radarr")
+            const radarrPort = radarrConfig.port || radarrDef?.defaultPort || 7878
+            await client.configureRadarr("radarr", radarrPort, this.env["API_KEY_RADARR"])
+            debugLog("FullAutoSetup", "Maintainerr -> Radarr connection configured")
+          } catch {
+            debugLog("FullAutoSetup", "Failed to configure Maintainerr -> Radarr connection")
+          }
+        }
+
+        // Configure Sonarr connection if enabled
+        const sonarrConfig = this.config.apps.find((a) => a.id === "sonarr" && a.enabled)
+        if (sonarrConfig && this.env["API_KEY_SONARR"]) {
+          try {
+            const sonarrDef = getApp("sonarr")
+            const sonarrPort = sonarrConfig.port || sonarrDef?.defaultPort || 8989
+            await client.configureSonarr("sonarr", sonarrPort, this.env["API_KEY_SONARR"])
+            debugLog("FullAutoSetup", "Maintainerr -> Sonarr connection configured")
+          } catch {
+            debugLog("FullAutoSetup", "Failed to configure Maintainerr -> Sonarr connection")
+          }
+        }
+
+        // Configure Overseerr connection if enabled
+        const overseerrConfig = this.config.apps.find((a) => a.id === "overseerr" && a.enabled)
+        if (overseerrConfig && this.env["API_KEY_OVERSEERR"]) {
+          try {
+            const overseerrDef = getApp("overseerr")
+            const overseerrPort = overseerrConfig.port || overseerrDef?.defaultPort || 5055
+            await client.configureOverseerr("overseerr", overseerrPort, this.env["API_KEY_OVERSEERR"])
+            debugLog("FullAutoSetup", "Maintainerr -> Overseerr connection configured")
+          } catch {
+            debugLog("FullAutoSetup", "Failed to configure Maintainerr -> Overseerr connection")
+          }
+        }
+
+        // Configure Tautulli connection if enabled
+        const tautulliConfig = this.config.apps.find((a) => a.id === "tautulli" && a.enabled)
+        if (tautulliConfig && this.env["API_KEY_TAUTULLI"]) {
+          try {
+            const tautulliDef = getApp("tautulli")
+            const tautulliPort = tautulliConfig.port || tautulliDef?.defaultPort || 8181
+            await client.configureTautulli("tautulli", tautulliPort, this.env["API_KEY_TAUTULLI"])
+            debugLog("FullAutoSetup", "Maintainerr -> Tautulli connection configured")
+          } catch {
+            debugLog("FullAutoSetup", "Failed to configure Maintainerr -> Tautulli connection")
+          }
+        }
+
+        const requiresWizard = result.data?.requiresWizard
+        const msg = requiresWizard ? `${result.message} (manual Plex setup needed)` : result.message
+        this.updateStep("Maintainerr", "success", msg)
+      } else {
+        this.updateStep("Maintainerr", "skipped", result.message)
+      }
+    } catch (e) {
+      this.updateStep("Maintainerr", "error", `${e}`)
     }
     this.refreshContent()
   }
@@ -1496,6 +1604,15 @@ export class FullAutoSetup extends BoxRenderable {
         } catch {
           /* Sonarr config failed */
         }
+      }
+
+      // Sync all configured arr instances with the Dictionarry database
+      try {
+        debugLog("FullAutoSetup", "Profilarr: Syncing profiles and custom formats...")
+        await client.syncAllConfigs()
+        debugLog("FullAutoSetup", "Profilarr: Sync completed")
+      } catch {
+        debugLog("FullAutoSetup", "Profilarr: Sync failed, but setup is complete")
       }
 
       this.updateStep("Profilarr", "success", `Configured - ${url}`)
