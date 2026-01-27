@@ -136,6 +136,7 @@ export type AppId =
   | "homepage"
   // Utilities
   | "huntarr"
+  | "maintainerr"
   | "unpackerr"
   | "filebot"
   | "chromium"
