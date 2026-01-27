@@ -42,6 +42,11 @@ interface ProfilarrSettings {
   api_key: string
 }
 
+interface ProfilarrApiResponse<T> {
+  data: T
+  success: boolean
+}
+
 // ==========================================
 // Client
 // ==========================================
@@ -122,21 +127,28 @@ export class ProfilarrApiClient implements IAutoSetupClient {
   async authenticate(username: string, password: string): Promise<string> {
     // Check if setup is needed
     try {
+      debugLog("ProfilarrApi", "Checking if setup is needed...")
       const response = await fetch(`${this.baseUrl}/auth/setup`)
+      debugLog("ProfilarrApi", `Setup check status: ${response.status}`)
+
       if (response.status === 200) {
         const status = (await response.json()) as ProfilarrSetupStatus
+        debugLog("ProfilarrApi", `Setup status: needs_setup=${status.needs_setup}`)
+
         if (status.needs_setup) {
           debugLog("ProfilarrApi", "Performing initial setup")
           const setupRes = await this.request<ProfilarrSetupResponse>("/auth/setup", {
             method: "POST",
             body: JSON.stringify({ username, password }),
           })
+          debugLog("ProfilarrApi", `Setup successful, got API key`)
           this.apiKey = setupRes.api_key
           return this.apiKey
         }
       }
-    } catch {
-      // Ignore check error, try login
+    } catch (e) {
+      debugLog("ProfilarrApi", `Setup check/perform error: ${e}`)
+      // Continue to try login
     }
 
     // Already configured, login to get API key
@@ -175,14 +187,20 @@ export class ProfilarrApiClient implements IAutoSetupClient {
   // ==========================================
 
   async getConfigs(): Promise<ProfilarrConfig[]> {
-    return this.request<ProfilarrConfig[]>("/arr/config")
+    const response = await this.request<ProfilarrApiResponse<ProfilarrConfig[]>>("/arr/config")
+    return response.data || []
   }
 
-  async addConfig(config: ProfilarrConfig): Promise<ProfilarrConfig> {
-    return this.request<ProfilarrConfig>("/arr/config", {
+  async addConfig(config: ProfilarrConfig): Promise<ProfilarrConfig | null> {
+    const response = await this.request<{ id?: number; success: boolean }>("/arr/config", {
       method: "POST",
       body: JSON.stringify(config),
     })
+    if (response.success && response.id) {
+      debugLog("ProfilarrApi", `Config created with id: ${response.id}`)
+      return { ...config, id: response.id }
+    }
+    return null
   }
 
   /**
@@ -250,13 +268,85 @@ export class ProfilarrApiClient implements IAutoSetupClient {
   }
 
   // ==========================================
+  // Git & Settings
+  // ==========================================
+
+  /**
+   * Get current settings including git repo status
+   */
+  async getSettings(): Promise<{ gitRepo: string | null; auto_pull_enabled: string }> {
+    return this.request<{ gitRepo: string | null; auto_pull_enabled: string }>("/settings")
+  }
+
+  /**
+   * Clone the Dictionarry database repository
+   * @returns true if cloned successfully or already cloned
+   */
+  async cloneDatabase(): Promise<boolean> {
+    try {
+      // Check if already cloned
+      const settings = await this.getSettings()
+      if (settings.gitRepo) {
+        debugLog("ProfilarrApi", `Database already cloned: ${settings.gitRepo}`)
+        return true
+      }
+
+      // Clone the Dictionarry database
+      debugLog("ProfilarrApi", "Cloning Dictionarry database...")
+      const response = await this.request<{ message: string }>("/git/clone", {
+        method: "POST",
+        body: JSON.stringify({ gitRepo: "https://github.com/Dictionarry-Hub/database" }),
+      })
+      debugLog("ProfilarrApi", `Clone result: ${response.message}`)
+      return true
+    } catch (e) {
+      debugLog("ProfilarrApi", `Clone failed: ${e}`)
+      return false
+    }
+  }
+
+  /**
+   * Sync a specific arr config
+   * @param configId The config ID to sync
+   */
+  async syncConfig(configId: number): Promise<boolean> {
+    try {
+      debugLog("ProfilarrApi", `Syncing config ${configId}...`)
+      const response = await this.request<{ success: boolean }>(`/arr/config/${configId}/sync`, {
+        method: "POST",
+        body: JSON.stringify({}),
+      })
+      debugLog("ProfilarrApi", `Sync config ${configId}: ${response.success ? "success" : "failed"}`)
+      return response.success
+    } catch (e) {
+      debugLog("ProfilarrApi", `Sync config ${configId} failed: ${e}`)
+      return false
+    }
+  }
+
+  /**
+   * Sync all configured arr instances
+   */
+  async syncAllConfigs(): Promise<void> {
+    try {
+      const configs = await this.getConfigs()
+      for (const config of configs) {
+        if (config.id) {
+          await this.syncConfig(config.id)
+        }
+      }
+    } catch (e) {
+      debugLog("ProfilarrApi", `Sync all failed: ${e}`)
+    }
+  }
+
+  // ==========================================
   // Auto-Setup (IAutoSetupClient)
   // ==========================================
 
   /**
    * Run the auto-setup process for Profilarr.
-   * Only handles authentication, returns API key for env persistence.
-   * *arr connections are configured separately via configureRadarr/configureSonarr.
+   * Handles authentication, clones the Dictionarry database, and syncs to arr instances.
    */
   async setup(options: AutoSetupOptions): Promise<AutoSetupResult> {
     const { username, password } = options
@@ -270,6 +360,12 @@ export class ProfilarrApiClient implements IAutoSetupClient {
 
       // Authenticate (setup or login)
       const apiKey = await this.authenticate(username, password)
+
+      // Clone the Dictionarry database
+      const cloned = await this.cloneDatabase()
+      if (!cloned) {
+        debugLog("ProfilarrApi", "Warning: Could not clone database, continuing anyway")
+      }
 
       return {
         success: true,

@@ -100,7 +100,6 @@ export class SecretsEditor extends BoxRenderable {
     await this.loadEnv()
 
     // 3. Render Inputs
-    // Use a scrolling container if needed, but for now just stacking boxes
     const container = new BoxRenderable(this.renderer as CliRenderer, {
       width: "100%",
       flexDirection: "column",

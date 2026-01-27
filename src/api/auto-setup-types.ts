@@ -59,4 +59,6 @@ export interface AutoSetupOptions {
   env: Record<string, string>
   /** Plex authentication token (for Plex-dependent services) */
   plexToken?: string
+  /** List of enabled app IDs (for smart library/config creation) */
+  enabledApps?: AppId[]
 }

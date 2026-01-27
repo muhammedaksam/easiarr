@@ -449,11 +449,11 @@ export class OverseerrClient implements IAutoSetupClient {
       }
 
       // Need Plex token to proceed
-      const plexToken = options.plexToken || process.env.PLEX_TOKEN
+      const plexToken = options.plexToken || process.env.API_KEY_PLEX
       if (!plexToken) {
         return {
           success: false,
-          message: "Plex token required (set PLEX_TOKEN env var)",
+          message: "Plex token required (set API_KEY_PLEX env var)",
         }
       }
 
