@@ -204,7 +204,7 @@ export class PlexApiClient implements IAutoSetupClient {
       agent: config.agent,
       scanner: config.scanner,
       language,
-      "location[0]": path,
+      location: path,
     })
 
     const response = await fetch(`${this.baseUrl}/library/sections?${params.toString()}`, {
@@ -243,10 +243,42 @@ export class PlexApiClient implements IAutoSetupClient {
   }
 
   /**
+   * Create libraries based on enabled *arr apps
+   * @param enabledApps - List of enabled app IDs
+   * @returns Number of libraries created
+   */
+  private async createDefaultLibraries(enabledApps?: string[]): Promise<number> {
+    // Map app to library: Radarr→Movies, Sonarr→TV Shows, Lidarr→Music
+    const libraryMap = [
+      { app: "radarr", name: "Movies", type: "movie" as const, path: "/data/media/movies" },
+      { app: "sonarr", name: "TV Shows", type: "show" as const, path: "/data/media/tv" },
+      { app: "lidarr", name: "Music", type: "artist" as const, path: "/data/media/music" },
+    ]
+
+    // Filter to only libraries for enabled apps (or all if no enabledApps provided)
+    const libraries = enabledApps ? libraryMap.filter((lib) => enabledApps.includes(lib.app)) : libraryMap
+
+    let librariesCreated = 0
+    for (const lib of libraries) {
+      const exists = await this.libraryExistsForPath(lib.path)
+      if (!exists) {
+        try {
+          await this.createLibrary(lib.name, lib.type, lib.path)
+          librariesCreated++
+        } catch (e) {
+          // Library creation may fail if path doesn't exist - that's OK
+          debugLog("PlexApi", `Could not create library ${lib.name}: ${e}`)
+        }
+      }
+    }
+    return librariesCreated
+  }
+
+  /**
    * Run the auto-setup process for Plex
    */
   async setup(options: AutoSetupOptions): Promise<AutoSetupResult> {
-    const { env, plexToken } = options
+    const { env, plexToken, enabledApps } = options
 
     // Check if server is reachable
     const healthy = await this.isHealthy()
@@ -254,35 +286,50 @@ export class PlexApiClient implements IAutoSetupClient {
       return { success: false, message: "Plex server not reachable" }
     }
 
+    // Store plexToken for authenticated requests
+    if (plexToken) {
+      this.setToken(plexToken)
+    } else if (env["API_KEY_PLEX"]) {
+      this.setToken(env["API_KEY_PLEX"])
+    }
+
     // Check if already claimed
     try {
       const serverInfo = await this.getServerInfo()
       if (serverInfo.claimed) {
+        // Server is claimed and we have the token - create libraries
+        const librariesCreated = await this.createDefaultLibraries(enabledApps)
         return {
           success: true,
-          message: "Already claimed",
+          message:
+            librariesCreated > 0 ? `Already claimed, ${librariesCreated} libraries configured` : "Already claimed",
           data: {
             machineIdentifier: serverInfo.machineIdentifier,
             version: serverInfo.version,
+            librariesCreated,
           },
         }
       }
-    } catch {
-      // Continue with setup if we can't get server info
+    } catch (e) {
+      // If we get 401, the server IS claimed but we don't have a valid token
+      const errMsg = String(e)
+      if (errMsg.includes("401")) {
+        return {
+          success: true,
+          message: "Already claimed - add API_KEY_PLEX to .env to create libraries",
+          data: { requiresWizard: false },
+        }
+      }
+      // Other errors - continue with setup attempt
     }
 
-    // Get claim token from environment or options
+    // Server not claimed - need claim token
     const claimToken = env["PLEX_CLAIM"]
     if (!claimToken) {
       return {
         success: false,
         message: "No PLEX_CLAIM token. Get one from https://plex.tv/claim (4-min expiry)",
       }
-    }
-
-    // Store plexToken for future authenticated requests
-    if (plexToken) {
-      this.setToken(plexToken)
     }
 
     try {
@@ -292,26 +339,8 @@ export class PlexApiClient implements IAutoSetupClient {
       // Get server info after claiming
       const serverInfo = await this.getServerInfo()
 
-      // Create default libraries if paths exist
-      const libraries = [
-        { name: "Movies", type: "movie" as const, path: "/data/media/movies" },
-        { name: "TV Shows", type: "show" as const, path: "/data/media/tv" },
-        { name: "Music", type: "artist" as const, path: "/data/media/music" },
-      ]
-
-      let librariesCreated = 0
-      for (const lib of libraries) {
-        const exists = await this.libraryExistsForPath(lib.path)
-        if (!exists) {
-          try {
-            await this.createLibrary(lib.name, lib.type, lib.path)
-            librariesCreated++
-          } catch (e) {
-            // Library creation may fail if path doesn't exist - that's OK
-            debugLog("PlexApi", `Could not create library ${lib.name}: ${e}`)
-          }
-        }
-      }
+      // Create default libraries
+      const librariesCreated = await this.createDefaultLibraries(enabledApps)
 
       return {
         success: true,
