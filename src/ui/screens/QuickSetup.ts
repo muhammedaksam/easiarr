@@ -583,10 +583,7 @@ export class QuickSetup {
 
     // Navigation Logic
     const nextStep = () => {
-      // Validate
-      if (!this.rootDir || !this.rootDir.startsWith("/")) {
-        // ideally show error, but for now just don't proceed or rely on user
-      }
+      // TODO: Validate rootDir is an absolute path
 
       // Determine next step
       if (hasGluetun) this.step = "vpn"
@@ -607,9 +604,7 @@ export class QuickSetup {
         this.step = "apps"
         this.renderStep()
       } else if (key.name === "tab" || key.name === "enter") {
-        // Custom focus cycling
-        // If Enter on NavMenu, it triggers ITEM_SELECTED, so we don't need to handle it here explicitly if we rely on that.
-        // But for inputs, Enter should move to next field.
+        // Enter on last item (NavMenu) is handled by SelectRenderable
 
         if (key.name === "enter" && focusIndex === inputs.length - 1) {
           // Handle by SelectRenderable logic
@@ -907,19 +902,6 @@ export class QuickSetup {
     const tempConfig = createDefaultConfig(this.rootDir)
     tempConfig.apps = Array.from(this.selectedApps).map((id) => ({ id, enabled: true }))
 
-    // We render SecretsEditor directly as content
-    // But verify page layout. SecretsEditor is a BoxRenderable.
-    // We should clear container and add SecretsEditor?
-    // QuickSetup uses `createPageLayout` usually.
-    // SecretsEditor HAS its own layout (Box with title).
-    // So we can just add it to `this.container`?
-    // But we want consistent styling/dimensions.
-
-    // Let's wrap SecretsEditor in our page layout or let it handle it.
-    // SecretsEditor (Step 377) extends BoxRenderable. Top-level window.
-    // It has `width: "100%", height: "100%"`.
-    // So we can add it directly to `this.container`.
-
     let totalSteps = 3
     if (hasTraefik) totalSteps++
     if (hasGluetun) totalSteps++
@@ -957,16 +939,6 @@ export class QuickSetup {
     })
 
     this.container.add(editor)
-
-    // And ensure no global key handler conflicts?
-    // QuickSetup `renderStep` clears `this.keyHandler`.
-    // SecretsEditor attaches its own listeners.
-    // Wait, SecretsEditor (Step 377) attaches to `input.on("keypress")`.
-    // Does it attach to global renderer? No.
-    // Does it need global focus?
-    // Container add should be fine. But we need to ensure inputs get focus.
-    // SecretsEditor constructor focuses first input.
-    // So it should work.
   }
 
   private renderConfirm(): void {
