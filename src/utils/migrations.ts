@@ -11,7 +11,15 @@ import { join } from "node:path"
 import { homedir } from "node:os"
 import { debugLog } from "./debug"
 
-const EASIARR_DIR = join(homedir(), ".easiarr")
+/**
+ * Get the XDG config directory for easiarr
+ */
+function getXdgConfigDir(): string {
+  const xdgConfigHome = process.env.XDG_CONFIG_HOME || join(homedir(), ".config")
+  return join(xdgConfigHome, "easiarr")
+}
+
+const EASIARR_DIR = getXdgConfigDir()
 const MIGRATIONS_FILE = join(EASIARR_DIR, ".migrations.json")
 
 interface MigrationState {
@@ -98,6 +106,18 @@ async function loadMigrations(): Promise<Migration[]> {
       name: m1765732722.name,
       up: m1765732722.up,
       down: m1765732722.down,
+    })
+  } catch (e) {
+    debugLog("Migrations", `Failed to load migration: ${e}`)
+  }
+
+  try {
+    const m1769515650 = await import("./migrations/1769515650_migrate_to_xdg")
+    migrations.push({
+      timestamp: "1769515650",
+      name: m1769515650.name,
+      up: m1769515650.up,
+      down: m1769515650.down,
     })
   } catch (e) {
     debugLog("Migrations", `Failed to load migration: ${e}`)
