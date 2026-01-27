@@ -13,12 +13,13 @@ import { detectTimezone, detectUid, detectGid } from "./defaults"
 import { VersionInfo } from "../VersionInfo"
 import { debugLog } from "../utils/debug"
 
-const CONFIG_DIR_NAME = ".easiarr"
+const CONFIG_DIR_NAME = "easiarr"
 const CONFIG_FILE_NAME = "config.json"
 const BACKUP_DIR_NAME = "backups"
 
 export function getConfigDir(): string {
-  return join(homedir(), CONFIG_DIR_NAME)
+  const xdgConfigHome = process.env.XDG_CONFIG_HOME || join(homedir(), ".config")
+  return join(xdgConfigHome, CONFIG_DIR_NAME)
 }
 
 export function getConfigPath(): string {
