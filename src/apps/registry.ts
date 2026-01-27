@@ -395,7 +395,7 @@ export const APPS: Record<AppId, AppDefinition> = {
     pgid: 13000,
     // TRaSH: Media servers only need media access, use /data/media for consistent paths
     volumes: (root) => [`${root}/config/plex:/config`, `${root}/data/media:/data/media`],
-    environment: { VERSION: "docker" },
+    environment: { VERSION: "docker", PLEX_CLAIM: "${PLEX_CLAIM}" },
     trashGuide: "docs/Plex/",
     apiKeyMeta: {
       configFile: "Library/Application Support/Plex Media Server/Preferences.xml",
@@ -615,6 +615,33 @@ export const APPS: Record<AppId, AppDefinition> = {
       requires: ["sonarr", "radarr"],
     },
     logVolume: "/config/logs",
+  },
+
+  maintainerr: {
+    id: "maintainerr",
+    name: "Maintainerr",
+    description: "Automated media management and cleanup for Plex",
+    category: "utility",
+    defaultPort: 6246,
+    image: "ghcr.io/maintainerr/maintainerr:latest",
+    puid: 0,
+    pgid: 13000,
+    volumes: (root) => [`${root}/config/maintainerr:/opt/data`],
+    dependsOn: ["plex"],
+    homepage: {
+      icon: "maintainerr.png",
+      widget: "customapi",
+      widgetFields: {
+        url: "http://maintainerr:6246/api/settings/version",
+        mappings: JSON.stringify([{ field: "version", label: "Version" }]),
+      },
+    },
+    autoSetup: {
+      type: "full",
+      description: "Generate API key, configure Plex/Radarr/Sonarr/Overseerr/Tautulli connections",
+      requires: ["plex"],
+    },
+    logVolume: "/opt/data/logs",
   },
 
   unpackerr: {
@@ -879,10 +906,7 @@ export const APPS: Record<AppId, AppDefinition> = {
     name: "Dozzle",
     description: "Real-time log viewer for Docker containers",
     category: "monitoring",
-    defaultPort: 8888, // Often overlaps with Gluetun default 8888? Gluetun is 8888 proxy. Dozzle defaults 8080 or 8888?
-    // checking default: usually 8080.
-    // I'll set defaultPort to 9999 or something unique if possible, or 8080 and let user change.
-    // Actually Dozzle defaults to 8080 inside container.
+    defaultPort: 8080,
     image: "amir20/dozzle",
     puid: 0,
     pgid: 0,

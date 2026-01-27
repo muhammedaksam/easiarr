@@ -519,8 +519,6 @@ export class ProwlarrSetup extends BoxRenderable {
         fg: "#f1fa8c",
       })
     )
-    // Removed extra `})` and `)` here to fix syntax.
-    // The original instruction had an extra `})` and `)` after the first `this.contentBox.add` call.
 
     items.forEach((idx, i) => {
       const realIndex = this.listScrollOffset + i
@@ -538,9 +536,7 @@ export class ProwlarrSetup extends BoxRenderable {
       // Helper to check relevance
       const checkRel = (min: number, max: number) => [...activeCategoryIds].some((id) => id >= min && id < max)
 
-      // Map to track which badge colors to use
-      // We can pre-define colors or just cycle them, but for now let's keep the user's preferred colors if possible,
-      // or define a mapping.
+      // Category badge colors
       const categoryColors: Record<string, { active: string; inactive: string }> = {
         Movies: { active: "#00ffff", inactive: "#008b8b" },
         TV: { active: "#ff00ff", inactive: "#8b008b" },
@@ -559,19 +555,11 @@ export class ProwlarrSetup extends BoxRenderable {
 
         // Find parent category from static data
         const parentCat = PROWLARR_CATEGORIES.find((pc) => {
-          // Check if id matches parent
           if (pc.id === id) return true
-          // Check if id matches any subcategory
           if (pc.subCategories?.some((sub) => sub.id === id)) return true
-          // Check range heuristic if needed, but the static data should cover known IDs
-          // Fallback to range check if no exact match found?
-          // Actually, the static data structure implies ranges (e.g. Movies 2000-2999)
-          // Let's use the ID ranges implied by the static data if possible, or just strict matching.
-          // The previous code used ranges. Let's try to match ranges based on the starting ID of the parent category.
-          // Assuming categories are 1000s blocks.
+          // Range check: categories are 1000s blocks
           const rangeStart = Math.floor(pc.id / 1000) * 1000
-          if (id >= rangeStart && id < rangeStart + 1000) return true
-          return false
+          return id >= rangeStart && id < rangeStart + 1000
         })
 
         if (parentCat) {
