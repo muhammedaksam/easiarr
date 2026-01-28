@@ -166,7 +166,7 @@ The wizard will automatically:
 easiarr stores its configuration in `$XDG_CONFIG_HOME/easiarr/`:
 
 ```bash
-~/.config/easiarr/
+$XDG_CONFIG_HOME/easiarr/
 ├── config.json          # Your easiarr configuration
 ├── docker-compose.yml   # Generated Docker Compose file
 └── backups/             # Configuration backups
