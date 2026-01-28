@@ -5,6 +5,7 @@
 
 import type { AutoSetupOptions, AutoSetupResult, IAutoSetupClient } from "./auto-setup-types"
 import { debugLog } from "~/utils/debug"
+import { BaseApiClient } from "./base-api"
 
 // Plex client identifier for API requests
 const PLEX_CLIENT_ID = "easiarr"
@@ -28,14 +29,12 @@ interface PlexServerInfo {
   claimed: boolean
 }
 
-export class PlexApiClient implements IAutoSetupClient {
-  private host: string
-  private port: number
+export class PlexApiClient extends BaseApiClient implements IAutoSetupClient {
+  protected readonly logPrefix = "PlexApi"
   private token?: string
 
   constructor(host: string, port: number = 32400, token?: string) {
-    this.host = host
-    this.port = port
+    super(host, port)
     this.token = token
   }
 
@@ -44,13 +43,6 @@ export class PlexApiClient implements IAutoSetupClient {
    */
   setToken(token: string): void {
     this.token = token
-  }
-
-  /**
-   * Get base URL for local Plex server
-   */
-  private get baseUrl(): string {
-    return `http://${this.host}:${this.port}`
   }
 
   /**
@@ -74,17 +66,8 @@ export class PlexApiClient implements IAutoSetupClient {
    * Check if Plex server is reachable
    */
   async isHealthy(): Promise<boolean> {
-    try {
-      const response = await fetch(`${this.baseUrl}/identity`, {
-        method: "GET",
-        headers: this.getHeaders(),
-      })
-      debugLog("PlexApi", `Health check: ${response.status}`)
-      return response.ok
-    } catch (error) {
-      debugLog("PlexApi", `Health check failed: ${error}`)
-      return false
-    }
+    const response = await this.get<unknown>("/identity", { headers: this.getHeaders() })
+    return response.success
   }
 
   /**
@@ -124,22 +107,18 @@ export class PlexApiClient implements IAutoSetupClient {
 
   /**
    * Claim the server using a claim token from plex.tv/claim
-   * The claim token has a 4-minute expiry
    */
   async claimServer(claimToken: string): Promise<void> {
     debugLog("PlexApi", "Claiming server with token...")
 
-    // Claim token should start with "claim-"
     const token = claimToken.startsWith("claim-") ? claimToken : `claim-${claimToken}`
 
-    const response = await fetch(`${this.baseUrl}/myplex/claim?token=${token}`, {
-      method: "POST",
+    const response = await this.post<unknown>(`/myplex/claim?token=${token}`, undefined, {
       headers: this.getHeaders(),
     })
 
-    if (!response.ok) {
-      const text = await response.text()
-      throw new Error(`Failed to claim server: ${response.status} - ${text}`)
+    if (!response.success) {
+      throw new Error(`Failed to claim server: ${response.status}`)
     }
 
     debugLog("PlexApi", "Server claimed successfully")
@@ -164,10 +143,6 @@ export class PlexApiClient implements IAutoSetupClient {
 
   /**
    * Create a library section
-   * @param name - Display name for the library
-   * @param type - Library type: movie, show, artist (music)
-   * @param path - Path to media files (inside container)
-   * @param language - Language code (default: en-US)
    */
   async createLibrary(
     name: string,
@@ -177,20 +152,10 @@ export class PlexApiClient implements IAutoSetupClient {
   ): Promise<void> {
     debugLog("PlexApi", `Creating library: ${name} (${type}) at ${path}`)
 
-    // Map type to agent and scanner
     const agents: Record<string, { agent: string; scanner: string }> = {
-      movie: {
-        agent: "tv.plex.agents.movie",
-        scanner: "Plex Movie",
-      },
-      show: {
-        agent: "tv.plex.agents.series",
-        scanner: "Plex TV Series",
-      },
-      artist: {
-        agent: "tv.plex.agents.music",
-        scanner: "Plex Music",
-      },
+      movie: { agent: "tv.plex.agents.movie", scanner: "Plex Movie" },
+      show: { agent: "tv.plex.agents.series", scanner: "Plex TV Series" },
+      artist: { agent: "tv.plex.agents.music", scanner: "Plex Music" },
     }
 
     const config = agents[type]
@@ -207,14 +172,12 @@ export class PlexApiClient implements IAutoSetupClient {
       location: path,
     })
 
-    const response = await fetch(`${this.baseUrl}/library/sections?${params.toString()}`, {
-      method: "POST",
+    const response = await this.post<unknown>(`/library/sections?${params.toString()}`, undefined, {
       headers: this.getHeaders(),
     })
 
-    if (!response.ok) {
-      const text = await response.text()
-      throw new Error(`Failed to create library: ${response.status} - ${text}`)
+    if (!response.success) {
+      throw new Error(`Failed to create library: ${response.status}`)
     }
 
     debugLog("PlexApi", `Library "${name}" created successfully`)
@@ -244,18 +207,14 @@ export class PlexApiClient implements IAutoSetupClient {
 
   /**
    * Create libraries based on enabled *arr apps
-   * @param enabledApps - List of enabled app IDs
-   * @returns Number of libraries created
    */
   private async createDefaultLibraries(enabledApps?: string[]): Promise<number> {
-    // Map app to library: Radarr→Movies, Sonarr→TV Shows, Lidarr→Music
     const libraryMap = [
       { app: "radarr", name: "Movies", type: "movie" as const, path: "/data/media/movies" },
       { app: "sonarr", name: "TV Shows", type: "show" as const, path: "/data/media/tv" },
       { app: "lidarr", name: "Music", type: "artist" as const, path: "/data/media/music" },
     ]
 
-    // Filter to only libraries for enabled apps (or all if no enabledApps provided)
     const libraries = enabledApps
       ? libraryMap.filter((lib) => enabledApps.includes(lib.app))
       : libraryMap
@@ -268,7 +227,6 @@ export class PlexApiClient implements IAutoSetupClient {
           await this.createLibrary(lib.name, lib.type, lib.path)
           librariesCreated++
         } catch (e) {
-          // Library creation may fail if path doesn't exist - that's OK
           debugLog("PlexApi", `Could not create library ${lib.name}: ${e}`)
         }
       }
@@ -282,24 +240,20 @@ export class PlexApiClient implements IAutoSetupClient {
   async setup(options: AutoSetupOptions): Promise<AutoSetupResult> {
     const { env, plexToken, enabledApps } = options
 
-    // Check if server is reachable
     const healthy = await this.isHealthy()
     if (!healthy) {
       return { success: false, message: "Plex server not reachable" }
     }
 
-    // Store plexToken for authenticated requests
     if (plexToken) {
       this.setToken(plexToken)
     } else if (env["API_KEY_PLEX"]) {
       this.setToken(env["API_KEY_PLEX"])
     }
 
-    // Check if already claimed
     try {
       const serverInfo = await this.getServerInfo()
       if (serverInfo.claimed) {
-        // Server is claimed and we have the token - create libraries
         const librariesCreated = await this.createDefaultLibraries(enabledApps)
         return {
           success: true,
@@ -315,7 +269,6 @@ export class PlexApiClient implements IAutoSetupClient {
         }
       }
     } catch (e) {
-      // If we get 401, the server IS claimed but we don't have a valid token
       const errMsg = String(e)
       if (errMsg.includes("401")) {
         return {
@@ -324,10 +277,8 @@ export class PlexApiClient implements IAutoSetupClient {
           data: { requiresWizard: false },
         }
       }
-      // Other errors - continue with setup attempt
     }
 
-    // Server not claimed - need claim token
     const claimToken = env["PLEX_CLAIM"]
     if (!claimToken) {
       return {
@@ -337,13 +288,8 @@ export class PlexApiClient implements IAutoSetupClient {
     }
 
     try {
-      // Claim the server
       await this.claimServer(claimToken)
-
-      // Get server info after claiming
       const serverInfo = await this.getServerInfo()
-
-      // Create default libraries
       const librariesCreated = await this.createDefaultLibraries(enabledApps)
 
       return {

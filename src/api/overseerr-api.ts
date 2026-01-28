@@ -6,6 +6,7 @@
 
 import type { AutoSetupOptions, AutoSetupResult, IAutoSetupClient } from "./auto-setup-types"
 import { debugLog } from "~/utils/debug"
+import { BaseApiClient } from "./base-api"
 
 interface OverseerrStatus {
   version: string
@@ -74,23 +75,14 @@ interface MainSettings {
   applicationUrl?: string
 }
 
-export class OverseerrClient implements IAutoSetupClient {
-  private host: string
-  private port: number
+export class OverseerrClient extends BaseApiClient implements IAutoSetupClient {
+  protected readonly logPrefix = "OverseerrApi"
   private apiKey?: string
   private sessionCookie?: string
 
   constructor(host: string, port: number = 5055, apiKey?: string) {
-    this.host = host
-    this.port = port
+    super(host, port)
     this.apiKey = apiKey
-  }
-
-  /**
-   * Get base URL for Overseerr
-   */
-  private get baseUrl(): string {
-    return `http://${this.host}:${this.port}`
   }
 
   /**
@@ -121,16 +113,8 @@ export class OverseerrClient implements IAutoSetupClient {
    * Check if Overseerr is reachable
    */
   async isHealthy(): Promise<boolean> {
-    try {
-      const response = await fetch(`${this.baseUrl}/api/v1/status`, {
-        method: "GET",
-      })
-      debugLog("OverseerrApi", `Health check: ${response.status}`)
-      return response.ok
-    } catch (error) {
-      debugLog("OverseerrApi", `Health check failed: ${error}`)
-      return false
-    }
+    const response = await this.get<OverseerrStatus>("/api/v1/status")
+    return response.success
   }
 
   /**
@@ -142,7 +126,6 @@ export class OverseerrClient implements IAutoSetupClient {
         method: "GET",
       })
       if (!response.ok) return false
-
       const data = await response.json()
       return data.initialized === true
     } catch {
@@ -152,7 +135,6 @@ export class OverseerrClient implements IAutoSetupClient {
 
   /**
    * Authenticate with Overseerr using a Plex token
-   * If no users exist, this creates an admin user automatically
    */
   async authenticateWithPlex(plexToken: string): Promise<OverseerrUser | null> {
     debugLog("OverseerrApi", "Authenticating with Plex token...")
@@ -168,29 +150,20 @@ export class OverseerrClient implements IAutoSetupClient {
       })
 
       if (response.ok) {
-        // Extract session cookie for subsequent requests
         const setCookie = response.headers.get("set-cookie")
         if (setCookie) {
           this.sessionCookie = setCookie.split(";")[0]
-          debugLog("OverseerrApi", "Session cookie obtained")
         }
-
-        const user = await response.json()
-        debugLog("OverseerrApi", `Authenticated as user: ${user.email || user.plexUsername}`)
-        return user
+        return await response.json()
       }
-
-      const text = await response.text()
-      debugLog("OverseerrApi", `Plex auth failed: ${response.status} - ${text}`)
       return null
-    } catch (error) {
-      debugLog("OverseerrApi", `Plex auth error: ${error}`)
+    } catch {
       return null
     }
   }
 
   /**
-   * Get available Plex servers for the authenticated user
+   * Get available Plex servers
    */
   async getPlexServers(): Promise<PlexDevice[]> {
     try {
@@ -198,7 +171,6 @@ export class OverseerrClient implements IAutoSetupClient {
         method: "GET",
         headers: this.getHeaders(),
       })
-
       if (response.ok) {
         return response.json()
       }
@@ -209,28 +181,16 @@ export class OverseerrClient implements IAutoSetupClient {
   }
 
   /**
-   * Initialize/finalize the Overseerr setup
-   * This marks the application as configured
+   * Initialize Overseerr
    */
   async initialize(): Promise<boolean> {
-    debugLog("OverseerrApi", "Finalizing Overseerr initialization...")
-
     try {
       const response = await fetch(`${this.baseUrl}/api/v1/settings/initialize`, {
         method: "POST",
         headers: this.getHeaders(),
       })
-
-      if (response.ok) {
-        debugLog("OverseerrApi", "Overseerr initialized successfully")
-        return true
-      }
-
-      const text = await response.text()
-      debugLog("OverseerrApi", `Initialize failed: ${response.status} - ${text}`)
-      return false
-    } catch (error) {
-      debugLog("OverseerrApi", `Initialize error: ${error}`)
+      return response.ok
+    } catch {
       return false
     }
   }
@@ -244,7 +204,6 @@ export class OverseerrClient implements IAutoSetupClient {
         method: "GET",
         headers: this.getHeaders(),
       })
-
       if (response.ok) {
         return response.json()
       }
@@ -255,89 +214,58 @@ export class OverseerrClient implements IAutoSetupClient {
   }
 
   /**
-   * Set application URL for external access
-   * URL will be used for links to Overseerr from other apps
+   * Set application URL
    */
   async setApplicationUrl(applicationUrl: string): Promise<boolean> {
-    debugLog("OverseerrApi", `Setting applicationUrl to: ${applicationUrl}`)
-
     try {
       const response = await fetch(`${this.baseUrl}/api/v1/settings/main`, {
         method: "POST",
         headers: this.getHeaders(),
         body: JSON.stringify({ applicationUrl }),
       })
-
-      if (response.ok) {
-        debugLog("OverseerrApi", "Application URL set successfully")
-        return true
-      }
-    } catch (error) {
-      debugLog("OverseerrApi", `Failed to set application URL: ${error}`)
+      return response.ok
+    } catch {
+      return false
     }
-    return false
   }
 
   /**
    * Sync Plex libraries
    */
   async syncPlexLibraries(): Promise<boolean> {
-    debugLog("OverseerrApi", "Syncing Plex libraries...")
-
     try {
       const response = await fetch(`${this.baseUrl}/api/v1/settings/plex/library?sync=true`, {
         method: "GET",
         headers: this.getHeaders(),
       })
-
-      if (response.ok) {
-        debugLog("OverseerrApi", "Plex libraries synced")
-        return true
-      }
+      return response.ok
     } catch {
-      // Ignore
+      return false
     }
-    return false
   }
 
   /**
    * Start a full Plex library scan
    */
   async startPlexScan(): Promise<boolean> {
-    debugLog("OverseerrApi", "Starting Plex library scan...")
-
     try {
       const response = await fetch(`${this.baseUrl}/api/v1/settings/plex/sync`, {
         method: "POST",
         headers: this.getHeaders(),
         body: JSON.stringify({ start: true }),
       })
-
-      if (response.ok) {
-        debugLog("OverseerrApi", "Plex scan started")
-        return true
-      }
+      return response.ok
     } catch {
-      // Ignore
+      return false
     }
-    return false
   }
 
   /**
    * Get Overseerr status
    */
   async getStatus(): Promise<OverseerrStatus | null> {
-    try {
-      const response = await fetch(`${this.baseUrl}/api/v1/status`, {
-        method: "GET",
-      })
-      if (response.ok) {
-        return response.json()
-      }
-    } catch {
-      // Ignore
-    }
-    return null
+    const response = await this.get<OverseerrStatus>("/api/v1/status")
+    return response.data ?? null
   }
 
   /**
@@ -348,7 +276,6 @@ export class OverseerrClient implements IAutoSetupClient {
       method: "GET",
       headers: this.getHeaders(),
     })
-
     if (response.ok) {
       return response.json()
     }
@@ -359,84 +286,50 @@ export class OverseerrClient implements IAutoSetupClient {
    * Update Plex settings
    */
   async updatePlexSettings(settings: Partial<PlexSettings>): Promise<boolean> {
-    debugLog("OverseerrApi", "Updating Plex settings...")
-
     const response = await fetch(`${this.baseUrl}/api/v1/settings/plex`, {
       method: "POST",
       headers: this.getHeaders(),
       body: JSON.stringify(settings),
     })
-
-    if (response.ok) {
-      debugLog("OverseerrApi", "Plex settings updated successfully")
-      return true
-    }
-
-    const text = await response.text()
-    debugLog("OverseerrApi", `Failed to update Plex settings: ${response.status} - ${text}`)
-    return false
+    return response.ok
   }
 
   /**
    * Add Radarr server
    */
   async addRadarrServer(settings: RadarrSettings): Promise<boolean> {
-    debugLog("OverseerrApi", `Adding Radarr server: ${settings.name}`)
-
     const response = await fetch(`${this.baseUrl}/api/v1/settings/radarr`, {
       method: "POST",
       headers: this.getHeaders(),
       body: JSON.stringify(settings),
     })
-
-    if (response.ok) {
-      debugLog("OverseerrApi", "Radarr server added successfully")
-      return true
-    }
-
-    const text = await response.text()
-    debugLog("OverseerrApi", `Failed to add Radarr: ${response.status} - ${text}`)
-    return false
+    return response.ok
   }
 
   /**
    * Add Sonarr server
    */
   async addSonarrServer(settings: SonarrSettings): Promise<boolean> {
-    debugLog("OverseerrApi", `Adding Sonarr server: ${settings.name}`)
-
     const response = await fetch(`${this.baseUrl}/api/v1/settings/sonarr`, {
       method: "POST",
       headers: this.getHeaders(),
       body: JSON.stringify(settings),
     })
-
-    if (response.ok) {
-      debugLog("OverseerrApi", "Sonarr server added successfully")
-      return true
-    }
-
-    const text = await response.text()
-    debugLog("OverseerrApi", `Failed to add Sonarr: ${response.status} - ${text}`)
-    return false
+    return response.ok
   }
 
   /**
-   * Run the auto-setup process for Overseerr
-   * Fully automated using Plex token
+   * Run the auto-setup process
    */
   async setup(options: AutoSetupOptions): Promise<AutoSetupResult> {
     try {
-      // Check if reachable
       const healthy = await this.isHealthy()
       if (!healthy) {
         return { success: false, message: "Overseerr not reachable" }
       }
 
-      // Check if already initialized
       const initialized = await this.isInitialized()
       if (initialized) {
-        // Try to get API key if we have session
         const settings = await this.getMainSettings()
         if (settings?.apiKey) {
           return {
@@ -448,7 +341,6 @@ export class OverseerrClient implements IAutoSetupClient {
         return { success: true, message: "Already configured" }
       }
 
-      // Need Plex token to proceed
       const plexToken = options.plexToken || process.env.API_KEY_PLEX
       if (!plexToken) {
         return {
@@ -457,19 +349,14 @@ export class OverseerrClient implements IAutoSetupClient {
         }
       }
 
-      // Step 1: Authenticate with Plex token (creates admin user if first run)
-      debugLog("OverseerrApi", "Step 1: Authenticating with Plex token...")
       const user = await this.authenticateWithPlex(plexToken)
       if (!user) {
         return { success: false, message: "Failed to authenticate with Plex" }
       }
 
-      // Step 2: Get available Plex servers and configure
-      debugLog("OverseerrApi", "Step 2: Getting Plex servers...")
       const servers = await this.getPlexServers()
       if (servers.length > 0) {
         const server = servers[0]
-        // Find local connection
         const localConn = server.connection.find((c) => c.local) || server.connection[0]
         if (localConn) {
           const url = new URL(localConn.uri)
@@ -481,24 +368,16 @@ export class OverseerrClient implements IAutoSetupClient {
         }
       }
 
-      // Step 3: Sync Plex libraries
-      debugLog("OverseerrApi", "Step 3: Syncing Plex libraries...")
       await this.syncPlexLibraries()
 
-      // Step 4: Initialize Overseerr
-      debugLog("OverseerrApi", "Step 4: Initializing Overseerr...")
       const initSuccess = await this.initialize()
       if (!initSuccess) {
         return { success: false, message: "Failed to initialize Overseerr" }
       }
 
-      // Step 5: Get API key for future use
-      debugLog("OverseerrApi", "Step 5: Getting API key...")
       const settings = await this.getMainSettings()
       const apiKey = settings?.apiKey
 
-      // Step 6: Start library scan in background
-      debugLog("OverseerrApi", "Step 6: Starting Plex library scan...")
       await this.startPlexScan()
 
       return {

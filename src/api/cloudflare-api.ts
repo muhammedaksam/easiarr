@@ -2,7 +2,7 @@
  * Cloudflare API client for tunnel and DNS management
  */
 
-import { debugLog } from "~/utils/debug"
+import { BaseApiClient } from "./base-api"
 
 const CLOUDFLARE_API_BASE = "https://api.cloudflare.com/client/v4"
 
@@ -45,25 +45,22 @@ interface DnsRecord {
   proxied: boolean
 }
 
-export class CloudflareApi {
+export class CloudflareApi extends BaseApiClient {
+  protected readonly logPrefix = "CloudflareAPI"
   private apiToken: string
   private accountId: string | null = null
 
   constructor(apiToken: string) {
+    // Use dummy host/port since we use absolute URLs
+    super("api.cloudflare.com", 443)
     this.apiToken = apiToken
-    debugLog("CloudflareAPI", "Client initialized")
   }
 
-  private async request<T>(
+  private async cfRequest<T>(
     method: string,
     endpoint: string,
     body?: unknown
   ): Promise<CloudflareResponse<T>> {
-    debugLog("CloudflareAPI", `${method} ${endpoint}`)
-    if (body) {
-      debugLog("CloudflareAPI", `Request body: ${JSON.stringify(body)}`)
-    }
-
     const response = await fetch(`${CLOUDFLARE_API_BASE}${endpoint}`, {
       method,
       headers: {
@@ -77,25 +74,19 @@ export class CloudflareApi {
 
     if (!data.success) {
       const errors = data.errors.map((e) => e.message).join(", ")
-      debugLog("CloudflareAPI", `Error: ${errors}`)
       throw new Error(`Cloudflare API error: ${errors}`)
     }
 
-    debugLog("CloudflareAPI", `Response success: ${data.success}`)
     return data
   }
 
-  /**
-   * Get account ID from token
-   */
   async getAccountId(): Promise<string> {
     if (this.accountId) return this.accountId
 
-    const response = await this.request<{ id: string }[]>("GET", "/accounts")
+    const response = await this.cfRequest<{ id: string }[]>("GET", "/accounts")
     if (response.result.length === 0) {
       throw new Error(
-        "No Cloudflare accounts found. Your API token is missing the 'Account Settings:Read' permission. " +
-          "Please edit your token in the Cloudflare dashboard and add: Account → Account Settings → Read"
+        "No Cloudflare accounts found. Your API token is missing the 'Account Settings:Read' permission."
       )
     }
 
@@ -103,55 +94,41 @@ export class CloudflareApi {
     return this.accountId
   }
 
-  /**
-   * List all zones (domains) in the account
-   */
   async listZones(): Promise<Zone[]> {
-    const response = await this.request<Zone[]>("GET", "/zones")
+    const response = await this.cfRequest<Zone[]>("GET", "/zones")
     return response.result
   }
 
-  /**
-   * Get zone ID by domain name
-   */
   async getZoneId(domain: string): Promise<string> {
-    const response = await this.request<Zone[]>("GET", `/zones?name=${encodeURIComponent(domain)}`)
+    const response = await this.cfRequest<Zone[]>(
+      "GET",
+      `/zones?name=${encodeURIComponent(domain)}`
+    )
     if (response.result.length === 0) {
       throw new Error(`Zone not found for domain: ${domain}`)
     }
     return response.result[0].id
   }
 
-  /**
-   * List all tunnels in the account
-   */
   async listTunnels(): Promise<Tunnel[]> {
     const accountId = await this.getAccountId()
-    const response = await this.request<Tunnel[]>("GET", `/accounts/${accountId}/cfd_tunnel`)
+    const response = await this.cfRequest<Tunnel[]>("GET", `/accounts/${accountId}/cfd_tunnel`)
     return response.result
   }
 
-  /**
-   * Get tunnel by name
-   */
   async getTunnelByName(name: string): Promise<Tunnel | null> {
     const tunnels = await this.listTunnels()
     return tunnels.find((t) => t.name === name) || null
   }
 
-  /**
-   * Create a new tunnel
-   */
   async createTunnel(name: string): Promise<{ tunnel: Tunnel; credentials: TunnelCredentials }> {
     const accountId = await this.getAccountId()
-
-    // Generate a random secret for the tunnel
     const secret = Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString("base64")
 
-    const response = await this.request<Tunnel>("POST", `/accounts/${accountId}/cfd_tunnel`, {
+    const response = await this.cfRequest<Tunnel>("POST", `/accounts/${accountId}/cfd_tunnel`, {
       name,
       tunnel_secret: secret,
-      config_src: "cloudflare", // Manage config from Cloudflare dashboard/API
+      config_src: "cloudflare",
     })
 
     return {
@@ -165,23 +142,15 @@ export class CloudflareApi {
     }
   }
 
-  /**
-   * Get tunnel token (for TUNNEL_TOKEN env var)
-   * The token is base64-encoded JSON containing account_tag, tunnel_id, and tunnel_secret
-   */
   async getTunnelToken(tunnelId: string): Promise<string> {
     const accountId = await this.getAccountId()
-    const response = await this.request<string>(
+    const response = await this.cfRequest<string>(
       "GET",
       `/accounts/${accountId}/cfd_tunnel/${tunnelId}/token`
     )
     return response.result
   }
 
-  /**
-   * Configure tunnel ingress rules
-   * @param warpRouting Enable WARP routing for private network access (VPN)
-   */
   async configureTunnel(
     tunnelId: string,
     ingress: Array<{ hostname?: string; service: string; originRequest?: Record<string, unknown> }>,
@@ -189,13 +158,12 @@ export class CloudflareApi {
   ): Promise<void> {
     const accountId = await this.getAccountId()
 
-    // Ensure there's a catch-all rule at the end
     const hasChatchAll = ingress.some((r) => !r.hostname)
     if (!hasChatchAll) {
       ingress.push({ service: "http_status:404" })
     }
 
-    await this.request("PUT", `/accounts/${accountId}/cfd_tunnel/${tunnelId}/configurations`, {
+    await this.cfRequest("PUT", `/accounts/${accountId}/cfd_tunnel/${tunnelId}/configurations`, {
       config: {
         ingress,
         "warp-routing": { enabled: warpRouting },
@@ -203,17 +171,11 @@ export class CloudflareApi {
     })
   }
 
-  /**
-   * List DNS records for a zone
-   */
   async listDnsRecords(zoneId: string): Promise<DnsRecord[]> {
-    const response = await this.request<DnsRecord[]>("GET", `/zones/${zoneId}/dns_records`)
+    const response = await this.cfRequest<DnsRecord[]>("GET", `/zones/${zoneId}/dns_records`)
     return response.result
   }
 
-  /**
-   * Create a CNAME DNS record pointing to the tunnel
-   */
   async createDnsRecord(
     zoneId: string,
     name: string,
@@ -222,30 +184,22 @@ export class CloudflareApi {
   ): Promise<DnsRecord> {
     const target = `${tunnelId}.cfargotunnel.com`
 
-    // Check if record already exists
-    const existing = await this.request<DnsRecord[]>(
+    const existing = await this.cfRequest<DnsRecord[]>(
       "GET",
       `/zones/${zoneId}/dns_records?type=CNAME&name=${encodeURIComponent(name)}`
     )
 
     if (existing.result.length > 0) {
-      // Update existing record
       const recordId = existing.result[0].id
-      const response = await this.request<DnsRecord>(
+      const response = await this.cfRequest<DnsRecord>(
         "PATCH",
         `/zones/${zoneId}/dns_records/${recordId}`,
-        {
-          type: "CNAME",
-          name,
-          content: target,
-          proxied,
-        }
+        { type: "CNAME", name, content: target, proxied }
       )
       return response.result
     }
 
-    // Create new record
-    const response = await this.request<DnsRecord>("POST", `/zones/${zoneId}/dns_records`, {
+    const response = await this.cfRequest<DnsRecord>("POST", `/zones/${zoneId}/dns_records`, {
       type: "CNAME",
       name,
       content: target,
@@ -255,62 +209,42 @@ export class CloudflareApi {
     return response.result
   }
 
-  /**
-   * Delete a tunnel
-   */
   async deleteTunnel(tunnelId: string): Promise<void> {
     const accountId = await this.getAccountId()
-    await this.request("DELETE", `/accounts/${accountId}/cfd_tunnel/${tunnelId}`)
+    await this.cfRequest("DELETE", `/accounts/${accountId}/cfd_tunnel/${tunnelId}`)
   }
 
   // ==================== Zero Trust Private Network API ====================
 
-  /**
-   * Add a private network route to a tunnel (for WARP VPN access)
-   * This allows WARP clients to access the specified network through the tunnel
-   */
   async addTunnelRoute(
     tunnelId: string,
     networkCidr: string,
     comment = "easiarr private network"
   ): Promise<string> {
     const accountId = await this.getAccountId()
-    const response = await this.request<{ id: string }>(
+    const response = await this.cfRequest<{ id: string }>(
       "POST",
       `/accounts/${accountId}/teamnet/routes`,
-      {
-        network: networkCidr,
-        tunnel_id: tunnelId,
-        comment,
-      }
+      { network: networkCidr, tunnel_id: tunnelId, comment }
     )
     return response.result.id
   }
 
-  /**
-   * List existing tunnel routes for the account
-   */
   async listTunnelRoutes(): Promise<
     Array<{ id: string; network: string; tunnel_id: string; comment?: string }>
   > {
     const accountId = await this.getAccountId()
-    const response = await this.request<
+    const response = await this.cfRequest<
       Array<{ id: string; network: string; tunnel_id: string; comment?: string }>
     >("GET", `/accounts/${accountId}/teamnet/routes`)
     return response.result
   }
 
-  /**
-   * Delete a tunnel route
-   */
   async deleteTunnelRoute(routeId: string): Promise<void> {
     const accountId = await this.getAccountId()
-    await this.request("DELETE", `/accounts/${accountId}/teamnet/routes/${routeId}`)
+    await this.cfRequest("DELETE", `/accounts/${accountId}/teamnet/routes/${routeId}`)
   }
 
-  /**
-   * Check if a tunnel route already exists for the given network
-   */
   async getTunnelRouteForNetwork(
     networkCidr: string
   ): Promise<{ id: string; tunnel_id: string } | null> {
@@ -320,9 +254,6 @@ export class CloudflareApi {
 
   // ==================== Cloudflare Access API ====================
 
-  /**
-   * Create an Access application
-   */
   async createAccessApplication(
     domain: string,
     name = "easiarr",
@@ -330,8 +261,7 @@ export class CloudflareApi {
   ): Promise<{ id: string; name: string }> {
     const accountId = await this.getAccountId()
 
-    // Check if app already exists
-    const existing = await this.request<Array<{ id: string; name: string; domain: string }>>(
+    const existing = await this.cfRequest<Array<{ id: string; name: string; domain: string }>>(
       "GET",
       `/accounts/${accountId}/access/apps`
     )
@@ -343,8 +273,7 @@ export class CloudflareApi {
       return { id: existingApp.id, name: existingApp.name }
     }
 
-    // Create new application
-    const response = await this.request<{ id: string; name: string }>(
+    const response = await this.cfRequest<{ id: string; name: string }>(
       "POST",
       `/accounts/${accountId}/access/apps`,
       {
@@ -359,9 +288,6 @@ export class CloudflareApi {
     return response.result
   }
 
-  /**
-   * Create an Access policy for an application
-   */
   async createAccessPolicy(
     appId: string,
     allowedEmails: string[],
@@ -369,8 +295,7 @@ export class CloudflareApi {
   ): Promise<{ id: string }> {
     const accountId = await this.getAccountId()
 
-    // Check if policy already exists
-    const existing = await this.request<Array<{ id: string; name: string }>>(
+    const existing = await this.cfRequest<Array<{ id: string; name: string }>>(
       "GET",
       `/accounts/${accountId}/access/apps/${appId}/policies`
     )
@@ -380,18 +305,13 @@ export class CloudflareApi {
       return { id: existingPolicy.id }
     }
 
-    // Create email-based allow policy
-    // Each email needs to be a separate include rule
-    // Use next available precedence (existing count + 1)
-    const response = await this.request<{ id: string }>(
+    const response = await this.cfRequest<{ id: string }>(
       "POST",
       `/accounts/${accountId}/access/apps/${appId}/policies`,
       {
         name: policyName,
         decision: "allow",
-        include: allowedEmails.map((email) => ({
-          email: { email },
-        })),
+        include: allowedEmails.map((email) => ({ email: { email } })),
         precedence: existing.result.length + 1,
       }
     )
@@ -399,9 +319,6 @@ export class CloudflareApi {
     return response.result
   }
 
-  /**
-   * Create bypass policy for an Access app (e.g., for home IP)
-   */
   async createBypassPolicy(
     appId: string,
     bypassIp: string,
@@ -409,8 +326,7 @@ export class CloudflareApi {
   ): Promise<{ id: string }> {
     const accountId = await this.getAccountId()
 
-    // Check if policy already exists
-    const existing = await this.request<Array<{ id: string; name: string }>>(
+    const existing = await this.cfRequest<Array<{ id: string; name: string }>>(
       "GET",
       `/accounts/${accountId}/access/apps/${appId}/policies`
     )
@@ -420,18 +336,13 @@ export class CloudflareApi {
       return { id: existingPolicy.id }
     }
 
-    // Create IP-based bypass policy
-    const response = await this.request<{ id: string }>(
+    const response = await this.cfRequest<{ id: string }>(
       "POST",
       `/accounts/${accountId}/access/apps/${appId}/policies`,
       {
         name: policyName,
         decision: "bypass",
-        include: [
-          {
-            ip: { ip: bypassIp },
-          },
-        ],
+        include: [{ ip: { ip: bypassIp } }],
         precedence: existing.result.length + 1,
       }
     )
@@ -439,9 +350,6 @@ export class CloudflareApi {
     return response.result
   }
 
-  /**
-   * Create Access application with email policy and optional IP bypass
-   */
   async setupAccessProtection(
     domain: string,
     allowedEmails: string[],
@@ -462,48 +370,33 @@ export class CloudflareApi {
 
   // ==================== WARP Device Enrollment API ====================
 
-  /**
-   * Get or create device enrollment application (type: warp)
-   */
   async getDeviceEnrollmentApp(): Promise<{ id: string; name: string } | null> {
     const accountId = await this.getAccountId()
-    const apps = await this.request<Array<{ id: string; name: string; type: string }>>(
+    const apps = await this.cfRequest<Array<{ id: string; name: string; type: string }>>(
       "GET",
       `/accounts/${accountId}/access/apps`
     )
     return apps.result.find((a) => a.type === "warp") || null
   }
 
-  /**
-   * Create device enrollment policy for WARP
-   * This allows specified emails to enroll their devices
-   * Also creates a bypass policy for local network access
-   */
   async setupDeviceEnrollment(
     allowedEmails: string[],
     privateNetworkCidr?: string
   ): Promise<{ appId: string; allowPolicyId: string; bypassPolicyId?: string }> {
     const accountId = await this.getAccountId()
 
-    // Check if WARP enrollment app exists
     let warpApp = await this.getDeviceEnrollmentApp()
 
     if (!warpApp) {
-      // Create WARP enrollment app
-      const response = await this.request<{ id: string; name: string }>(
+      const response = await this.cfRequest<{ id: string; name: string }>(
         "POST",
         `/accounts/${accountId}/access/apps`,
-        {
-          type: "warp",
-          name: "Device Enrollment",
-          session_duration: "24h",
-        }
+        { type: "warp", name: "Device Enrollment", session_duration: "24h" }
       )
       warpApp = response.result
     }
 
-    // Get existing policies
-    const existingPolicies = await this.request<Array<{ id: string; name: string }>>(
+    const existingPolicies = await this.cfRequest<Array<{ id: string; name: string }>>(
       "GET",
       `/accounts/${accountId}/access/apps/${warpApp.id}/policies`
     )
@@ -511,45 +404,37 @@ export class CloudflareApi {
     let allowPolicyId: string
     let bypassPolicyId: string | undefined
 
-    // 1. Create/get email-based Allow policy
     const allowPolicyName = "easiarr-vpn-allow"
     const existingAllow = existingPolicies.result.find((p) => p.name === allowPolicyName)
     if (existingAllow) {
       allowPolicyId = existingAllow.id
     } else {
-      const policy = await this.request<{ id: string }>(
+      const policy = await this.cfRequest<{ id: string }>(
         "POST",
         `/accounts/${accountId}/access/apps/${warpApp.id}/policies`,
         {
           name: allowPolicyName,
           decision: "allow",
-          include: allowedEmails.map((email) => ({
-            email: { email },
-          })),
+          include: allowedEmails.map((email) => ({ email: { email } })),
           precedence: existingPolicies.result.length + 1,
         }
       )
       allowPolicyId = policy.result.id
     }
 
-    // 2. Create/get Bypass policy for local network (if CIDR provided)
     if (privateNetworkCidr) {
       const bypassPolicyName = "easiarr-vpn-bypass"
       const existingBypass = existingPolicies.result.find((p) => p.name === bypassPolicyName)
       if (existingBypass) {
         bypassPolicyId = existingBypass.id
       } else {
-        const bypassPolicy = await this.request<{ id: string }>(
+        const bypassPolicy = await this.cfRequest<{ id: string }>(
           "POST",
           `/accounts/${accountId}/access/apps/${warpApp.id}/policies`,
           {
             name: bypassPolicyName,
             decision: "bypass",
-            include: [
-              {
-                ip: { ip: privateNetworkCidr },
-              },
-            ],
+            include: [{ ip: { ip: privateNetworkCidr } }],
             precedence: existingPolicies.result.length + 2,
           }
         )
@@ -572,24 +457,19 @@ export async function setupCloudflaredTunnel(
 ): Promise<{ tunnelToken: string; tunnelId: string; accountId: string }> {
   const api = new CloudflareApi(apiToken)
 
-  // Get account ID first (needed for Homepage widget)
   const accountId = await api.getAccountId()
 
-  // 1. Check if tunnel already exists
   let tunnel = await api.getTunnelByName(tunnelName)
   let tunnelToken: string
 
   if (tunnel) {
-    // Get existing tunnel token
     tunnelToken = await api.getTunnelToken(tunnel.id)
   } else {
-    // 2. Create new tunnel
     const result = await api.createTunnel(tunnelName)
     tunnel = result.tunnel
     tunnelToken = await api.getTunnelToken(tunnel.id)
   }
 
-  // 3. Configure ingress rules (enable warp-routing if VPN is enabled)
   await api.configureTunnel(
     tunnel.id,
     [
@@ -602,7 +482,6 @@ export async function setupCloudflaredTunnel(
     warpRouting
   )
 
-  // 4. Add DNS CNAME record (wildcard)
   const zoneId = await api.getZoneId(domain)
   await api.createDnsRecord(zoneId, `*.${domain}`, tunnel.id)
 
