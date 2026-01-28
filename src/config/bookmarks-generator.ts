@@ -4,13 +4,12 @@
  */
 
 import { writeFile } from "node:fs/promises"
-import { homedir } from "node:os"
-import { join } from "node:path"
 
 import type { AppCategory, EasiarrConfig } from "./schema"
 import { CATEGORY_ORDER } from "~/apps/categories"
 import { getApp } from "~/apps/registry"
 import { readEnvSync } from "~/utils/env"
+import { getConfigPath } from "~/utils/paths"
 import { APP_CATEGORIES } from "./schema"
 
 interface BookmarkEntry {
@@ -124,7 +123,7 @@ export function generateBookmarksHtml(config: EasiarrConfig, useLocalUrls = fals
  */
 export function getBookmarksPath(type: "local" | "remote" = "local"): string {
   const filename = type === "remote" ? "bookmarks-remote.html" : "bookmarks-local.html"
-  return join(homedir(), ".easiarr", filename)
+  return getConfigPath(filename)
 }
 
 /**

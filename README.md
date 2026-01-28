@@ -23,7 +23,7 @@ A terminal-based wizard that helps you set up Radarr, Sonarr, Prowlarr, and othe
 - 🎮 **Container Control** - Start, stop, and restart containers directly from the TUI
 - 📋 **Container Logs Viewer** - View and save Docker container logs from the TUI
 - ⚙️ **App Management** - Add or remove apps from your stack with ease
-- 💾 **Persistent Configuration** - Settings saved to `~/.easiarr/config.json`
+- 💾 **Persistent Configuration** - Settings saved to `$XDG_CONFIG_HOME/easiarr/config.json`
 - 🔀 **Reverse Proxy** - Traefik or Caddy support with automatic SSL
 - 🖥️ **Unraid Support** - Automatic OS detection and compatibility
 
@@ -163,10 +163,10 @@ The wizard will automatically:
 
 ## Configuration
 
-easiarr stores its configuration in `~/.easiarr/`:
+easiarr stores its configuration in `$XDG_CONFIG_HOME/easiarr/`:
 
 ```bash
-~/.easiarr/
+~/.config/easiarr/
 ├── config.json          # Your easiarr configuration
 ├── docker-compose.yml   # Generated Docker Compose file
 └── backups/             # Configuration backups

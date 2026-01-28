@@ -5,7 +5,7 @@
  */
 
 import type { AppDefinition, AppId } from "~/config/schema"
-import { getArchWarning, getSystemArch, isAppCompatible, isAppDeprecated } from "~/util/arch"
+import { getArchWarning, getSystemArch, isAppCompatible, isAppDeprecated } from "~/utils/arch"
 
 export const APPS: Record<AppId, AppDefinition> = {
   // === SERVARR (Media Management) ===
@@ -766,9 +766,9 @@ export const APPS: Record<AppId, AppDefinition> = {
     puid: 0,
     pgid: 0,
     volumes: () => [
-      "${HOME}/.easiarr/config.json:/web/config.json:ro",
-      "${HOME}/.easiarr/bookmarks-local.html:/web/bookmarks-local.html:ro",
-      "${HOME}/.easiarr/bookmarks-remote.html:/web/bookmarks-remote.html:ro",
+      "${XDG_CONFIG_HOME}/easiarr/config.json:/web/config.json:ro",
+      "${XDG_CONFIG_HOME}/easiarr/bookmarks-local.html:/web/bookmarks-local.html:ro",
+      "${XDG_CONFIG_HOME}/easiarr/bookmarks-remote.html:/web/bookmarks-remote.html:ro",
     ],
     environment: {
       FOLDER: "/web",

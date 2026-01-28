@@ -7,8 +7,8 @@
  */
 
 import { appendFileSync, writeFileSync } from "node:fs"
-import { homedir } from "node:os"
-import { join } from "node:path"
+
+import { getConfigPath } from "./paths"
 
 // Check CLI args for --debug flag
 const hasDebugFlag = process.argv.includes("--debug") || process.argv.includes("-d")
@@ -16,15 +16,8 @@ const hasEnvDebug = process.env.EASIARR_DEBUG === "1" || process.env.EASIARR_DEB
 
 export const DEBUG_ENABLED = hasDebugFlag || hasEnvDebug
 
-// Compute XDG path locally to avoid circular dependency with manager.ts
-function getXdgConfigDir(): string {
-  const xdgConfigHome = process.env.XDG_CONFIG_HOME || join(homedir(), ".config")
-  return join(xdgConfigHome, "easiarr")
-}
-
 // Save debug log to XDG config dir like other config files
-const easiarrDir = getXdgConfigDir()
-const logFile = join(easiarrDir, "debug.log")
+const logFile = getConfigPath("debug.log")
 
 /**
  * Initialize debug mode - clears old log file
