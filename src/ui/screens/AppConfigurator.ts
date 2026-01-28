@@ -3,19 +3,14 @@
  * Configures *arr apps via API - sets root folders and download clients
  */
 
-import {
-  BoxRenderable,
-  CliRenderer,
-  InputRenderable,
-  InputRenderableEvents,
-  KeyEvent,
-  TextRenderable,
-} from "@opentui/core"
+import { BoxRenderable, CliRenderer, KeyEvent, TextRenderable } from "@opentui/core"
 
 import { ArrApiClient, createQBittorrentConfig, createSABnzbdConfig } from "~/api/arr-api"
 import { QBittorrentClient } from "~/api/qbittorrent-api"
 import { getApp } from "~/apps/registry"
 import { AppId, EasiarrConfig } from "~/config/schema"
+import { CredentialsForm, CredentialsFormResult } from "~/ui/components/CredentialsForm"
+import { DownloadClientForm, DownloadClientFormResult } from "~/ui/components/DownloadClientForm"
 import { createPageLayout } from "~/ui/components/PageLayout"
 import { getCategoriesForApps } from "~/utils/categories"
 import { readEnvSync, updateEnv } from "~/utils/env"
@@ -108,122 +103,33 @@ export class AppConfigurator extends BoxRenderable {
     this.pageContainer = container
     this.add(container)
 
-    content.add(
-      new TextRenderable(this.cliRenderer, {
-        content: "Set a global username/password for all *arr applications:\n",
-        fg: "#4a9eff",
-      })
-    )
-
-    // Username input
-    content.add(new TextRenderable(this.cliRenderer, { content: "Username:", fg: "#aaaaaa" }))
-    const userInput = new InputRenderable(this.cliRenderer, {
-      id: "global-user-input",
-      width: 30,
-      placeholder: "admin",
-      value: this.globalUsername,
-      focusedBackgroundColor: "#1a1a1a",
-    })
-    content.add(userInput)
-
-    content.add(new BoxRenderable(this.cliRenderer, { width: 1, height: 1 })) // Spacer
-
-    // Password input
-    content.add(new TextRenderable(this.cliRenderer, { content: "Password:", fg: "#aaaaaa" }))
-    const passInput = new InputRenderable(this.cliRenderer, {
-      id: "global-pass-input",
-      width: 30,
-      placeholder: "Enter password",
-      value: this.globalPassword,
-      focusedBackgroundColor: "#1a1a1a",
-    })
-    content.add(passInput)
-
-    content.add(new BoxRenderable(this.cliRenderer, { width: 1, height: 1 })) // Spacer
-
-    // Email input (for Cloudflare Access, notifications, etc.)
-    content.add(
-      new TextRenderable(this.cliRenderer, { content: "Email (optional):", fg: "#aaaaaa" })
-    )
-    const emailInput = new InputRenderable(this.cliRenderer, {
-      id: "global-email-input",
-      width: 40,
-      placeholder: "you@example.com",
-      value: this.globalEmail,
-      focusedBackgroundColor: "#1a1a1a",
-    })
-    content.add(emailInput)
-
-    content.add(new BoxRenderable(this.cliRenderer, { width: 1, height: 1 })) // Spacer
-
-    // Override toggle
-    const overrideText = new TextRenderable(this.cliRenderer, {
-      id: "override-toggle",
-      content: `[O] Override existing: ${this.overrideExisting ? "Yes" : "No"}`,
-      fg: this.overrideExisting ? "#50fa7b" : "#6272a4",
-    })
-    content.add(overrideText)
-
-    userInput.focus()
-    let focusedInput: InputRenderable | null = userInput
-
-    // Handle key events
-    this.keyHandler = (key: KeyEvent) => {
-      // Skip shortcut keys when an input is focused (allow typing 'o')
-      const inputIsFocused = focusedInput !== null
-
-      if (key.name === "o" && !inputIsFocused) {
-        // Toggle override only when no input is focused
-        this.overrideExisting = !this.overrideExisting
-        overrideText.content = `[O] Override existing: ${this.overrideExisting ? "Yes" : "No"}`
-        overrideText.fg = this.overrideExisting ? "#50fa7b" : "#6272a4"
-      } else if (key.name === "tab") {
-        // Cycle focus: username -> password -> email -> no focus (shortcuts work) -> username
-        if (focusedInput === userInput) {
-          userInput.blur()
-          passInput.focus()
-          focusedInput = passInput
-        } else if (focusedInput === passInput) {
-          passInput.blur()
-          emailInput.focus()
-          focusedInput = emailInput
-        } else if (focusedInput === emailInput) {
-          emailInput.blur()
-          focusedInput = null // No focus state - shortcuts available
-        } else {
-          // No input focused, go back to username
-          userInput.focus()
-          focusedInput = userInput
-        }
-      } else if (key.name === "escape") {
-        // Skip credentials setup
-        this.cliRenderer.keyInput.off("keypress", this.keyHandler)
-        userInput.blur()
-        passInput.blur()
-        emailInput.blur()
-        focusedInput = null
+    const form = new CredentialsForm(
+      this.cliRenderer,
+      {
+        title: "Set a global username/password for all *arr applications:",
+        initialUsername: this.globalUsername,
+        initialPassword: this.globalPassword,
+        initialEmail: this.globalEmail,
+        showEmail: true,
+        showOverride: true,
+        initialOverride: this.overrideExisting,
+      },
+      (result: CredentialsFormResult) => {
+        this.globalUsername = result.username
+        this.globalPassword = result.password
+        this.globalEmail = result.email
+        this.overrideExisting = result.override
+        this.saveGlobalCredentialsToEnv()
         this.currentStep = "configure"
         this.runConfiguration()
-      } else if (key.name === "return") {
-        // Save and continue
-        this.globalUsername = userInput.value || "admin"
-        this.globalPassword = passInput.value
-        this.globalEmail = emailInput.value
-
-        this.cliRenderer.keyInput.off("keypress", this.keyHandler)
-        userInput.blur()
-        passInput.blur()
-        emailInput.blur()
-        focusedInput = null
-
-        // Save credentials to .env
-        this.saveGlobalCredentialsToEnv()
-
+      },
+      () => {
+        // Cancelled - skip credentials
         this.currentStep = "configure"
         this.runConfiguration()
       }
-    }
-    this.cliRenderer.keyInput.on("keypress", this.keyHandler)
+    )
+    content.add(form)
   }
 
   private async saveGlobalCredentialsToEnv() {
@@ -259,133 +165,76 @@ export class AppConfigurator extends BoxRenderable {
       const result = this.results[i]
       result.status = "configuring"
       this.updateDisplay()
-
-      try {
-        await this.configureApp(result.appId)
-        result.status = "success"
-        result.message = "Root folder configured"
-      } catch (e) {
-        result.status = "error"
-        result.message = e instanceof Error ? e.message : String(e)
-      }
-      this.updateDisplay()
+      await this.configureApp(result.appId)
     }
 
-    // Setup auth for *arr apps without root folders (e.g., Prowlarr)
-    if (this.globalPassword) {
-      const arrAppsNeedingAuth = ["prowlarr"]
-      for (const appId of arrAppsNeedingAuth) {
-        const appConfig = this.config.apps.find((a) => a.id === appId && a.enabled)
-        if (!appConfig) continue
-
-        const apiKey = this.extractApiKey(appId as AppId)
-        if (!apiKey) continue
-
-        const appDef = getApp(appId as AppId)
-        const port = appConfig.port || appDef?.defaultPort || 9696
-        // Prowlarr uses v1 API, not v3
-        const client = new ArrApiClient("localhost", port, apiKey, "v1")
-
-        try {
-          await client.updateHostConfig(
-            this.globalUsername,
-            this.globalPassword,
-            this.overrideExisting
-          )
-        } catch {
-          // Auth setup for these apps is best-effort
-        }
-      }
-    }
-
-    // After root folders, prompt for download clients if needed
-    if (this.hasQBittorrent || this.hasSABnzbd) {
-      if (this.hasQBittorrent) {
-        this.currentStep = "qbittorrent"
-        this.renderQBittorrentPrompt()
-      } else if (this.hasSABnzbd) {
-        this.currentStep = "sabnzbd"
-        this.renderSABnzbdPrompt()
-      }
+    // After all apps configured, handle download clients
+    if (this.hasQBittorrent) {
+      this.currentStep = "qbittorrent"
+      this.renderQBittorrentPrompt()
+    } else if (this.hasSABnzbd) {
+      this.currentStep = "sabnzbd"
+      this.renderSABnzbdPrompt()
     } else {
       this.currentStep = "done"
       this.renderDone()
     }
   }
 
-  private async configureApp(appId: AppId): Promise<void> {
+  private async configureApp(appId: AppId) {
+    const result = this.results.find((r) => r.appId === appId)
+    if (!result) return
+
     const appDef = getApp(appId)
-    if (!appDef?.rootFolder || !appDef.apiKeyMeta) {
-      throw new Error("Missing configuration")
+    if (!appDef) {
+      result.status = "error"
+      result.message = "Unknown app"
+      return
     }
 
-    // Get API key from config file
+    // Get API key from env
     const apiKey = this.extractApiKey(appId)
     if (!apiKey) {
-      throw new Error("API key not found - start container first")
+      result.status = "skipped"
+      result.message = "No API key"
+      return
     }
 
-    // Wait for app to be healthy
-    const port = this.config.apps.find((a) => a.id === appId)?.port || appDef.defaultPort
-    const client = new ArrApiClient("localhost", port, apiKey, appDef.rootFolder.apiVersion)
+    try {
+      const appConfig = this.config.apps.find((a) => a.id === appId)
+      const port = appConfig?.port ?? appDef.defaultPort
+      const client = new ArrApiClient(appId, port, apiKey)
 
-    // Retry health check a few times
-    let healthy = false
-    for (let i = 0; i < 3; i++) {
-      healthy = await client.isHealthy()
-      if (healthy) break
-      await new Promise((r) => setTimeout(r, 1000))
-    }
+      // Check current root folder
+      const rootFolders = await client.getRootFolders()
+      const targetPath = appDef.rootFolder?.path
 
-    if (!healthy) {
-      throw new Error("App not responding - start containers first")
-    }
-
-    // Check if root folder already exists
-    const existingFolders = await client.getRootFolders()
-    const alreadyExists = existingFolders.some((f) => f.path === appDef.rootFolder!.path)
-
-    if (alreadyExists) {
-      throw new Error("Already configured")
-    }
-
-    // Add root folder - Lidarr requires profile IDs and name
-    if (appId === "lidarr") {
-      const metadataProfiles = await client.getMetadataProfiles()
-      const qualityProfiles = await client.getQualityProfiles()
-      await client.addRootFolder({
-        path: appDef.rootFolder.path,
-        name: "Music", // Required by Lidarr
-        defaultMetadataProfileId: metadataProfiles[0]?.id || 1,
-        defaultQualityProfileId: qualityProfiles[0]?.id || 1,
-      })
-    } else {
-      await client.addRootFolder(appDef.rootFolder.path)
-    }
-
-    // Set up authentication if credentials provided
-    if (this.globalPassword) {
-      try {
-        await client.updateHostConfig(
-          this.globalUsername,
-          this.globalPassword,
-          this.overrideExisting
-        )
-      } catch {
-        // Ignore auth setup errors - not critical
+      // Check if already configured properly
+      const hasCorrectRoot = rootFolders.some((rf) => rf.path === targetPath)
+      if (hasCorrectRoot && !this.overrideExisting) {
+        result.status = "success"
+        result.message = "Already configured"
+        return
       }
+
+      // Add root folder if missing
+      if (!hasCorrectRoot && targetPath) {
+        await client.addRootFolder(targetPath)
+      }
+
+      result.status = "success"
+      result.message = "Root folder set"
+    } catch (error) {
+      result.status = "error"
+      result.message = String(error).substring(0, 50)
     }
   }
 
   private extractApiKey(appId: AppId): string | null {
-    // Use API keys from .env file (format: API_KEY_APPNAME)
     const envKey = `API_KEY_${appId.toUpperCase()}`
     return readEnvSync()[envKey] ?? null
   }
 
-  /**
-   * Get qBittorrent categories based on enabled *arr apps
-   */
   private getEnabledCategories(): { name: string; savePath: string }[] {
     const enabledAppIds = this.config.apps.filter((a) => a.enabled).map((a) => a.id)
     return getCategoriesForApps(enabledAppIds)
@@ -407,7 +256,7 @@ export class AppConfigurator extends BoxRenderable {
   }
 
   private updateDisplay() {
-    // Clear content and rebuild - remove all children from contentBox
+    // Clear content and rebuild
     const contentChildren = [...this.contentBox.getChildren()]
     for (const child of contentChildren) {
       if (child.id) {
@@ -429,31 +278,32 @@ export class AppConfigurator extends BoxRenderable {
 
     // Results
     for (const result of this.results) {
-      const icon =
-        result.status === "pending"
-          ? "⏳"
-          : result.status === "configuring"
-            ? "🔄"
-            : result.status === "success"
-              ? "✓"
-              : result.status === "skipped"
-                ? "⏭"
-                : "✗"
+      let icon = "○"
+      let color = "#6272a4"
 
-      const color =
-        result.status === "success"
-          ? "#50fa7b"
-          : result.status === "error"
-            ? "#ff5555"
-            : result.status === "skipped"
-              ? "#6272a4"
-              : "#f1fa8c"
+      switch (result.status) {
+        case "configuring":
+          icon = "◉"
+          color = "#f1fa8c"
+          break
+        case "success":
+          icon = "✓"
+          color = "#50fa7b"
+          break
+        case "error":
+          icon = "✗"
+          color = "#ff5555"
+          break
+        case "skipped":
+          icon = "⏭"
+          color = "#6272a4"
+          break
+      }
 
       const message = result.message ? ` - ${result.message}` : ""
-
       this.contentBox.add(
         new TextRenderable(this.cliRenderer, {
-          content: `${icon} ${result.appName.padEnd(15)} ${message}`,
+          content: `${icon} ${result.appName}${message}`,
           fg: color,
         })
       )
@@ -474,39 +324,15 @@ export class AppConfigurator extends BoxRenderable {
     this.pageContainer = container
     this.add(container)
 
-    content.add(
-      new TextRenderable(this.cliRenderer, {
-        content: "Enter qBittorrent credentials (from Settings → WebUI):\n",
-        fg: "#4a9eff",
-      })
-    )
-
-    // Password input - pre-fill with saved value
-    content.add(new TextRenderable(this.cliRenderer, { content: "Password:", fg: "#aaaaaa" }))
-    const passInput = new InputRenderable(this.cliRenderer, {
-      id: "qb-pass-input",
-      width: 30,
-      placeholder: "WebUI Password",
-      value: this.qbPass,
-      focusedBackgroundColor: "#1a1a1a",
-    })
-    content.add(passInput)
-
-    passInput.focus()
-
-    // Handle Enter via SUBMIT event
-    passInput.on(InputRenderableEvents.ENTER, () => {
-      this.qbPass = passInput.value
-      if (this.keyHandler) this.cliRenderer.keyInput.off("keypress", this.keyHandler)
-      passInput.blur()
-      this.addDownloadClients("qbittorrent")
-    })
-
-    // Handle Escape via keypress
-    this.keyHandler = (key: KeyEvent) => {
-      if (key.name === "escape") {
-        this.cliRenderer.keyInput.off("keypress", this.keyHandler)
-        passInput.blur()
+    const form = new DownloadClientForm(
+      this.cliRenderer,
+      { type: "qbittorrent", initialValue: this.qbPass },
+      (result: DownloadClientFormResult) => {
+        this.qbPass = result.value
+        this.addDownloadClients("qbittorrent")
+      },
+      () => {
+        // Cancelled
         if (this.hasSABnzbd) {
           this.currentStep = "sabnzbd"
           this.renderSABnzbdPrompt()
@@ -515,8 +341,8 @@ export class AppConfigurator extends BoxRenderable {
           this.renderDone()
         }
       }
-    }
-    this.cliRenderer.keyInput.on("keypress", this.keyHandler)
+    )
+    content.add(form)
   }
 
   private renderSABnzbdPrompt() {
@@ -533,44 +359,20 @@ export class AppConfigurator extends BoxRenderable {
     this.pageContainer = container
     this.add(container)
 
-    content.add(
-      new TextRenderable(this.cliRenderer, {
-        content: "Enter SABnzbd API Key (from Config → General → API Key):\n",
-        fg: "#4a9eff",
-      })
-    )
-
-    // API key input - pre-fill with saved value
-    content.add(new TextRenderable(this.cliRenderer, { content: "API Key:", fg: "#aaaaaa" }))
-    const keyInput = new InputRenderable(this.cliRenderer, {
-      id: "sab-key-input",
-      width: 40,
-      placeholder: "SABnzbd API Key",
-      value: this.sabApiKey,
-      focusedBackgroundColor: "#1a1a1a",
-    })
-    content.add(keyInput)
-
-    keyInput.focus()
-
-    // Handle Enter via SUBMIT event
-    keyInput.on(InputRenderableEvents.ENTER, () => {
-      this.sabApiKey = keyInput.value
-      if (this.keyHandler) this.cliRenderer.keyInput.off("keypress", this.keyHandler)
-      keyInput.blur()
-      this.addDownloadClients("sabnzbd")
-    })
-
-    // Handle Escape via keypress
-    this.keyHandler = (key: KeyEvent) => {
-      if (key.name === "escape") {
-        this.cliRenderer.keyInput.off("keypress", this.keyHandler)
-        keyInput.blur()
+    const form = new DownloadClientForm(
+      this.cliRenderer,
+      { type: "sabnzbd", initialValue: this.sabApiKey },
+      (result: DownloadClientFormResult) => {
+        this.sabApiKey = result.value
+        this.addDownloadClients("sabnzbd")
+      },
+      () => {
+        // Cancelled
         this.currentStep = "done"
         this.renderDone()
       }
-    }
-    this.cliRenderer.keyInput.on("keypress", this.keyHandler)
+    )
+    content.add(form)
   }
 
   private async addDownloadClients(type: "qbittorrent" | "sabnzbd") {
@@ -578,68 +380,52 @@ export class AppConfigurator extends BoxRenderable {
     if (type === "qbittorrent") {
       try {
         const qbClient = new QBittorrentClient(this.qbHost, this.qbPort, this.qbUser, this.qbPass)
-        const loggedIn = await qbClient.login()
-        if (loggedIn) {
-          // Generate categories from enabled *arr apps that use download clients
-          const categories = this.getEnabledCategories()
-          // Configure TRaSH-compliant settings: save_path, auto_tmm, categories
-          await qbClient.configureTRaSHCompliant(categories)
+        await qbClient.login()
+
+        // Create categories for enabled *arr apps
+        const categories = this.getEnabledCategories()
+        for (const cat of categories) {
+          await qbClient.createCategory(cat.name, cat.savePath)
         }
       } catch {
-        // Ignore qBittorrent config errors - may not be ready or have different auth
-      }
-    }
-
-    // Add download client to all *arr apps
-    const servarrApps = this.config.apps.filter((a) => {
-      const def = getApp(a.id)
-      return a.enabled && def?.rootFolder
-    })
-
-    for (const appConfig of servarrApps) {
-      const appDef = getApp(appConfig.id)
-      if (!appDef?.rootFolder || !appDef.apiKeyMeta) continue
-
-      const apiKey = this.extractApiKey(appConfig.id)
-      if (!apiKey) continue
-
-      const port = appConfig.port || appDef.defaultPort
-      const client = new ArrApiClient("localhost", port, apiKey, appDef.rootFolder.apiVersion)
-
-      try {
-        // Check if download client already exists
-        const existingClients = await client.getDownloadClients()
-        const clientName = type === "qbittorrent" ? "qBittorrent" : "SABnzbd"
-        const alreadyExists = existingClients.some((c) => c.name === clientName)
-
-        // Skip adding if already exists, but qBittorrent config was already done above
-        if (alreadyExists) continue
-
-        if (type === "qbittorrent") {
-          const config = createQBittorrentConfig(
-            this.qbHost,
-            this.qbPort,
-            this.qbUser,
-            this.qbPass,
-            appConfig.id
-          )
-          await client.addDownloadClient(config)
-        } else {
-          const config = createSABnzbdConfig(
-            this.sabHost,
-            this.sabPort,
-            this.sabApiKey,
-            appConfig.id
-          )
-          await client.addDownloadClient(config)
-        }
-      } catch {
-        // Ignore errors - client may already exist
+        // QB may not be ready or credentials wrong - continue anyway
       }
     }
 
     // Save credentials to .env
     await this.saveCredentialsToEnv(type)
+
+    // Add download clients to *arr apps
+    for (const result of this.results) {
+      if (result.status !== "success") continue
+
+      const apiKey = this.extractApiKey(result.appId)
+      if (!apiKey) continue
+
+      const appDef = getApp(result.appId)
+      const appConfig = this.config.apps.find((a) => a.id === result.appId)
+      const port = appConfig?.port ?? appDef?.defaultPort ?? 8989
+
+      try {
+        const client = new ArrApiClient(result.appId, port, apiKey)
+
+        if (type === "qbittorrent") {
+          const qbConfig = createQBittorrentConfig(
+            this.qbHost,
+            this.qbPort,
+            this.qbUser,
+            this.qbPass,
+            result.appId
+          )
+          await client.addDownloadClient(qbConfig)
+        } else {
+          const sabConfig = createSABnzbdConfig(this.sabHost, this.sabPort, this.sabApiKey)
+          await client.addDownloadClient(sabConfig)
+        }
+      } catch {
+        // Continue - download client may fail but app is still configured
+      }
+    }
 
     // Move to next step
     if (type === "qbittorrent" && this.hasSABnzbd) {
@@ -701,7 +487,7 @@ export class AppConfigurator extends BoxRenderable {
       )
     }
 
-    content.add(new BoxRenderable(this.cliRenderer, { width: 1, height: 1 })) // Spacer
+    content.add(new BoxRenderable(this.cliRenderer, { width: 1, height: 1 }))
 
     // Show results summary
     for (const result of this.results) {
@@ -730,7 +516,6 @@ export class AppConfigurator extends BoxRenderable {
   }
 
   private clear() {
-    // Remove all children
     const children = [...this.getChildren()]
     for (const child of children) {
       if (child.id) {
