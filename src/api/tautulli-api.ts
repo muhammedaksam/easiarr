@@ -6,6 +6,7 @@
 
 import type { AutoSetupOptions, AutoSetupResult, IAutoSetupClient } from "./auto-setup-types"
 import { debugLog } from "~/utils/debug"
+import { BaseApiClient } from "./base-api"
 
 interface TautulliServerInfo {
   pms_identifier?: string
@@ -29,22 +30,13 @@ interface TautulliApiResponse<T = unknown> {
   }
 }
 
-export class TautulliClient implements IAutoSetupClient {
-  private host: string
-  private port: number
+export class TautulliClient extends BaseApiClient implements IAutoSetupClient {
+  protected readonly logPrefix = "TautulliApi"
   private apiKey?: string
 
   constructor(host: string, port: number = 8181, apiKey?: string) {
-    this.host = host
-    this.port = port
+    super(host, port)
     this.apiKey = apiKey
-  }
-
-  /**
-   * Get base URL for Tautulli
-   */
-  private get baseUrl(): string {
-    return `http://${this.host}:${this.port}`
   }
 
   /**
@@ -74,14 +66,9 @@ export class TautulliClient implements IAutoSetupClient {
    */
   async isHealthy(): Promise<boolean> {
     try {
-      // Tautulli returns 200 OK even without API key for basic requests
-      const response = await fetch(`${this.baseUrl}/status`, {
-        method: "GET",
-      })
-      debugLog("TautulliApi", `Health check: ${response.status}`)
+      const response = await fetch(`${this.baseUrl}/status`, { method: "GET" })
       return response.ok
-    } catch (error) {
-      debugLog("TautulliApi", `Health check failed: ${error}`)
+    } catch {
       return false
     }
   }
@@ -91,10 +78,8 @@ export class TautulliClient implements IAutoSetupClient {
    */
   async isInitialized(): Promise<boolean> {
     if (!this.apiKey) return false
-
     try {
       const serverInfo = await this.getServerInfo()
-      // If we have PMS identifier, Plex is connected
       return !!serverInfo?.pms_identifier
     } catch {
       return false
@@ -103,7 +88,6 @@ export class TautulliClient implements IAutoSetupClient {
 
   /**
    * Get or create API key
-   * Works without authentication on first run!
    */
   async getApiKey(username?: string, password?: string): Promise<string | null> {
     debugLog("TautulliApi", "Getting/creating API key...")
@@ -125,9 +109,6 @@ export class TautulliClient implements IAutoSetupClient {
           return apiKey
         }
       }
-
-      const text = await response.text()
-      debugLog("TautulliApi", `Failed to get API key: ${response.status} - ${text}`)
     } catch (error) {
       debugLog("TautulliApi", `Error getting API key: ${error}`)
     }
@@ -141,9 +122,7 @@ export class TautulliClient implements IAutoSetupClient {
     if (!this.apiKey) return null
 
     try {
-      const response = await fetch(this.buildApiUrl("get_server_info"), {
-        method: "GET",
-      })
+      const response = await fetch(this.buildApiUrl("get_server_info"), { method: "GET" })
 
       if (response.ok) {
         const data = (await response.json()) as TautulliApiResponse<TautulliServerInfo>
@@ -164,9 +143,7 @@ export class TautulliClient implements IAutoSetupClient {
     if (!this.apiKey) return null
 
     try {
-      const response = await fetch(this.buildApiUrl("get_server_info"), {
-        method: "GET",
-      })
+      const response = await fetch(this.buildApiUrl("get_server_info"), { method: "GET" })
 
       if (response.ok) {
         const data = (await response.json()) as TautulliApiResponse<Record<string, unknown>>
@@ -187,9 +164,7 @@ export class TautulliClient implements IAutoSetupClient {
     if (!this.apiKey) return false
 
     try {
-      const response = await fetch(this.buildApiUrl("server_status"), {
-        method: "GET",
-      })
+      const response = await fetch(this.buildApiUrl("server_status"), { method: "GET" })
 
       if (response.ok) {
         const data = (await response.json()) as TautulliApiResponse<{ connected: boolean }>
@@ -202,15 +177,13 @@ export class TautulliClient implements IAutoSetupClient {
   }
 
   /**
-   * Get API key from settings (if accessible)
+   * Get settings
    */
   async getSettings(): Promise<Record<string, unknown> | null> {
     if (!this.apiKey) return null
 
     try {
-      const response = await fetch(this.buildApiUrl("get_settings"), {
-        method: "GET",
-      })
+      const response = await fetch(this.buildApiUrl("get_settings"), { method: "GET" })
 
       if (response.ok) {
         const data = (await response.json()) as TautulliApiResponse<Record<string, unknown>>
@@ -226,17 +199,14 @@ export class TautulliClient implements IAutoSetupClient {
 
   /**
    * Run the auto-setup process for Tautulli
-   * Gets API key automatically, but Plex connection requires manual wizard
    */
   async setup(options: AutoSetupOptions): Promise<AutoSetupResult> {
     try {
-      // Check if reachable
       const healthy = await this.isHealthy()
       if (!healthy) {
         return { success: false, message: "Tautulli not reachable" }
       }
 
-      // Step 1: Get or create API key (works without auth initially)
       debugLog("TautulliApi", "Step 1: Getting API key...")
       let apiKey: string | undefined = this.apiKey
       if (!apiKey) {
@@ -247,7 +217,6 @@ export class TautulliClient implements IAutoSetupClient {
         apiKey = newKey
       }
 
-      // Step 2: Check if Plex is already connected
       debugLog("TautulliApi", "Step 2: Checking Plex connection...")
       const serverInfo = await this.getServerInfo()
       const plexConnected = !!serverInfo?.pms_identifier
@@ -262,8 +231,6 @@ export class TautulliClient implements IAutoSetupClient {
         }
       }
 
-      // Plex not connected - requires manual wizard
-      // But we still got the API key which is useful
       return {
         success: true,
         message: "API key obtained. Complete Plex connection via web wizard.",

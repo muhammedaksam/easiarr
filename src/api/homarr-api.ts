@@ -8,6 +8,7 @@ import type { AutoSetupOptions, AutoSetupResult, IAutoSetupClient } from "./auto
 import type { AppConfig } from "~/config/schema"
 import { getApp } from "~/apps/registry"
 import { debugLog } from "~/utils/debug"
+import { BaseApiClient } from "./base-api"
 
 interface HomarrApp {
   id?: string
@@ -29,22 +30,13 @@ interface HomarrInfo {
   version: string
 }
 
-export class HomarrClient implements IAutoSetupClient {
-  private host: string
-  private port: number
+export class HomarrClient extends BaseApiClient implements IAutoSetupClient {
+  protected readonly logPrefix = "HomarrApi"
   private apiKey?: string
 
   constructor(host: string, port: number = 7575, apiKey?: string) {
-    this.host = host
-    this.port = port
+    super(host, port)
     this.apiKey = apiKey
-  }
-
-  /**
-   * Get base URL for Homarr
-   */
-  private get baseUrl(): string {
-    return `http://${this.host}:${this.port}`
   }
 
   /**
@@ -73,13 +65,9 @@ export class HomarrClient implements IAutoSetupClient {
    */
   async isHealthy(): Promise<boolean> {
     try {
-      const response = await fetch(this.baseUrl, {
-        method: "GET",
-      })
-      debugLog("HomarrApi", `Health check: ${response.status}`)
+      const response = await fetch(this.baseUrl, { method: "GET" })
       return response.ok
-    } catch (error) {
-      debugLog("HomarrApi", `Health check failed: ${error}`)
+    } catch {
       return false
     }
   }
@@ -88,7 +76,6 @@ export class HomarrClient implements IAutoSetupClient {
    * Check if already configured (has users)
    */
   async isInitialized(): Promise<boolean> {
-    // Homarr is always "initialized" after first access
     return true
   }
 
@@ -96,118 +83,52 @@ export class HomarrClient implements IAutoSetupClient {
    * Get Homarr version info
    */
   async getInfo(): Promise<HomarrInfo | null> {
-    try {
-      const response = await fetch(`${this.baseUrl}/api/info`, {
-        method: "GET",
-        headers: this.getHeaders(),
-      })
-
-      if (response.ok) {
-        return response.json()
-      }
-    } catch {
-      // API may not be available
-    }
-    return null
+    const response = await this.get<HomarrInfo>("/api/info", { headers: this.getHeaders() })
+    return response.data ?? null
   }
 
   /**
    * Get all users
    */
   async getUsers(): Promise<HomarrUser[]> {
-    try {
-      const response = await fetch(`${this.baseUrl}/api/users`, {
-        method: "GET",
-        headers: this.getHeaders(),
-      })
-
-      if (response.ok) {
-        return response.json()
-      }
-    } catch {
-      // API may require auth
-    }
-    return []
+    const response = await this.get<HomarrUser[]>("/api/users", { headers: this.getHeaders() })
+    return response.data ?? []
   }
 
   /**
    * Create a user
    */
   async createUser(username: string, password: string, email?: string): Promise<boolean> {
-    debugLog("HomarrApi", `Creating user: ${username}`)
-
-    try {
-      const response = await fetch(`${this.baseUrl}/api/users`, {
-        method: "POST",
-        headers: this.getHeaders(),
-        body: JSON.stringify({
-          username,
-          password,
-          confirmPassword: password,
-          email: email || "",
-          groupIds: [],
-        }),
-      })
-
-      if (response.ok) {
-        debugLog("HomarrApi", `User "${username}" created successfully`)
-        return true
-      }
-
-      const text = await response.text()
-      debugLog("HomarrApi", `Failed to create user: ${response.status} - ${text}`)
-      return false
-    } catch (error) {
-      debugLog("HomarrApi", `Failed to create user: ${error}`)
-      return false
-    }
+    const response = await this.post<unknown>(
+      "/api/users",
+      {
+        username,
+        password,
+        confirmPassword: password,
+        email: email || "",
+        groupIds: [],
+      },
+      { headers: this.getHeaders() }
+    )
+    return response.success
   }
 
   /**
    * Get all apps
    */
   async getApps(): Promise<HomarrApp[]> {
-    try {
-      const response = await fetch(`${this.baseUrl}/api/apps`, {
-        method: "GET",
-        headers: this.getHeaders(),
-      })
-
-      if (response.ok) {
-        return response.json()
-      }
-    } catch {
-      // API may require auth
-    }
-    return []
+    const response = await this.get<HomarrApp[]>("/api/apps", { headers: this.getHeaders() })
+    return response.data ?? []
   }
 
   /**
    * Create an app
    */
   async createApp(app: Omit<HomarrApp, "id" | "appId">): Promise<string | null> {
-    debugLog("HomarrApi", `Creating app: ${app.name}`)
-
-    try {
-      const response = await fetch(`${this.baseUrl}/api/apps`, {
-        method: "POST",
-        headers: this.getHeaders(),
-        body: JSON.stringify(app),
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        debugLog("HomarrApi", `App "${app.name}" created with ID ${data.appId}`)
-        return data.appId
-      }
-
-      const text = await response.text()
-      debugLog("HomarrApi", `Failed to create app: ${response.status} - ${text}`)
-      return null
-    } catch (error) {
-      debugLog("HomarrApi", `Failed to create app: ${error}`)
-      return null
-    }
+    const response = await this.post<{ appId: string }>("/api/apps", app, {
+      headers: this.getHeaders(),
+    })
+    return response.data?.appId ?? null
   }
 
   /**
@@ -215,10 +136,7 @@ export class HomarrClient implements IAutoSetupClient {
    */
   buildAppConfig(appConfig: AppConfig): Omit<HomarrApp, "id" | "appId"> | null {
     const appDef = getApp(appConfig.id)
-    if (!appDef) return null
-
-    // Skip apps without web UI
-    if (appDef.defaultPort === 0) return null
+    if (!appDef || appDef.defaultPort === 0) return null
 
     const port = appConfig.port || appDef.defaultPort
 
@@ -238,18 +156,15 @@ export class HomarrClient implements IAutoSetupClient {
     const { username, password } = options
 
     try {
-      // Check if reachable
       const healthy = await this.isHealthy()
       if (!healthy) {
         return { success: false, message: "Homarr not reachable" }
       }
 
-      // Check if users exist
       const users = await this.getUsers()
       let userCreated = false
 
       if (users.length === 0) {
-        // Try to create initial user
         userCreated = await this.createUser(username, password)
       }
 
@@ -269,7 +184,6 @@ export class HomarrClient implements IAutoSetupClient {
   async setupEasiarrApps(apps: AppConfig[]): Promise<number> {
     let addedCount = 0
 
-    // Get existing apps to avoid duplicates
     const existingApps = await this.getApps()
     const existingNames = new Set(existingApps.map((a) => a.name))
 
@@ -279,7 +193,6 @@ export class HomarrClient implements IAutoSetupClient {
       const homarrApp = this.buildAppConfig(appConfig)
       if (!homarrApp) continue
 
-      // Skip if already exists
       if (existingNames.has(homarrApp.name)) {
         debugLog("HomarrApi", `App "${homarrApp.name}" already exists, skipping`)
         continue
