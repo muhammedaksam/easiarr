@@ -1,6 +1,6 @@
 /**
  * Configuration Manager
- * Handles reading and writing config to ~/.easiarr/
+ * Handles reading and writing config to $XDG_CONFIG_HOME/easiarr/
  */
 
 import { existsSync } from "node:fs"

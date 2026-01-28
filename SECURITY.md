@@ -32,7 +32,7 @@ If you discover a security vulnerability in easiarr, please report it responsibl
 easiarr stores sensitive information in `.env` files. Always:
 
 - Never commit `.env` files to version control
-- Set restrictive file permissions: `chmod 600 ~/.easiarr/.env`
+- Set restrictive file permissions: `chmod 600 $XDG_CONFIG_HOME/easiarr/.env`
 - Use strong, unique passwords for each service
 - Regularly rotate API keys and credentials
 
