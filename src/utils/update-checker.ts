@@ -3,13 +3,13 @@
  * Check GitHub releases for new easiarr versions
  */
 
-import { VersionInfo } from "../VersionInfo"
 import { existsSync, readFileSync, writeFileSync } from "node:fs"
-import { join } from "node:path"
-import { homedir } from "node:os"
+
+import { getConfigPath } from "~/utils/paths"
+import { VersionInfo } from "~/VersionInfo"
 
 const GITHUB_REPO = "muhammedaksam/easiarr"
-const CACHE_FILE = join(homedir(), ".easiarr", ".update-cache.json")
+const CACHE_FILE = getConfigPath(".update-cache.json")
 const CACHE_DURATION_MS = 24 * 60 * 60 * 1000 // 24 hours
 
 export interface UpdateInfo {

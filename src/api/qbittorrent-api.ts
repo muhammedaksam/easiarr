@@ -4,8 +4,9 @@
  * API docs: https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-4.1)
  */
 
-import { debugLog } from "../utils/debug"
-import type { IAutoSetupClient, AutoSetupOptions, AutoSetupResult } from "./auto-setup-types"
+import type { AutoSetupOptions, AutoSetupResult, IAutoSetupClient } from "./auto-setup-types"
+import { debugLog } from "~/utils/debug"
+import { BaseApiClient } from "./base-api"
 
 export interface QBittorrentPreferences {
   save_path?: string
@@ -16,13 +17,12 @@ export interface QBittorrentPreferences {
   save_path_changed_tmm_enabled?: boolean
   max_ratio?: number
   max_ratio_enabled?: boolean
-  max_ratio_act?: number // 0 = Pause, 1 = Remove
+  max_ratio_act?: number
   max_seeding_time?: number
   max_seeding_time_enabled?: boolean
   queueing_enabled?: boolean
   web_ui_username?: string
   web_ui_password?: string
-  // Connection & Speed
   listen_port?: number
   upnp?: boolean
   natpmp?: boolean
@@ -31,11 +31,10 @@ export interface QBittorrentPreferences {
   limit_utp_rate?: boolean
   limit_tcp_overhead?: boolean
   limit_lan_peers?: boolean
-  // Bittorrent
   enable_dht?: boolean
   enable_pex?: boolean
   enable_lsd?: boolean
-  encryption_mode?: number // 0=Prefer, 1=Force, 2=Allow (check API docs for exact enum, typically 1=Force or Allow)
+  encryption_mode?: number
   anonymous_mode?: boolean
   add_trackers_enabled?: boolean
   pre_allocate_all?: boolean
@@ -48,21 +47,20 @@ export interface QBittorrentCategory {
   savePath: string
 }
 
-export class QBittorrentClient implements IAutoSetupClient {
-  private baseUrl: string
+export class QBittorrentClient extends BaseApiClient implements IAutoSetupClient {
+  protected readonly logPrefix = "qBittorrent"
   private username: string
   private password: string
   private cookie: string | null = null
 
   constructor(host: string, port: number, username: string, password: string) {
-    this.baseUrl = `http://${host}:${port}`
+    super(host, port)
     this.username = username
     this.password = password
   }
 
   /**
    * Authenticate with qBittorrent WebUI
-   * POST /api/v2/auth/login
    */
   async login(): Promise<boolean> {
     try {
@@ -74,34 +72,27 @@ export class QBittorrentClient implements IAutoSetupClient {
       })
 
       if (!response.ok) {
-        debugLog("qBittorrent", `Login failed: ${response.status}`)
         return false
       }
 
-      // Extract SID cookie from response
       const setCookie = response.headers.get("set-cookie")
       if (setCookie) {
         const match = setCookie.match(/SID=([^;]+)/)
         if (match) {
           this.cookie = `SID=${match[1]}`
-          debugLog("qBittorrent", "Login successful (cookie)")
           return true
         }
       }
 
-      // Check response text for "Ok."
       const text = await response.text()
-      const success = text === "Ok."
-      debugLog("qBittorrent", `Login response: ${text}, success: ${success}`)
-      return success
-    } catch (e) {
-      debugLog("qBittorrent", `Login error: ${e}`)
+      return text === "Ok."
+    } catch {
       return false
     }
   }
 
   /**
-   * Check if connected to qBittorrent
+   * Check if connected
    */
   async isConnected(): Promise<boolean> {
     try {
@@ -116,7 +107,6 @@ export class QBittorrentClient implements IAutoSetupClient {
 
   /**
    * Get current preferences
-   * GET /api/v2/app/preferences
    */
   async getPreferences(): Promise<QBittorrentPreferences> {
     const response = await fetch(`${this.baseUrl}/api/v2/app/preferences`, {
@@ -132,7 +122,6 @@ export class QBittorrentClient implements IAutoSetupClient {
 
   /**
    * Set preferences
-   * POST /api/v2/app/setPreferences
    */
   async setPreferences(prefs: QBittorrentPreferences): Promise<void> {
     const response = await fetch(`${this.baseUrl}/api/v2/app/setPreferences`, {
@@ -151,7 +140,6 @@ export class QBittorrentClient implements IAutoSetupClient {
 
   /**
    * Get all categories
-   * GET /api/v2/torrents/categories
    */
   async getCategories(): Promise<Record<string, { name: string; savePath: string }>> {
     const response = await fetch(`${this.baseUrl}/api/v2/torrents/categories`, {
@@ -167,7 +155,6 @@ export class QBittorrentClient implements IAutoSetupClient {
 
   /**
    * Create a category
-   * POST /api/v2/torrents/createCategory
    */
   async createCategory(name: string, savePath: string): Promise<void> {
     const response = await fetch(`${this.baseUrl}/api/v2/torrents/createCategory`, {
@@ -179,7 +166,6 @@ export class QBittorrentClient implements IAutoSetupClient {
       body: `category=${encodeURIComponent(name)}&savePath=${encodeURIComponent(savePath)}`,
     })
 
-    // 409 means category already exists - that's OK
     if (!response.ok && response.status !== 409) {
       throw new Error(`Failed to create category: ${response.status}`)
     }
@@ -187,7 +173,6 @@ export class QBittorrentClient implements IAutoSetupClient {
 
   /**
    * Edit a category's save path
-   * POST /api/v2/torrents/editCategory
    */
   async editCategory(name: string, savePath: string): Promise<void> {
     const response = await fetch(`${this.baseUrl}/api/v2/torrents/editCategory`, {
@@ -206,9 +191,6 @@ export class QBittorrentClient implements IAutoSetupClient {
 
   /**
    * Configure qBittorrent for TRaSH Guide compliance
-   * Sets proper save paths and creates categories based on enabled *arr apps
-   * @param categories - Array of {name, savePath} for each enabled *arr app
-   * @param auth - Optional credentials to enforce (update username/password)
    */
   async configureTRaSHCompliant(
     categories: QBittorrentCategory[] = [],
@@ -216,70 +198,53 @@ export class QBittorrentClient implements IAutoSetupClient {
   ): Promise<void> {
     debugLog("qBittorrent", "Configuring TRaSH-compliant settings")
 
-    // 1. Set global preferences
-    debugLog("qBittorrent", "Setting save_path to /data/torrents")
     const prefs: Record<string, unknown> = {
       save_path: "/data/torrents",
       temp_path_enabled: false,
       auto_tmm_enabled: true,
       category_changed_tmm_enabled: true,
       save_path_changed_tmm_enabled: true,
-
-      // Downloads
-      pre_allocate_all: false, // Recommended disabled for unRaid/cache drives, safe default
-      incomplete_files_ext: true, // Recommended: Enabled
-      create_subfolder_enabled: true, // Recommended: Enabled
-
-      // Connection
-      upnp: false, // Recommended: Disabled (use manual port forward)
-      natpmp: false, // Recommended: Disabled
-
-      // Speed
-      dl_limit: -1, // Unlimited
-      up_limit: -1, // Unlimited (User should tune if needed)
-      limit_utp_rate: true, // Recommended: Enabled
-      limit_tcp_overhead: false, // Recommended: Disabled
-      limit_lan_peers: true, // Recommended: Enabled
-
-      // Bittorrent
-      enable_dht: true, // Implied enabled
-      enable_pex: true, // Implied enabled
-      enable_lsd: true, // Implied enabled
-      encryption_mode: 0, // 0 = Prefer Encryption (closest to "Allow encryption" usually, need to verify enum. 1=Force, 2=None usually. Let's assume 0 is safe/default or check docs if possible. TRaSH says "Allow encryption")
-      anonymous_mode: false, // Recommended: Disabled
-      add_trackers_enabled: false, // Recommended: Disabled for private trackers
-      queueing_enabled: true, // Recommended: Personal preference, enabled by default
-
-      // Seeding Limits (TRaSH Recommended: Disable globally)
-      max_ratio: -1, // -1 = Unlimited
+      pre_allocate_all: false,
+      incomplete_files_ext: true,
+      create_subfolder_enabled: true,
+      upnp: false,
+      natpmp: false,
+      dl_limit: -1,
+      up_limit: -1,
+      limit_utp_rate: true,
+      limit_tcp_overhead: false,
+      limit_lan_peers: true,
+      enable_dht: true,
+      enable_pex: true,
+      enable_lsd: true,
+      encryption_mode: 0,
+      anonymous_mode: false,
+      add_trackers_enabled: false,
+      queueing_enabled: true,
+      max_ratio: -1,
       max_ratio_enabled: false,
       max_seeding_time_enabled: false,
-      max_ratio_act: 0, // 0 = Pause (Safe fallback)
+      max_ratio_act: 0,
     }
 
     if (auth) {
-      debugLog("qBittorrent", "Setting WebUI username/password")
       prefs.web_ui_username = auth.user
       prefs.web_ui_password = auth.pass
     }
 
     await this.setPreferences(prefs)
 
-    // 2. Create categories for each enabled media type
     for (const cat of categories) {
-      debugLog("qBittorrent", `Creating category: ${cat.name} -> ${cat.savePath}`)
       try {
         await this.createCategory(cat.name, cat.savePath)
       } catch {
-        // Try to update existing category
         try {
           await this.editCategory(cat.name, cat.savePath)
         } catch {
-          // Ignore - category might not exist or be locked
+          // Ignore
         }
       }
     }
-    debugLog("qBittorrent", "TRaSH configuration complete")
   }
 
   /**
@@ -288,34 +253,31 @@ export class QBittorrentClient implements IAutoSetupClient {
   async isHealthy(): Promise<boolean> {
     try {
       const response = await fetch(`${this.baseUrl}/api/v2/app/version`)
-      return response.ok || response.status === 403 // 403 means running but not logged in
+      return response.ok || response.status === 403
     } catch {
       return false
     }
   }
 
   /**
-   * Check if already configured (can login)
+   * Check if already configured
    */
   async isInitialized(): Promise<boolean> {
-    // qBittorrent is always "initialized" - the question is whether we can login
     return this.isConnected()
   }
 
   /**
-   * Run the auto-setup process for qBittorrent
+   * Run the auto-setup process
    */
   async setup(options: AutoSetupOptions): Promise<AutoSetupResult> {
     const { username, password } = options
 
     try {
-      // Check if reachable
       const healthy = await this.isHealthy()
       if (!healthy) {
         return { success: false, message: "qBittorrent not reachable" }
       }
 
-      // Update credentials and try to login
       this.username = username
       this.password = password
 
@@ -324,7 +286,6 @@ export class QBittorrentClient implements IAutoSetupClient {
         return { success: false, message: "Login failed - check credentials" }
       }
 
-      // Configure TRaSH-compliant settings
       await this.configureTRaSHCompliant([], { user: username, pass: password })
 
       return {

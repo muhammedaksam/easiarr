@@ -3,15 +3,16 @@
  * Generates services.yaml and other config files for Homepage dashboard
  */
 
-import { writeFile, mkdir } from "node:fs/promises"
 import { existsSync } from "node:fs"
+import { mkdir, writeFile } from "node:fs/promises"
 import { join } from "node:path"
-import type { EasiarrConfig, AppCategory } from "./schema"
+
+import type { AppCategory, EasiarrConfig } from "./schema"
+import { PortainerApiClient } from "~/api/portainer-api"
+import { CATEGORY_ORDER } from "~/apps/categories"
+import { getApp } from "~/apps/registry"
+import { getLocalIp, readEnvSync, updateEnv } from "~/utils/env"
 import { APP_CATEGORIES } from "./schema"
-import { getApp } from "../apps/registry"
-import { CATEGORY_ORDER } from "../apps/categories"
-import { readEnvSync, getLocalIp, updateEnv } from "../utils/env"
-import { PortainerApiClient } from "../api/portainer-api"
 
 /**
  * Get the Homepage config directory path
@@ -128,7 +129,9 @@ export async function generateServicesYaml(config: EasiarrConfig): Promise<strin
       // Most widgets need API key - only add if available
       else if (
         apiKey ||
-        ["qbittorrent", "gluetun", "traefik", "huntarr", "easiarr", "flaresolverr"].includes(appDef.id)
+        ["qbittorrent", "gluetun", "traefik", "huntarr", "easiarr", "flaresolverr"].includes(
+          appDef.id
+        )
       ) {
         service.widget = {
           type: widgetType,
@@ -353,7 +356,9 @@ layout:
 /**
  * Save Homepage configuration files
  */
-export async function saveHomepageConfig(config: EasiarrConfig): Promise<{ services: string; settings: string }> {
+export async function saveHomepageConfig(
+  config: EasiarrConfig
+): Promise<{ services: string; settings: string }> {
   const configPath = getHomepageConfigPath(config)
 
   // Ensure directory exists

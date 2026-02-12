@@ -4,32 +4,34 @@
  * Supports individual and bulk container operations
  */
 
-import type { RenderContext, CliRenderer, KeyEvent } from "@opentui/core"
+import type { CliRenderer, KeyEvent, RenderContext } from "@opentui/core"
+
 import {
   BoxRenderable,
-  TextRenderable,
   SelectRenderable,
   SelectRenderableEvents,
   TabSelectRenderable,
   TabSelectRenderableEvents,
+  TextRenderable,
 } from "@opentui/core"
-import type { App } from "../App"
-import type { EasiarrConfig } from "../../config/schema"
+
+import type { EasiarrConfig } from "~/config/schema"
+import type { ContainerStatus } from "~/docker"
+import type { App } from "~/ui"
 import {
-  composeUp,
   composeDown,
-  composeStop,
   composeRestart,
+  composeStop,
+  composeUp,
+  getContainerLogs,
   getContainerStatuses,
   pullImages,
+  recreateService,
+  restartContainer as restartSingleContainer,
   startContainer,
   stopContainer,
-  restartContainer as restartSingleContainer,
-  getContainerLogs,
-  recreateService,
-  type ContainerStatus,
-} from "../../docker"
-import { createPageLayout } from "../components/PageLayout"
+} from "~/docker"
+import { createPageLayout } from "~/ui/components/PageLayout"
 
 type Mode = "containers" | "bulk"
 

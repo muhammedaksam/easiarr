@@ -1,14 +1,15 @@
 /**
  * Log File Management Utilities
- * Handles saving and managing container logs to ~/.easiarr/logs/
+ * Handles saving and managing container logs to XDG config dir
  */
 
-import { mkdir, writeFile, readdir, stat } from "node:fs/promises"
+import { mkdir, readdir, stat, writeFile } from "node:fs/promises"
 import { join } from "node:path"
-import { homedir } from "node:os"
-import { debugLog } from "./debug"
 
-const LOGS_DIR = join(homedir(), ".easiarr", "logs")
+import { debugLog } from "./debug"
+import { getConfigPath } from "./paths"
+
+const LOGS_DIR = getConfigPath("logs")
 
 /**
  * Get the logs directory path for a specific app

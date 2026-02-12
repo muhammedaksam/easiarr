@@ -93,7 +93,9 @@ export class CustomFormatClient {
   }
 
   // Import multiple CFs
-  async importCustomFormats(cfs: Omit<CustomFormat, "id">[]): Promise<{ success: number; failed: number }> {
+  async importCustomFormats(
+    cfs: Omit<CustomFormat, "id">[]
+  ): Promise<{ success: number; failed: number }> {
     let success = 0
     let failed = 0
 
@@ -110,7 +112,10 @@ export class CustomFormatClient {
   }
 
   // Fetch CF from TRaSH GitHub
-  static async fetchTRaSHCustomFormat(app: "radarr" | "sonarr", cfName: string): Promise<CustomFormat | null> {
+  static async fetchTRaSHCustomFormat(
+    app: "radarr" | "sonarr",
+    cfName: string
+  ): Promise<CustomFormat | null> {
     try {
       const url = `${TRASH_CF_BASE_URL}/${app}/cf/${cfName}.json`
       const response = await fetch(url)
@@ -175,7 +180,14 @@ export const TRASH_CF_NAMES = {
       "dd",
     ],
     streaming: ["amzn", "atvp", "dsnp", "hbo", "hmax", "hulu", "ma", "nf", "pcok", "pmtp"],
-    movieVersions: ["imax-enhanced", "imax", "hybrid", "criterion-collection", "special-edition", "theatrical-cut"],
+    movieVersions: [
+      "imax-enhanced",
+      "imax",
+      "hybrid",
+      "criterion-collection",
+      "special-edition",
+      "theatrical-cut",
+    ],
     misc: ["repack-proper", "repack2", "multi", "hq-remux", "hq-webdl", "hq"],
   },
   sonarr: {

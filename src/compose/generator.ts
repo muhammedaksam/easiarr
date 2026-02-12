@@ -4,14 +4,15 @@
  */
 
 import { writeFile } from "node:fs/promises"
-import type { EasiarrConfig, AppConfig, TraefikConfig, AppId } from "../config/schema"
-import { getComposePath } from "../config/manager"
-import { getApp } from "../apps/registry"
-import { generateServiceYaml } from "./templates"
-import { updateEnv, getLocalIp } from "../utils/env"
-import { saveTraefikConfig } from "./traefik-config"
+
+import type { AppConfig, AppId, EasiarrConfig, TraefikConfig } from "~/config/schema"
+import { getApp } from "~/apps/registry"
+import { getComposePath } from "~/config/manager"
+import { debugLog } from "~/utils/debug"
+import { getLocalIp, updateEnv } from "~/utils/env"
 import { saveCaddyConfig } from "./caddy-config"
-import { debugLog } from "../utils/debug"
+import { generateServiceYaml } from "./templates"
+import { saveTraefikConfig } from "./traefik-config"
 
 export interface ComposeService {
   image: string
@@ -35,7 +36,10 @@ export interface ComposeFile {
 }
 
 export function generateCompose(config: EasiarrConfig): string {
-  debugLog("ComposeGenerator", `Generating compose for ${config.apps.filter((a) => a.enabled).length} enabled apps`)
+  debugLog(
+    "ComposeGenerator",
+    `Generating compose for ${config.apps.filter((a) => a.enabled).length} enabled apps`
+  )
   const services: Record<string, ComposeService> = {}
 
   // Track ports to move to Gluetun
@@ -98,14 +102,20 @@ export function generateCompose(config: EasiarrConfig): string {
 
     // 3. Add ports to Gluetun
     if (gluetunPorts.length > 0) {
-      services["gluetun"].ports = [...new Set([...(services["gluetun"].ports || []), ...gluetunPorts])]
+      services["gluetun"].ports = [
+        ...new Set([...(services["gluetun"].ports || []), ...gluetunPorts]),
+      ]
     }
   }
 
   return formatComposeYaml({ services })
 }
 
-function buildService(appDef: ReturnType<typeof getApp>, appConfig: AppConfig, config: EasiarrConfig): ComposeService {
+function buildService(
+  appDef: ReturnType<typeof getApp>,
+  appConfig: AppConfig,
+  config: EasiarrConfig
+): ComposeService {
   if (!appDef) throw new Error("App definition not found")
 
   const port = appConfig.port ?? appDef.defaultPort
@@ -181,25 +191,40 @@ function buildService(appDef: ReturnType<typeof getApp>, appConfig: AppConfig, c
 
   // Add dependencies
   if (appDef.dependsOn && appDef.dependsOn.length > 0) {
-    const enabledDeps = appDef.dependsOn.filter((dep) => config.apps.some((a) => a.id === dep && a.enabled))
+    const enabledDeps = appDef.dependsOn.filter((dep) =>
+      config.apps.some((a) => a.id === dep && a.enabled)
+    )
     if (enabledDeps.length > 0) {
       service.depends_on = enabledDeps
     }
   }
 
-  if (config.traefik?.enabled && appDef.id !== "plex" && appDef.id !== "cloudflared" && appDef.defaultPort !== 0) {
+  if (
+    config.traefik?.enabled &&
+    appDef.id !== "plex" &&
+    appDef.id !== "cloudflared" &&
+    appDef.defaultPort !== 0
+  ) {
     if (appDef.id === "traefik") {
       // Special labels for Traefik dashboard (accessible via traefik.domain on port 8080)
       service.labels = generateTraefikLabels("traefik", 8080, config.traefik)
     } else {
-      service.labels = generateTraefikLabels(appDef.id, appDef.internalPort ?? appDef.defaultPort, config.traefik)
+      service.labels = generateTraefikLabels(
+        appDef.id,
+        appDef.internalPort ?? appDef.defaultPort,
+        config.traefik
+      )
     }
   }
 
   return service
 }
 
-function generateTraefikLabels(serviceName: string, port: number, traefik: TraefikConfig): string[] {
+function generateTraefikLabels(
+  serviceName: string,
+  port: number,
+  traefik: TraefikConfig
+): string[] {
   const labels: string[] = [
     "traefik.enable=true",
     // Router

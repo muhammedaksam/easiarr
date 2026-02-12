@@ -6,7 +6,9 @@
 import { existsSync } from "node:fs"
 import { homedir } from "node:os"
 import { join } from "node:path"
+
 import { debugLog } from "./debug"
+import { getConfigDir as getXdgConfigDir } from "./paths"
 
 // Unraid-specific paths
 const UNRAID_IDENTIFIERS = [
@@ -34,13 +36,13 @@ export function isUnraid(): boolean {
 
 /**
  * Get the default appdata path for Unraid
- * Returns /mnt/user/appdata/easiarr on Unraid, ~/.easiarr otherwise
+ * Returns /mnt/user/appdata/easiarr on Unraid, XDG config dir otherwise
  */
 export function getUnraidAppDataPath(): string {
   if (isUnraid()) {
     return join(UNRAID_APPDATA_PATH, "easiarr")
   }
-  return join(homedir(), ".easiarr")
+  return getXdgConfigDir()
 }
 
 /**
@@ -79,7 +81,7 @@ export function getConfigDir(): string {
   if (isUnraid()) {
     return UNRAID_APPDATA_PATH
   }
-  return join(homedir(), ".easiarr")
+  return getXdgConfigDir()
 }
 
 /**
@@ -95,7 +97,7 @@ export function getUnraidInfo(): {
   return {
     isUnraid: onUnraid,
     hasComposeManager: onUnraid ? hasComposeManager() : false,
-    appDataPath: onUnraid ? UNRAID_APPDATA_PATH : join(homedir(), ".easiarr"),
+    appDataPath: onUnraid ? UNRAID_APPDATA_PATH : getXdgConfigDir(),
     composeManagerPath: onUnraid && hasComposeManager() ? getComposeManagerProjectPath() : null,
   }
 }

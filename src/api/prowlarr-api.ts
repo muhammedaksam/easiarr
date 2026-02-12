@@ -3,8 +3,9 @@
  * Manages Indexer Proxies, Sync Profiles, and FlareSolverr integration
  */
 
-import { debugLog } from "../utils/debug"
-import type { IAutoSetupClient, AutoSetupOptions, AutoSetupResult } from "./auto-setup-types"
+import type { AutoSetupOptions, AutoSetupResult, IAutoSetupClient } from "./auto-setup-types"
+import { debugLog } from "~/utils/debug"
+import { BaseApiClient } from "./base-api"
 
 export interface IndexerProxy {
   id?: number
@@ -68,17 +69,17 @@ export interface Application {
 
 export type ArrAppType = "Radarr" | "Sonarr" | "Lidarr" | "Readarr" | "Whisparr" | "Mylar"
 
-export class ProwlarrClient implements IAutoSetupClient {
-  private baseUrl: string
+export class ProwlarrClient extends BaseApiClient implements IAutoSetupClient {
+  protected readonly logPrefix = "Prowlarr"
   private apiKey: string
 
   constructor(host: string, port: number, apiKey: string) {
-    this.baseUrl = `http://${host}:${port}/api/v1`
+    super(host, port)
     this.apiKey = apiKey
   }
 
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    const url = `${this.baseUrl}${endpoint}`
+    const url = `${this.baseUrl}/api/v1${endpoint}`
     const headers: Record<string, string> = {
       "X-Api-Key": this.apiKey,
       "Content-Type": "application/json",
@@ -86,20 +87,12 @@ export class ProwlarrClient implements IAutoSetupClient {
     }
 
     debugLog("Prowlarr", `${options.method || "GET"} ${url}`)
-    if (options.body) {
-      debugLog("Prowlarr", `Request Body: ${options.body}`)
-    }
 
     const response = await fetch(url, { ...options, headers })
     const text = await response.text()
 
-    debugLog("Prowlarr", `Response ${response.status} from ${endpoint}`)
-    if (text && text.length < 2000) {
-      debugLog("Prowlarr", `Response Body: ${text}`)
-    }
-
     if (!response.ok) {
-      throw new Error(`Prowlarr API request failed: ${response.status} ${response.statusText} - ${text}`)
+      throw new Error(`Prowlarr API request failed: ${response.status} ${response.statusText}`)
     }
 
     if (!text) return {} as T
@@ -194,7 +187,12 @@ export class ProwlarrClient implements IAutoSetupClient {
     })
   }
 
-  async addFlareSolverr(name: string, host: string, tags: number[] = [], requestTimeout = 60): Promise<IndexerProxy> {
+  async addFlareSolverr(
+    name: string,
+    host: string,
+    tags: number[] = [],
+    requestTimeout = 60
+  ): Promise<IndexerProxy> {
     const fields: { name: string; value: unknown }[] = [
       { name: "host", value: host },
       { name: "requestTimeout", value: requestTimeout },
@@ -226,11 +224,10 @@ export class ProwlarrClient implements IAutoSetupClient {
   }
 
   async createIndexer(indexer: ProwlarrIndexerSchema): Promise<ProwlarrIndexer> {
-    // Ensure required fields are set
     const payload = {
       ...indexer,
-      id: undefined, // Create new
-      appProfileId: 1, // Default profile
+      id: undefined,
+      appProfileId: 1,
     }
     return this.request<ProwlarrIndexer>("/indexer", {
       method: "POST",
@@ -238,7 +235,7 @@ export class ProwlarrClient implements IAutoSetupClient {
     })
   }
 
-  // Sync Profile management (aka App Sync Profile)
+  // Sync Profile management
   async getSyncProfiles(): Promise<SyncProfile[]> {
     return this.request<SyncProfile[]>("/appprofile")
   }
@@ -250,13 +247,13 @@ export class ProwlarrClient implements IAutoSetupClient {
     })
   }
 
-  // Create TRaSH-recommended sync profiles for limited API indexers
-  async createLimitedAPISyncProfiles(): Promise<{ automatic: SyncProfile; interactive: SyncProfile }> {
+  async createLimitedAPISyncProfiles(): Promise<{
+    automatic: SyncProfile
+    interactive: SyncProfile
+  }> {
     const existingProfiles = await this.getSyncProfiles()
-
     const findByName = (name: string) => existingProfiles.find((p) => p.name === name)
 
-    // Automatic Search profile (disable RSS)
     let automatic = findByName("Automatic Search")
     if (!automatic) {
       automatic = await this.createSyncProfile({
@@ -268,7 +265,6 @@ export class ProwlarrClient implements IAutoSetupClient {
       })
     }
 
-    // Interactive Search profile (disable RSS and Automatic)
     let interactive = findByName("Interactive Search")
     if (!interactive) {
       interactive = await this.createSyncProfile({
@@ -283,12 +279,8 @@ export class ProwlarrClient implements IAutoSetupClient {
     return { automatic, interactive }
   }
 
-  // Configure FlareSolverr for Cloudflare-protected indexers
   async configureFlareSolverr(flareSolverrHost: string): Promise<void> {
-    // Create flaresolverr tag
     const tag = await this.getOrCreateTag("flaresolverr")
-
-    // Check if FlareSolverr proxy already exists
     const proxies = await this.getIndexerProxies()
     const existingFS = proxies.find((p) => p.implementation === "FlareSolverr")
 
@@ -297,7 +289,7 @@ export class ProwlarrClient implements IAutoSetupClient {
     }
   }
 
-  // Application management (sync *arr apps)
+  // Application management
   async getApplications(): Promise<Application[]> {
     return this.request<Application[]>("/applications")
   }
@@ -335,7 +327,6 @@ export class ProwlarrClient implements IAutoSetupClient {
     await this.request(`/applications/${id}`, { method: "DELETE" })
   }
 
-  // Update an existing application
   async updateApplication(
     id: number,
     appType: ArrAppType,
@@ -372,7 +363,6 @@ export class ProwlarrClient implements IAutoSetupClient {
     })
   }
 
-  // Sync all apps - triggers Prowlarr to push indexers to connected apps
   async syncApplications(): Promise<void> {
     await this.request("/command", {
       method: "POST",
@@ -383,7 +373,6 @@ export class ProwlarrClient implements IAutoSetupClient {
     })
   }
 
-  // Add or update *arr app
   async addArrApp(
     appType: ArrAppType,
     host: string,
@@ -396,16 +385,10 @@ export class ProwlarrClient implements IAutoSetupClient {
     const prowlarrUrl = `http://${prowlarrHost}:${prowlarrPort}`
     const appUrl = `http://${host}:${port}`
 
-    // Check if app already exists
     const apps = await this.getApplications()
     const existing = apps.find((a) => a.implementation === appType)
 
     if (existing && existing.id) {
-      // Update existing app with new syncCategories
-      debugLog(
-        "Prowlarr",
-        `Updating existing ${appType} app (id=${existing.id}) with syncCategories: ${JSON.stringify(syncCategories)}`
-      )
       return this.updateApplication(
         existing.id,
         appType,
@@ -419,13 +402,17 @@ export class ProwlarrClient implements IAutoSetupClient {
       )
     }
 
-    // Create new app
-    return this.addApplication(appType, appType, prowlarrUrl, appUrl, apiKey, "fullSync", syncCategories)
+    return this.addApplication(
+      appType,
+      appType,
+      prowlarrUrl,
+      appUrl,
+      apiKey,
+      "fullSync",
+      syncCategories
+    )
   }
 
-  /**
-   * Check if already configured (has any indexers)
-   */
   async isInitialized(): Promise<boolean> {
     try {
       const indexers = await this.getIndexers()
@@ -435,18 +422,13 @@ export class ProwlarrClient implements IAutoSetupClient {
     }
   }
 
-  /**
-   * Run the auto-setup process for Prowlarr
-   */
   async setup(_options: AutoSetupOptions): Promise<AutoSetupResult> {
     try {
-      // Check if reachable
       const healthy = await this.isHealthy()
       if (!healthy) {
         return { success: false, message: "Prowlarr not reachable" }
       }
 
-      // Check current state
       const indexers = await this.getIndexers()
       const apps = await this.getApplications()
       const proxies = await this.getIndexerProxies()
@@ -467,393 +449,40 @@ export class ProwlarrClient implements IAutoSetupClient {
 }
 
 export const PROWLARR_CATEGORIES = [
-  {
-    id: 1000,
-    name: "Console",
-    subCategories: [
-      {
-        id: 1010,
-        name: "Console/NDS",
-        subCategories: [],
-      },
-      {
-        id: 1020,
-        name: "Console/PSP",
-        subCategories: [],
-      },
-      {
-        id: 1030,
-        name: "Console/Wii",
-        subCategories: [],
-      },
-      {
-        id: 1040,
-        name: "Console/XBox",
-        subCategories: [],
-      },
-      {
-        id: 1050,
-        name: "Console/XBox 360",
-        subCategories: [],
-      },
-      {
-        id: 1060,
-        name: "Console/Wiiware",
-        subCategories: [],
-      },
-      {
-        id: 1070,
-        name: "Console/XBox 360 DLC",
-        subCategories: [],
-      },
-      {
-        id: 1080,
-        name: "Console/PS3",
-        subCategories: [],
-      },
-      {
-        id: 1090,
-        name: "Console/Other",
-        subCategories: [],
-      },
-      {
-        id: 1110,
-        name: "Console/3DS",
-        subCategories: [],
-      },
-      {
-        id: 1120,
-        name: "Console/PS Vita",
-        subCategories: [],
-      },
-      {
-        id: 1130,
-        name: "Console/WiiU",
-        subCategories: [],
-      },
-      {
-        id: 1140,
-        name: "Console/XBox One",
-        subCategories: [],
-      },
-      {
-        id: 1180,
-        name: "Console/PS4",
-        subCategories: [],
-      },
-    ],
-  },
+  { id: 1000, name: "Console", subCategories: [] as { id: number; name: string }[] },
   {
     id: 2000,
     name: "Movies",
     subCategories: [
-      {
-        id: 2010,
-        name: "Movies/Foreign",
-        subCategories: [],
-      },
-      {
-        id: 2020,
-        name: "Movies/Other",
-        subCategories: [],
-      },
-      {
-        id: 2030,
-        name: "Movies/SD",
-        subCategories: [],
-      },
-      {
-        id: 2040,
-        name: "Movies/HD",
-        subCategories: [],
-      },
-      {
-        id: 2045,
-        name: "Movies/UHD",
-        subCategories: [],
-      },
-      {
-        id: 2050,
-        name: "Movies/BluRay",
-        subCategories: [],
-      },
-      {
-        id: 2060,
-        name: "Movies/3D",
-        subCategories: [],
-      },
-      {
-        id: 2070,
-        name: "Movies/DVD",
-        subCategories: [],
-      },
-      {
-        id: 2080,
-        name: "Movies/WEB-DL",
-        subCategories: [],
-      },
-      {
-        id: 2090,
-        name: "Movies/x265",
-        subCategories: [],
-      },
+      { id: 2010, name: "Movies/Foreign" },
+      { id: 2020, name: "Movies/Other" },
+      { id: 2030, name: "Movies/SD" },
+      { id: 2040, name: "Movies/HD" },
+      { id: 2045, name: "Movies/UHD" },
+      { id: 2050, name: "Movies/BluRay" },
+      { id: 2060, name: "Movies/3D" },
+      { id: 2070, name: "Movies/DVD" },
+      { id: 2080, name: "Movies/WEB-DL" },
     ],
   },
-  {
-    id: 3000,
-    name: "Audio",
-    subCategories: [
-      {
-        id: 3010,
-        name: "Audio/MP3",
-        subCategories: [],
-      },
-      {
-        id: 3020,
-        name: "Audio/Video",
-        subCategories: [],
-      },
-      {
-        id: 3030,
-        name: "Audio/Audiobook",
-        subCategories: [],
-      },
-      {
-        id: 3040,
-        name: "Audio/Lossless",
-        subCategories: [],
-      },
-      {
-        id: 3050,
-        name: "Audio/Other",
-        subCategories: [],
-      },
-      {
-        id: 3060,
-        name: "Audio/Foreign",
-        subCategories: [],
-      },
-    ],
-  },
-  {
-    id: 4000,
-    name: "PC",
-    subCategories: [
-      {
-        id: 4010,
-        name: "PC/0day",
-        subCategories: [],
-      },
-      {
-        id: 4020,
-        name: "PC/ISO",
-        subCategories: [],
-      },
-      {
-        id: 4030,
-        name: "PC/Mac",
-        subCategories: [],
-      },
-      {
-        id: 4040,
-        name: "PC/Mobile-Other",
-        subCategories: [],
-      },
-      {
-        id: 4050,
-        name: "PC/Games",
-        subCategories: [],
-      },
-      {
-        id: 4060,
-        name: "PC/Mobile-iOS",
-        subCategories: [],
-      },
-      {
-        id: 4070,
-        name: "PC/Mobile-Android",
-        subCategories: [],
-      },
-    ],
-  },
+  { id: 3000, name: "Audio", subCategories: [] as { id: number; name: string }[] },
+  { id: 4000, name: "PC", subCategories: [] as { id: number; name: string }[] },
   {
     id: 5000,
     name: "TV",
     subCategories: [
-      {
-        id: 5010,
-        name: "TV/WEB-DL",
-        subCategories: [],
-      },
-      {
-        id: 5020,
-        name: "TV/Foreign",
-        subCategories: [],
-      },
-      {
-        id: 5030,
-        name: "TV/SD",
-        subCategories: [],
-      },
-      {
-        id: 5040,
-        name: "TV/HD",
-        subCategories: [],
-      },
-      {
-        id: 5045,
-        name: "TV/UHD",
-        subCategories: [],
-      },
-      {
-        id: 5050,
-        name: "TV/Other",
-        subCategories: [],
-      },
-      {
-        id: 5060,
-        name: "TV/Sport",
-        subCategories: [],
-      },
-      {
-        id: 5070,
-        name: "TV/Anime",
-        subCategories: [],
-      },
-      {
-        id: 5080,
-        name: "TV/Documentary",
-        subCategories: [],
-      },
-      {
-        id: 5090,
-        name: "TV/x265",
-        subCategories: [],
-      },
+      { id: 5010, name: "TV/WEB-DL" },
+      { id: 5020, name: "TV/Foreign" },
+      { id: 5030, name: "TV/SD" },
+      { id: 5040, name: "TV/HD" },
+      { id: 5045, name: "TV/UHD" },
+      { id: 5050, name: "TV/Other" },
+      { id: 5060, name: "TV/Sport" },
+      { id: 5070, name: "TV/Anime" },
+      { id: 5080, name: "TV/Documentary" },
     ],
   },
-  {
-    id: 6000,
-    name: "XXX",
-    subCategories: [
-      {
-        id: 6010,
-        name: "XXX/DVD",
-        subCategories: [],
-      },
-      {
-        id: 6020,
-        name: "XXX/WMV",
-        subCategories: [],
-      },
-      {
-        id: 6030,
-        name: "XXX/XviD",
-        subCategories: [],
-      },
-      {
-        id: 6040,
-        name: "XXX/x264",
-        subCategories: [],
-      },
-      {
-        id: 6045,
-        name: "XXX/UHD",
-        subCategories: [],
-      },
-      {
-        id: 6050,
-        name: "XXX/Pack",
-        subCategories: [],
-      },
-      {
-        id: 6060,
-        name: "XXX/ImageSet",
-        subCategories: [],
-      },
-      {
-        id: 6070,
-        name: "XXX/Other",
-        subCategories: [],
-      },
-      {
-        id: 6080,
-        name: "XXX/SD",
-        subCategories: [],
-      },
-      {
-        id: 6090,
-        name: "XXX/WEB-DL",
-        subCategories: [],
-      },
-    ],
-  },
-  {
-    id: 7000,
-    name: "Books",
-    subCategories: [
-      {
-        id: 7010,
-        name: "Books/Mags",
-        subCategories: [],
-      },
-      {
-        id: 7020,
-        name: "Books/EBook",
-        subCategories: [],
-      },
-      {
-        id: 7030,
-        name: "Books/Comics",
-        subCategories: [],
-      },
-      {
-        id: 7040,
-        name: "Books/Technical",
-        subCategories: [],
-      },
-      {
-        id: 7050,
-        name: "Books/Other",
-        subCategories: [],
-      },
-      {
-        id: 7060,
-        name: "Books/Foreign",
-        subCategories: [],
-      },
-    ],
-  },
-  {
-    id: 8000,
-    name: "Other",
-    subCategories: [
-      {
-        id: 8010,
-        name: "Other/Misc",
-        subCategories: [],
-      },
-      {
-        id: 8020,
-        name: "Other/Hashed",
-        subCategories: [],
-      },
-    ],
-  },
-  {
-    id: 0,
-    name: "Other",
-    subCategories: [
-      {
-        id: 10,
-        name: "Other/Misc",
-        subCategories: [],
-      },
-      {
-        id: 20,
-        name: "Other/Hashed",
-        subCategories: [],
-      },
-    ],
-  },
+  { id: 6000, name: "XXX", subCategories: [] as { id: number; name: string }[] },
+  { id: 7000, name: "Books", subCategories: [] as { id: number; name: string }[] },
+  { id: 8000, name: "Other", subCategories: [] as { id: number; name: string }[] },
 ]

@@ -3,7 +3,7 @@
  * TypeScript interfaces for configuration management
  */
 
-import { VersionInfo } from "../VersionInfo"
+import { VersionInfo } from "~/VersionInfo"
 
 export interface EasiarrConfig {
   version: string

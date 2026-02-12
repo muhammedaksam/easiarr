@@ -1,13 +1,15 @@
-import { BoxRenderable, CliRenderer, TextRenderable, KeyEvent } from "@opentui/core"
+import { randomBytes } from "node:crypto"
 import { existsSync, readFileSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
-import { randomBytes } from "node:crypto"
+
+import { BoxRenderable, CliRenderer, KeyEvent, TextRenderable } from "@opentui/core"
 import { parse as parseYaml } from "yaml"
-import { createPageLayout } from "../components/PageLayout"
-import { EasiarrConfig, AppDefinition } from "../../config/schema"
-import { getApp } from "../../apps/registry"
-import { updateEnv, readEnvSync } from "../../utils/env"
-import { PortainerApiClient } from "../../api/portainer-api"
+
+import { PortainerApiClient } from "~/api/portainer-api"
+import { getApp } from "~/apps/registry"
+import { AppDefinition, EasiarrConfig } from "~/config/schema"
+import { createPageLayout } from "~/ui/components/PageLayout"
+import { readEnvSync, updateEnv } from "~/utils/env"
 
 /** Generate a random 32-character hex API key */
 function generateApiKey(): string {
@@ -40,7 +42,10 @@ function parseIniValue(content: string, section: string, key: string): string | 
       if (k.trim().toLowerCase() === key.toLowerCase()) {
         let value = valueParts.join("=").trim()
         // Remove quotes if present
-        if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+        if (
+          (value.startsWith('"') && value.endsWith('"')) ||
+          (value.startsWith("'") && value.endsWith("'"))
+        ) {
           value = value.slice(1, -1)
         }
         return value
@@ -308,9 +313,15 @@ export class ApiKeyViewer extends BoxRenderable {
         marginBottom: 1,
       })
       header.add(
-        new TextRenderable(this.cliRenderer, { content: "Application".padEnd(20), fg: "#ffffff", attributes: 1 })
+        new TextRenderable(this.cliRenderer, {
+          content: "Application".padEnd(20),
+          fg: "#ffffff",
+          attributes: 1,
+        })
       )
-      header.add(new TextRenderable(this.cliRenderer, { content: "API Key", fg: "#ffffff", attributes: 1 }))
+      header.add(
+        new TextRenderable(this.cliRenderer, { content: "API Key", fg: "#ffffff", attributes: 1 })
+      )
       content.add(header)
 
       // Rows

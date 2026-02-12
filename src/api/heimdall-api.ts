@@ -3,10 +3,10 @@
  * Handles Heimdall dashboard auto-setup with application tiles
  */
 
-import { debugLog } from "../utils/debug"
-import type { IAutoSetupClient, AutoSetupOptions, AutoSetupResult } from "./auto-setup-types"
-import type { AppConfig } from "../config/schema"
-import { getApp } from "../apps/registry"
+import type { AutoSetupOptions, AutoSetupResult, IAutoSetupClient } from "./auto-setup-types"
+import type { AppConfig } from "~/config/schema"
+import { getApp } from "~/apps/registry"
+import { BaseApiClient } from "./base-api"
 
 interface HeimdallApp {
   id?: number
@@ -18,20 +18,11 @@ interface HeimdallApp {
   pinned?: boolean
 }
 
-export class HeimdallClient implements IAutoSetupClient {
-  private host: string
-  private port: number
+export class HeimdallClient extends BaseApiClient implements IAutoSetupClient {
+  protected readonly logPrefix = "HeimdallApi"
 
   constructor(host: string, port: number = 80) {
-    this.host = host
-    this.port = port
-  }
-
-  /**
-   * Get base URL for Heimdall
-   */
-  private get baseUrl(): string {
-    return `http://${this.host}:${this.port}`
+    super(host, port)
   }
 
   /**
@@ -39,13 +30,9 @@ export class HeimdallClient implements IAutoSetupClient {
    */
   async isHealthy(): Promise<boolean> {
     try {
-      const response = await fetch(this.baseUrl, {
-        method: "GET",
-      })
-      debugLog("HeimdallApi", `Health check: ${response.status}`)
+      const response = await fetch(this.baseUrl, { method: "GET" })
       return response.ok
-    } catch (error) {
-      debugLog("HeimdallApi", `Health check failed: ${error}`)
+    } catch {
       return false
     }
   }
@@ -54,72 +41,23 @@ export class HeimdallClient implements IAutoSetupClient {
    * Check if already configured
    */
   async isInitialized(): Promise<boolean> {
-    // Heimdall is always "initialized" - it works out of the box
     return true
   }
 
   /**
-   * Get list of apps (via API if available)
-   * Note: Heimdall primarily uses web UI for configuration
+   * Get list of apps
    */
   async getApps(): Promise<HeimdallApp[]> {
-    try {
-      const response = await fetch(`${this.baseUrl}/api/items`, {
-        method: "GET",
-        headers: {
-          Accept: "application/json",
-        },
-      })
-
-      if (response.ok) {
-        return response.json()
-      }
-    } catch {
-      // API may not be available or require auth
-    }
-    return []
+    const response = await this.get<HeimdallApp[]>("/api/items")
+    return response.data ?? []
   }
 
   /**
    * Add an app/tile to Heimdall
-   * Note: Heimdall API may require authentication
    */
   async addApp(app: HeimdallApp): Promise<boolean> {
-    debugLog("HeimdallApi", `Adding app: ${app.title}`)
-
-    try {
-      const response = await fetch(`${this.baseUrl}/api/items`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-        body: JSON.stringify(app),
-      })
-
-      if (response.ok) {
-        debugLog("HeimdallApi", `App "${app.title}" added successfully`)
-        return true
-      }
-
-      // API might require auth or not exist
-      if (response.status === 401 || response.status === 403) {
-        debugLog("HeimdallApi", "API requires authentication")
-        return false
-      }
-
-      if (response.status === 404) {
-        debugLog("HeimdallApi", "Items API not available")
-        return false
-      }
-
-      const text = await response.text()
-      debugLog("HeimdallApi", `Failed to add app: ${response.status} - ${text}`)
-      return false
-    } catch (error) {
-      debugLog("HeimdallApi", `Failed to add app: ${error}`)
-      return false
-    }
+    const response = await this.post<unknown, HeimdallApp>("/api/items", app)
+    return response.success
   }
 
   /**
@@ -127,10 +65,7 @@ export class HeimdallClient implements IAutoSetupClient {
    */
   buildAppConfig(appConfig: AppConfig): HeimdallApp | null {
     const appDef = getApp(appConfig.id)
-    if (!appDef) return null
-
-    // Skip apps without web UI
-    if (appDef.defaultPort === 0) return null
+    if (!appDef || appDef.defaultPort === 0) return null
 
     const port = appConfig.port || appDef.defaultPort
 
@@ -166,16 +101,13 @@ export class HeimdallClient implements IAutoSetupClient {
    */
   async setup(_options: AutoSetupOptions): Promise<AutoSetupResult> {
     try {
-      // Check if reachable
       const healthy = await this.isHealthy()
       if (!healthy) {
         return { success: false, message: "Heimdall not reachable" }
       }
 
-      // Check existing apps count
       const existingApps = await this.getApps()
 
-      // Heimdall works out of the box, tiles can be added via UI
       return {
         success: true,
         message: "Ready - add tiles via UI",

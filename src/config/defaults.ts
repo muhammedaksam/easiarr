@@ -3,7 +3,7 @@
  * Auto-detect timezone and UID/GID from system
  */
 
-import { readlinkSync, existsSync } from "node:fs"
+import { existsSync, readlinkSync } from "node:fs"
 
 export function detectTimezone(): string {
   const tzPath = "/etc/localtime"

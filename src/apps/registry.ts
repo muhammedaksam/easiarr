@@ -4,7 +4,8 @@
  * Based on mediastack and TRaSH Guides configurations
  */
 
-import type { AppDefinition, AppId } from "../config/schema"
+import type { AppDefinition, AppId } from "~/config/schema"
+import { getArchWarning, getSystemArch, isAppCompatible, isAppDeprecated } from "~/utils/arch"
 
 export const APPS: Record<AppId, AppDefinition> = {
   // === SERVARR (Media Management) ===
@@ -560,7 +561,10 @@ export const APPS: Record<AppId, AppDefinition> = {
     image: "ghcr.io/gethomepage/homepage:latest",
     puid: 0,
     pgid: 0,
-    volumes: (root) => [`${root}/config/homepage:/app/config`, "/var/run/docker.sock:/var/run/docker.sock"],
+    volumes: (root) => [
+      `${root}/config/homepage:/app/config`,
+      "/var/run/docker.sock:/var/run/docker.sock",
+    ],
     environment: {
       HOMEPAGE_ALLOWED_HOSTS:
         "homepage,homepage.${CLOUDFLARE_DNS_ZONE},${CLOUDFLARE_DNS_ZONE},localhost,${LOCAL_DOCKER_IP},${LOCAL_DOCKER_IP}:3009",
@@ -578,7 +582,10 @@ export const APPS: Record<AppId, AppDefinition> = {
     image: "portainer/portainer-ce:latest",
     puid: 0,
     pgid: 0,
-    volumes: (root) => [`${root}/config/portainer:/data`, "/var/run/docker.sock:/var/run/docker.sock"],
+    volumes: (root) => [
+      `${root}/config/portainer:/data`,
+      "/var/run/docker.sock:/var/run/docker.sock",
+    ],
     minPasswordLength: 12, // Portainer requires minimum 12 character password
     homepage: { icon: "portainer.png", widget: "portainer" },
     logVolume: "/data/logs",
@@ -759,9 +766,9 @@ export const APPS: Record<AppId, AppDefinition> = {
     puid: 0,
     pgid: 0,
     volumes: () => [
-      "${HOME}/.easiarr/config.json:/web/config.json:ro",
-      "${HOME}/.easiarr/bookmarks-local.html:/web/bookmarks-local.html:ro",
-      "${HOME}/.easiarr/bookmarks-remote.html:/web/bookmarks-remote.html:ro",
+      "${XDG_CONFIG_HOME}/easiarr/config.json:/web/config.json:ro",
+      "${XDG_CONFIG_HOME}/easiarr/bookmarks-local.html:/web/bookmarks-local.html:ro",
+      "${XDG_CONFIG_HOME}/easiarr/bookmarks-remote.html:/web/bookmarks-remote.html:ro",
     ],
     environment: {
       FOLDER: "/web",
@@ -922,7 +929,10 @@ export const APPS: Record<AppId, AppDefinition> = {
     image: "louislam/uptime-kuma:1",
     puid: 0,
     pgid: 0,
-    volumes: (root) => [`${root}/config/uptime-kuma:/app/data`, "/var/run/docker.sock:/var/run/docker.sock"],
+    volumes: (root) => [
+      `${root}/config/uptime-kuma:/app/data`,
+      "/var/run/docker.sock:/var/run/docker.sock",
+    ],
     homepage: { icon: "uptime-kuma.png", widget: "uptimekuma" },
     autoSetup: {
       type: "full",
@@ -1021,7 +1031,10 @@ export const APPS: Record<AppId, AppDefinition> = {
     image: "ldez/traefik-certs-dumper:latest",
     puid: 0,
     pgid: 0,
-    volumes: (root) => [`${root}/config/traefik/letsencrypt:/traefik:ro`, `${root}/config/traefik/certs:/output`],
+    volumes: (root) => [
+      `${root}/config/traefik/letsencrypt:/traefik:ro`,
+      `${root}/config/traefik/certs:/output`,
+    ],
     dependsOn: ["traefik"],
   },
 
@@ -1034,7 +1047,10 @@ export const APPS: Record<AppId, AppDefinition> = {
     image: "crowdsecurity/crowdsec:latest",
     puid: 0,
     pgid: 0,
-    volumes: (root) => [`${root}/config/crowdsec:/etc/crowdsec`, "/var/run/docker.sock:/var/run/docker.sock:ro"],
+    volumes: (root) => [
+      `${root}/config/crowdsec:/etc/crowdsec`,
+      "/var/run/docker.sock:/var/run/docker.sock:ro",
+    ],
     homepage: { icon: "crowdsec.png", widget: "crowdsec" },
   },
 
@@ -1047,7 +1063,10 @@ export const APPS: Record<AppId, AppDefinition> = {
     image: "headscale/headscale:latest",
     puid: 0,
     pgid: 0,
-    volumes: (root) => [`${root}/config/headscale:/etc/headscale`, `${root}/config/headscale/data:/var/lib/headscale`],
+    volumes: (root) => [
+      `${root}/config/headscale:/etc/headscale`,
+      `${root}/config/headscale/data:/var/lib/headscale`,
+    ],
     homepage: { icon: "headscale.png", widget: "headscale" },
   },
 
@@ -1096,7 +1115,10 @@ export const APPS: Record<AppId, AppDefinition> = {
     image: "ghcr.io/goauthentik/server:latest",
     puid: 0,
     pgid: 13000,
-    volumes: (root) => [`${root}/config/authentik/media:/media`, `${root}/config/authentik/templates:/templates`],
+    volumes: (root) => [
+      `${root}/config/authentik/media:/media`,
+      `${root}/config/authentik/templates:/templates`,
+    ],
     environment: {
       AUTHENTIK_REDIS__HOST: "valkey",
       AUTHENTIK_POSTGRESQL__HOST: "postgresql",
@@ -1224,8 +1246,6 @@ export function getAllApps(): AppDefinition[] {
 export function getAppIds(): AppId[] {
   return Object.keys(APPS) as AppId[]
 }
-
-import { getSystemArch, isAppCompatible, getArchWarning, isAppDeprecated } from "../util/arch"
 
 /**
  * Get all apps compatible with the current system architecture

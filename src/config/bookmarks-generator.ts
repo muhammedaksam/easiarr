@@ -4,13 +4,13 @@
  */
 
 import { writeFile } from "node:fs/promises"
-import { join } from "node:path"
-import { homedir } from "node:os"
-import type { EasiarrConfig, AppCategory } from "./schema"
+
+import type { AppCategory, EasiarrConfig } from "./schema"
+import { CATEGORY_ORDER } from "~/apps/categories"
+import { getApp } from "~/apps/registry"
+import { readEnvSync } from "~/utils/env"
+import { getConfigPath } from "~/utils/paths"
 import { APP_CATEGORIES } from "./schema"
-import { CATEGORY_ORDER } from "../apps/categories"
-import { getApp } from "../apps/registry"
-import { readEnvSync } from "../utils/env"
 
 interface BookmarkEntry {
   name: string
@@ -23,7 +23,12 @@ type CategoryBookmarks = Map<AppCategory, BookmarkEntry[]>
 /**
  * Get the URL for an app based on Traefik configuration
  */
-function getAppUrl(appId: string, port: number, config: EasiarrConfig, useLocalUrls: boolean): string {
+function getAppUrl(
+  appId: string,
+  port: number,
+  config: EasiarrConfig,
+  useLocalUrls: boolean
+): string {
   if (!useLocalUrls && config.traefik?.enabled && config.traefik.domain) {
     return `https://${appId}.${config.traefik.domain}/`
   }
@@ -36,7 +41,10 @@ function getAppUrl(appId: string, port: number, config: EasiarrConfig, useLocalU
 /**
  * Generate bookmark entries grouped by category
  */
-function generateBookmarksByCategory(config: EasiarrConfig, useLocalUrls: boolean): CategoryBookmarks {
+function generateBookmarksByCategory(
+  config: EasiarrConfig,
+  useLocalUrls: boolean
+): CategoryBookmarks {
   const categoryBookmarks: CategoryBookmarks = new Map()
 
   for (const appConfig of config.apps) {
@@ -115,14 +123,17 @@ export function generateBookmarksHtml(config: EasiarrConfig, useLocalUrls = fals
  */
 export function getBookmarksPath(type: "local" | "remote" = "local"): string {
   const filename = type === "remote" ? "bookmarks-remote.html" : "bookmarks-local.html"
-  return join(homedir(), ".easiarr", filename)
+  return getConfigPath(filename)
 }
 
 /**
  * Save bookmarks HTML file
  * @param type - 'local' for local URLs, 'remote' for Traefik URLs
  */
-export async function saveBookmarks(config: EasiarrConfig, type: "local" | "remote" = "local"): Promise<string> {
+export async function saveBookmarks(
+  config: EasiarrConfig,
+  type: "local" | "remote" = "local"
+): Promise<string> {
   const useLocalUrls = type === "local"
   const html = generateBookmarksHtml(config, useLocalUrls)
   const path = getBookmarksPath(type)

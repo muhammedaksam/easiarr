@@ -3,22 +3,24 @@
  * Edit configuration files directly
  */
 
+import { existsSync } from "node:fs"
+import { readFile, writeFile } from "node:fs/promises"
+
 import {
   BoxRenderable,
+  CliRenderer,
+  KeyEvent,
+  RenderContext,
   SelectRenderable,
   SelectRenderableEvents,
-  CliRenderer,
-  RenderContext,
-  KeyEvent,
 } from "@opentui/core"
-import { App } from "../App"
-import { EasiarrConfig } from "../../config/schema"
-import { createPageLayout } from "../components/PageLayout"
-import { FileEditor } from "../components/FileEditor"
-import { readFile, writeFile } from "node:fs/promises"
-import { getConfigPath, getComposePath } from "../../config/manager"
-import { getEnvPath } from "../../utils/env"
-import { existsSync } from "node:fs"
+
+import { getComposePath, getConfigPath } from "~/config/manager"
+import { EasiarrConfig } from "~/config/schema"
+import { App } from "~/ui/App"
+import { FileEditor } from "~/ui/components/FileEditor"
+import { createPageLayout } from "~/ui/components/PageLayout"
+import { getEnvPath } from "~/utils/env"
 
 export class AdvancedSettings {
   private renderer: CliRenderer
@@ -28,7 +30,12 @@ export class AdvancedSettings {
   private keyHandler: ((k: KeyEvent) => void) | null = null
   private activeEditor: FileEditor | null = null
 
-  constructor(renderer: CliRenderer | RenderContext, container: BoxRenderable, app: App, config: EasiarrConfig) {
+  constructor(
+    renderer: CliRenderer | RenderContext,
+    container: BoxRenderable,
+    app: App,
+    config: EasiarrConfig
+  ) {
     this.renderer = renderer as CliRenderer
     this.container = container
     this.app = app

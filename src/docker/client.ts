@@ -4,8 +4,9 @@
  */
 
 import { $ } from "bun"
-import { getComposePath } from "../config/manager"
-import { debugLog } from "../utils/debug"
+
+import { getComposePath } from "~/config/manager"
+import { debugLog } from "~/utils/debug"
 
 export interface ContainerStatus {
   name: string
@@ -48,7 +49,10 @@ export async function composeDown(): Promise<{
 /**
  * Run a one-off container with docker compose run --rm
  */
-export async function composeRun(service: string, command: string): Promise<{ success: boolean; output: string }> {
+export async function composeRun(
+  service: string,
+  command: string
+): Promise<{ success: boolean; output: string }> {
   try {
     const composePath = getComposePath()
     debugLog("Docker", `compose run --rm ${service} ${command}`)
@@ -61,7 +65,9 @@ export async function composeRun(service: string, command: string): Promise<{ su
   }
 }
 
-export async function composeRestart(service?: string): Promise<{ success: boolean; output: string }> {
+export async function composeRestart(
+  service?: string
+): Promise<{ success: boolean; output: string }> {
   try {
     const composePath = getComposePath()
     debugLog("Docker", `compose restart ${service || "all"}`)
@@ -89,7 +95,9 @@ export async function composeStop(service?: string): Promise<{ success: boolean;
   }
 }
 
-export async function composeStart(service?: string): Promise<{ success: boolean; output: string }> {
+export async function composeStart(
+  service?: string
+): Promise<{ success: boolean; output: string }> {
   try {
     const composePath = getComposePath()
     const result = service
@@ -175,7 +183,9 @@ export interface ContainerDetails {
 /**
  * Start a specific container by service name
  */
-export async function startContainer(service: string): Promise<{ success: boolean; output: string }> {
+export async function startContainer(
+  service: string
+): Promise<{ success: boolean; output: string }> {
   try {
     const composePath = getComposePath()
     const result = await $`docker compose -f ${composePath} start ${service}`.text()
@@ -188,7 +198,9 @@ export async function startContainer(service: string): Promise<{ success: boolea
 /**
  * Stop a specific container by service name
  */
-export async function stopContainer(service: string): Promise<{ success: boolean; output: string }> {
+export async function stopContainer(
+  service: string
+): Promise<{ success: boolean; output: string }> {
   try {
     const composePath = getComposePath()
     const result = await $`docker compose -f ${composePath} stop ${service}`.text()
@@ -201,7 +213,9 @@ export async function stopContainer(service: string): Promise<{ success: boolean
 /**
  * Restart a specific container by service name
  */
-export async function restartContainer(service: string): Promise<{ success: boolean; output: string }> {
+export async function restartContainer(
+  service: string
+): Promise<{ success: boolean; output: string }> {
   try {
     const composePath = getComposePath()
     const result = await $`docker compose -f ${composePath} restart ${service}`.text()
@@ -224,7 +238,8 @@ export async function getContainerDetails(containerName: string): Promise<Contai
     const data = JSON.parse(result.trim())
 
     // Get uptime from Status
-    const statusResult = await $`docker ps --filter "name=${containerName}" --format "{{.Status}}"`.text()
+    const statusResult =
+      await $`docker ps --filter "name=${containerName}" --format "{{.Status}}"`.text()
 
     // Get port mappings
     const portsResult = await $`docker port ${containerName} 2>/dev/null`.text()
@@ -255,7 +270,8 @@ export async function getContainerLogs(
 ): Promise<{ success: boolean; output: string }> {
   try {
     const composePath = getComposePath()
-    const result = await $`docker compose -f ${composePath} logs ${service} --tail ${lines} --no-color`.text()
+    const result =
+      await $`docker compose -f ${composePath} logs ${service} --tail ${lines} --no-color`.text()
     return { success: true, output: result }
   } catch (error) {
     return { success: false, output: String(error) }
@@ -265,7 +281,9 @@ export async function getContainerLogs(
 /**
  * Pull latest image for a specific service
  */
-export async function pullServiceImage(service: string): Promise<{ success: boolean; output: string }> {
+export async function pullServiceImage(
+  service: string
+): Promise<{ success: boolean; output: string }> {
   try {
     const composePath = getComposePath()
     const result = await $`docker compose -f ${composePath} pull ${service}`.text()
@@ -278,12 +296,15 @@ export async function pullServiceImage(service: string): Promise<{ success: bool
 /**
  * Recreate a specific service (pull + up)
  */
-export async function recreateService(service: string): Promise<{ success: boolean; output: string }> {
+export async function recreateService(
+  service: string
+): Promise<{ success: boolean; output: string }> {
   try {
     const composePath = getComposePath()
     // Pull first, then recreate
     await $`docker compose -f ${composePath} pull ${service}`.text()
-    const result = await $`docker compose -f ${composePath} up -d --force-recreate ${service}`.text()
+    const result =
+      await $`docker compose -f ${composePath} up -d --force-recreate ${service}`.text()
     return { success: true, output: result }
   } catch (error) {
     return { success: false, output: String(error) }

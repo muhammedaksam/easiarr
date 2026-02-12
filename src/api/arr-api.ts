@@ -3,7 +3,11 @@
  * Interacts with Radarr, Sonarr, Lidarr, Readarr, Whisparr APIs
  */
 
-import { debugLog } from "../utils/debug"
+import type { NamingConfig } from "./naming-config"
+import type { AppId } from "~/config/schema"
+import { getCategoryFieldName, getCategoryForApp } from "~/utils/categories"
+import { debugLog } from "~/utils/debug"
+import { TRASH_NAMING_CONFIG } from "./naming-config"
 
 // Types for Root Folder API
 export interface RootFolder {
@@ -44,10 +48,6 @@ export interface RemotePathMapping {
   localPath: string
 }
 
-import type { AppId } from "../config/schema"
-import { getCategoryForApp, getCategoryFieldName } from "../utils/categories"
-import { TRASH_NAMING_CONFIG, type NamingConfig } from "./naming-config"
-
 // qBittorrent download client config
 export function createQBittorrentConfig(
   host: string,
@@ -82,7 +82,12 @@ export function createQBittorrentConfig(
 }
 
 // SABnzbd download client config
-export function createSABnzbdConfig(host: string, port: number, apiKey: string, appId?: AppId): DownloadClientConfig {
+export function createSABnzbdConfig(
+  host: string,
+  port: number,
+  apiKey: string,
+  appId?: AppId
+): DownloadClientConfig {
   const category = appId ? getCategoryForApp(appId) : "default"
   const categoryField = appId ? getCategoryFieldName(appId) : "category"
 
@@ -214,7 +219,11 @@ export class ArrApiClient {
     return this.request<HostConfig>("/config/host")
   }
 
-  async updateHostConfig(username: string, password: string, override = false): Promise<HostConfig | null> {
+  async updateHostConfig(
+    username: string,
+    password: string,
+    override = false
+  ): Promise<HostConfig | null> {
     // First get current config to preserve all other settings
     const currentConfig = await this.getHostConfig()
 
@@ -293,11 +302,15 @@ export class ArrApiClient {
       // 3. Update configuration
       await this.updateNamingConfig(newConfig)
     } catch (e) {
-      throw new Error(`Failed to configure naming: ${e}`)
+      throw new Error(`Failed to configure naming: ${e}`, { cause: e })
     }
   }
 
-  async addRemotePathMapping(host: string, remotePath: string, localPath: string): Promise<RemotePathMapping> {
+  async addRemotePathMapping(
+    host: string,
+    remotePath: string,
+    localPath: string
+  ): Promise<RemotePathMapping> {
     return this.request<RemotePathMapping>("/remotepathmapping", {
       method: "POST",
       body: JSON.stringify({ host, remotePath, localPath }),

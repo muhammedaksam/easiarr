@@ -3,8 +3,8 @@
  * Handles Grafana auto-setup including admin password change and Prometheus datasource
  */
 
-import { debugLog } from "../utils/debug"
-import type { IAutoSetupClient, AutoSetupOptions, AutoSetupResult } from "./auto-setup-types"
+import type { AutoSetupOptions, AutoSetupResult, IAutoSetupClient } from "./auto-setup-types"
+import { BaseApiClient } from "./base-api"
 
 interface GrafanaDataSource {
   id?: number
@@ -25,24 +25,20 @@ interface GrafanaHealthResponse {
   version: string
 }
 
-export class GrafanaClient implements IAutoSetupClient {
-  private host: string
-  private port: number
+export class GrafanaClient extends BaseApiClient implements IAutoSetupClient {
+  protected readonly logPrefix = "GrafanaApi"
   private username: string
   private password: string
 
-  constructor(host: string, port: number = 3000, username: string = "admin", password: string = "admin") {
-    this.host = host
-    this.port = port
+  constructor(
+    host: string,
+    port: number = 3000,
+    username: string = "admin",
+    password: string = "admin"
+  ) {
+    super(host, port)
     this.username = username
     this.password = password
-  }
-
-  /**
-   * Get base URL for Grafana
-   */
-  private get baseUrl(): string {
-    return `http://${this.host}:${this.port}`
   }
 
   /**
@@ -76,16 +72,8 @@ export class GrafanaClient implements IAutoSetupClient {
    * Check if Grafana is reachable
    */
   async isHealthy(): Promise<boolean> {
-    try {
-      const response = await fetch(`${this.baseUrl}/api/health`, {
-        method: "GET",
-      })
-      debugLog("GrafanaApi", `Health check: ${response.status}`)
-      return response.ok
-    } catch (error) {
-      debugLog("GrafanaApi", `Health check failed: ${error}`)
-      return false
-    }
+    const response = await this.get<GrafanaHealthResponse>("/api/health")
+    return response.success
   }
 
   /**
@@ -93,14 +81,12 @@ export class GrafanaClient implements IAutoSetupClient {
    */
   async isInitialized(): Promise<boolean> {
     try {
-      // Try to login with default credentials
       const response = await fetch(`${this.baseUrl}/api/user`, {
         method: "GET",
         headers: {
           Authorization: `Basic ${Buffer.from("admin:admin").toString("base64")}`,
         },
       })
-      // If login with admin:admin fails, it's already configured
       return !response.ok
     } catch {
       return true
@@ -111,25 +97,16 @@ export class GrafanaClient implements IAutoSetupClient {
    * Change admin password
    */
   async changeAdminPassword(newPassword: string): Promise<boolean> {
-    debugLog("GrafanaApi", "Changing admin password...")
+    const response = await this.put<unknown, { oldPassword: string; newPassword: string }>(
+      "/api/user/password",
+      { oldPassword: this.password, newPassword },
+      { headers: this.getHeaders() }
+    )
 
-    const response = await fetch(`${this.baseUrl}/api/user/password`, {
-      method: "PUT",
-      headers: this.getHeaders(),
-      body: JSON.stringify({
-        oldPassword: this.password,
-        newPassword: newPassword,
-      }),
-    })
-
-    if (response.ok) {
-      debugLog("GrafanaApi", "Admin password changed successfully")
+    if (response.success) {
       this.password = newPassword
       return true
     }
-
-    const text = await response.text()
-    debugLog("GrafanaApi", `Failed to change password: ${response.status} - ${text}`)
     return false
   }
 
@@ -137,16 +114,10 @@ export class GrafanaClient implements IAutoSetupClient {
    * Get list of datasources
    */
   async getDataSources(): Promise<GrafanaDataSource[]> {
-    const response = await fetch(`${this.baseUrl}/api/datasources`, {
-      method: "GET",
+    const response = await this.get<GrafanaDataSource[]>("/api/datasources", {
       headers: this.getHeaders(),
     })
-
-    if (!response.ok) {
-      throw new Error(`Failed to get datasources: ${response.status}`)
-    }
-
-    return response.json()
+    return response.data ?? []
   }
 
   /**
@@ -165,8 +136,6 @@ export class GrafanaClient implements IAutoSetupClient {
     url: string = "http://prometheus:9090",
     isDefault: boolean = true
   ): Promise<boolean> {
-    debugLog("GrafanaApi", `Creating Prometheus datasource: ${name} -> ${url}`)
-
     const payload: GrafanaDataSource = {
       name,
       type: "prometheus",
@@ -179,58 +148,26 @@ export class GrafanaClient implements IAutoSetupClient {
       },
     }
 
-    const response = await fetch(`${this.baseUrl}/api/datasources`, {
-      method: "POST",
+    const response = await this.post<unknown, GrafanaDataSource>("/api/datasources", payload, {
       headers: this.getHeaders(),
-      body: JSON.stringify(payload),
     })
 
-    if (response.ok) {
-      debugLog("GrafanaApi", `Prometheus datasource "${name}" created successfully`)
-      return true
-    }
-
-    // Check if already exists (409 Conflict)
-    if (response.status === 409) {
-      debugLog("GrafanaApi", `Datasource "${name}" already exists`)
-      return true
-    }
-
-    const text = await response.text()
-    debugLog("GrafanaApi", `Failed to create datasource: ${response.status} - ${text}`)
-    return false
+    // Success or already exists (409)
+    return response.success || response.status === 409
   }
 
   /**
    * Generate an API key for external integrations
    */
   async createApiKey(name: string = "easiarr", role: string = "Admin"): Promise<string | null> {
-    debugLog("GrafanaApi", `Creating API key: ${name}`)
+    const response = await this.post<
+      { key: string },
+      { name: string; role: string; secondsToLive: number }
+    >("/api/auth/keys", { name, role, secondsToLive: 0 }, { headers: this.getHeaders() })
 
-    const response = await fetch(`${this.baseUrl}/api/auth/keys`, {
-      method: "POST",
-      headers: this.getHeaders(),
-      body: JSON.stringify({
-        name,
-        role,
-        secondsToLive: 0, // Never expires
-      }),
-    })
-
-    if (response.ok) {
-      const data = await response.json()
-      debugLog("GrafanaApi", "API key created successfully")
-      return data.key
+    if (response.success && response.data?.key) {
+      return response.data.key
     }
-
-    // May already exist
-    if (response.status === 409) {
-      debugLog("GrafanaApi", "API key already exists")
-      return null
-    }
-
-    const text = await response.text()
-    debugLog("GrafanaApi", `Failed to create API key: ${response.status} - ${text}`)
     return null
   }
 
@@ -238,18 +175,8 @@ export class GrafanaClient implements IAutoSetupClient {
    * Get Grafana server info
    */
   async getServerInfo(): Promise<GrafanaHealthResponse | null> {
-    try {
-      const response = await fetch(`${this.baseUrl}/api/health`, {
-        method: "GET",
-      })
-
-      if (response.ok) {
-        return response.json()
-      }
-    } catch {
-      // Ignore
-    }
-    return null
+    const response = await this.get<GrafanaHealthResponse>("/api/health")
+    return response.data ?? null
   }
 
   /**
@@ -259,46 +186,35 @@ export class GrafanaClient implements IAutoSetupClient {
     const { username, password } = options
 
     try {
-      // Check if reachable
       const healthy = await this.isHealthy()
       if (!healthy) {
         return { success: false, message: "Grafana not reachable" }
       }
 
-      // Check if already configured
       const initialized = await this.isInitialized()
 
       if (!initialized) {
-        // First login - change default password
         this.setCredentials("admin", "admin")
-
         const changed = await this.changeAdminPassword(password)
         if (!changed) {
           return { success: false, message: "Failed to change admin password" }
         }
       } else {
-        // Try to login with provided credentials
         this.setCredentials(username, password)
-
-        // Verify login by fetching user
         const response = await fetch(`${this.baseUrl}/api/user`, {
           method: "GET",
           headers: this.getHeaders(),
         })
-
         if (!response.ok) {
           return { success: false, message: "Login failed - check credentials" }
         }
       }
 
-      // Now configure Prometheus datasource if prometheus is enabled
-      // Use container name for internal communication
       const prometheusExists = await this.dataSourceExists("Prometheus")
       if (!prometheusExists) {
         await this.createPrometheusDataSource("Prometheus", "http://prometheus:9090", true)
       }
 
-      // Generate API key for Homepage widget etc.
       const apiKey = await this.createApiKey("easiarr-api-key")
 
       return {
