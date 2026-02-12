@@ -302,7 +302,7 @@ export class ArrApiClient {
       // 3. Update configuration
       await this.updateNamingConfig(newConfig)
     } catch (e) {
-      throw new Error(`Failed to configure naming: ${e}`)
+      throw new Error(`Failed to configure naming: ${e}`, { cause: e })
     }
   }
 

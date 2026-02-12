@@ -300,15 +300,15 @@ export class JellyseerrClient extends BaseApiClient implements IAutoSetupClient 
       }
 
       if (message.includes("NO_ADMIN_USER") || message.includes("NotAdmin")) {
-        throw new Error(`Jellyfin user "${username}" is not an administrator.`)
+        throw new Error(`Jellyfin user "${username}" is not an administrator.`, { cause: err })
       }
 
       if (message.includes("InvalidCredentials") || message.includes("401")) {
-        throw new Error(`Invalid Jellyfin credentials for user "${username}".`)
+        throw new Error(`Invalid Jellyfin credentials for user "${username}".`, { cause: err })
       }
 
       if (message.includes("InvalidUrl") || message.includes("INVALID_URL")) {
-        throw new Error(`Cannot reach Jellyfin at ${hostname}:${port}.`)
+        throw new Error(`Cannot reach Jellyfin at ${hostname}:${port}.`, { cause: err })
       }
 
       throw err
