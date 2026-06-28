@@ -13,13 +13,7 @@ export interface SonarrNamingConfig {
   replaceIllegalCharacters: boolean
   colonReplacementFormat: "dash" | "spaceDash" | "spaceDashSpace" | "smart" | "delete" | number
   multiEpisodeStyle:
-    | "extend"
-    | "duplicate"
-    | "repeat"
-    | "scene"
-    | "range"
-    | "prefixedRange"
-    | number
+    "extend" | "duplicate" | "repeat" | "scene" | "range" | "prefixedRange" | number
   dailyEpisodeFormat: string
   animeEpisodeFormat: string
   seriesFolderFormat: string

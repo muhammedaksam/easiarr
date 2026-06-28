@@ -1126,12 +1126,10 @@ export class QuickSetup {
     config.umask = this.umask
 
     // Add selected apps
-    config.apps = Array.from(this.selectedApps).map(
-      (id): AppConfig => ({
-        id,
-        enabled: true,
-      })
-    )
+    config.apps = Array.from(this.selectedApps).map((id): AppConfig => ({
+      id,
+      enabled: true,
+    }))
 
     // Add VPN config if enabled
     if (this.selectedApps.has("gluetun")) {
