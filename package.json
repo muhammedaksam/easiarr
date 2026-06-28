@@ -1,14 +1,14 @@
 {
   "name": "@muhammedaksam/easiarr",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "description": "TUI tool for generating docker-compose files for the *arr media ecosystem with 41 apps, TRaSH Guides best practices, VPN routing, and Traefik reverse proxy support",
-  "module": "src/index.ts",
+  "module": "dist/index.js",
   "type": "module",
   "bin": {
-    "easiarr": "./src/index.ts"
+    "easiarr": "./dist/index.js"
   },
   "files": [
-    "src"
+    "dist"
   ],
   "author": "Muhammed Mustafa AKŞAM <info@muhammedaksam.com.tr> (https://github.com/muhammedaksam)",
   "license": "MIT",
@@ -36,7 +36,7 @@
   "scripts": {
     "dev": "bun run --watch src/index.ts",
     "dev:debug": "bun run dev --debug",
-    "build": "bun build src/index.ts --outdir dist --target bun",
+    "build": "bun build src/index.ts --outdir dist --target bun --external @opentui/core",
     "typecheck": "bun x tsc --noEmit",
     "lint": "eslint src/",
     "lint:fix": "eslint src/ --fix",
@@ -56,23 +56,23 @@
     "@types/bcrypt": "^6.0.0",
     "@types/bun": "latest",
     "@types/jest": "^30.0.0",
-    "@types/node": "^25.2.3",
-    "eslint": "^10.0.0",
+    "@types/node": "^26.0.1",
+    "eslint": "^10.6.0",
     "eslint-plugin-import": "^2.32.0",
-    "jest": "^30.2.0",
-    "jiti": "^2.6.1",
-    "prettier": "^3.8.1",
-    "ts-jest": "^29.4.6",
-    "typescript-eslint": "^8.55.0"
+    "jest": "^30.4.2",
+    "jiti": "^2.7.0",
+    "prettier": "^3.9.1",
+    "ts-jest": "^29.4.11",
+    "typescript-eslint": "^8.62.0"
   },
   "peerDependencies": {
     "typescript": "^5.9.3"
   },
   "dependencies": {
-    "@opentui/core": "^0.1.79",
+    "@opentui/core": "^0.4.2",
     "bcrypt": "^6.0.0",
     "socket.io-client": "^4.8.3",
-    "yaml": "^2.8.2"
+    "yaml": "^2.9.0"
   },
   "engines": {
     "bun": ">=1.0"
