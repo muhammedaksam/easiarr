@@ -30,6 +30,7 @@ import { APPS } from "~/apps/registry"
 import { saveConfig } from "~/config/manager"
 import { APP_CATEGORIES } from "~/config/schema"
 import { createPageLayout } from "~/ui/components/PageLayout"
+import { readEnv } from "~/utils/env"
 
 // Default monitoring options
 const DEFAULT_CHECKS: MonitorOptions = {
@@ -636,7 +637,6 @@ export class MonitorDashboard extends BoxRenderable {
     if (!selectedApp) return
 
     // Read API key from env file
-    const { readEnv } = await import("~/utils/env")
     const env = await readEnv()
     const apiKey = env[`API_KEY_${selectedApp.id.toUpperCase()}`]
 
