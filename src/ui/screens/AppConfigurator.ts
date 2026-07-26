@@ -268,12 +268,10 @@ export class AppConfigurator extends BoxRenderable {
     // Clear content and rebuild
     const contentChildren = [...this.contentBox.getChildren()]
     for (const child of contentChildren) {
-      if (child.id) {
-        try {
-          this.contentBox.remove(child.id)
-        } catch {
-          /* ignore */
-        }
+      try {
+        this.contentBox.remove(child)
+      } catch {
+        /* ignore */
       }
     }
 
@@ -527,12 +525,10 @@ export class AppConfigurator extends BoxRenderable {
   private clear() {
     const children = [...this.getChildren()]
     for (const child of children) {
-      if (child.id) {
-        try {
-          this.remove(child.id)
-        } catch {
-          /* ignore */
-        }
+      try {
+        this.remove(child)
+      } catch {
+        /* ignore */
       }
     }
   }
@@ -541,9 +537,9 @@ export class AppConfigurator extends BoxRenderable {
     if (this.keyHandler) {
       this.cliRenderer.keyInput.off("keypress", this.keyHandler)
     }
-    if (this.parent && this.id) {
+    if (this.parent) {
       try {
-        this.parent.remove(this.id)
+        this.parent.remove(this)
       } catch {
         /* ignore */
       }

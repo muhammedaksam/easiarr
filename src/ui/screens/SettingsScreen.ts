@@ -83,7 +83,7 @@ export class SettingsScreen extends BoxRenderable {
 
     const children = this.getChildren()
     for (const child of children) {
-      this.remove(child.id)
+      this.remove(child)
     }
 
     const { container: page, content } = createPageLayout(this.cliRenderer as CliRenderer, {
@@ -627,7 +627,7 @@ export class SettingsScreen extends BoxRenderable {
     }
     const parent = this.parent
     if (parent) {
-      parent.remove(this.id)
+      parent.remove(this)
     }
   }
 }

@@ -278,7 +278,7 @@ export class MonitorDashboard extends BoxRenderable {
 
   private clearPanel(panel: BoxRenderable): void {
     const children = panel.getChildren()
-    children.forEach((c) => panel.remove(c.id))
+    children.forEach((c) => panel.remove(c))
   }
 
   private renderCategoriesPanel(): void {
@@ -870,9 +870,9 @@ export class MonitorDashboard extends BoxRenderable {
   private cleanup(): void {
     this._renderer.keyInput.off("keypress", this.keyHandler)
     // Remove self from parent container
-    if (this.parent && this.id) {
+    if (this.parent) {
       try {
-        this.parent.remove(this.id)
+        this.parent.remove(this)
       } catch {
         /* ignore removal errors */
       }

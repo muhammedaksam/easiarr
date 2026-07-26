@@ -56,7 +56,7 @@ export class AppManager {
     // Clear container
     const children = this.container.getChildren()
     for (const child of children) {
-      this.container.remove(child.id)
+      this.container.remove(child)
     }
 
     const { container: page, content } = createPageLayout(this.renderer as CliRenderer, {
@@ -254,7 +254,7 @@ export class AppManager {
     })
 
     menu.on(SelectRenderableEvents.ITEM_SELECTED, (index) => {
-      this.container.remove("secrets-prompt-overlay")
+      this.container.remove(overlay)
       if (index === 0) {
         // Show SecretsEditor
         const editor = new SecretsEditor(this.renderer as CliRenderer, {
@@ -263,11 +263,11 @@ export class AppManager {
           height: "100%",
           config: this.config,
           onSave: () => {
-            this.container.remove("secrets-editor-overlay")
+            this.container.remove(editor)
             this.app.navigateTo("main")
           },
           onCancel: () => {
-            this.container.remove("secrets-editor-overlay")
+            this.container.remove(editor)
             this.app.navigateTo("main")
           },
         })

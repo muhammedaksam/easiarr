@@ -114,7 +114,7 @@ export class LogsViewer extends BoxRenderable {
   private clearContent(): void {
     const children = [...this.content.getChildren()]
     for (const child of children) {
-      if (child.id) this.content.remove(child.id)
+      this.content.remove(child)
     }
   }
 
@@ -361,7 +361,7 @@ export class LogsViewer extends BoxRenderable {
   private rebuildUI(): void {
     // Remove old page
     if (this.page) {
-      this.remove(this.page.id)
+      this.remove(this.page)
     }
     this.buildUI()
   }
