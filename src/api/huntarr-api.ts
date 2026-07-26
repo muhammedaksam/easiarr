@@ -6,6 +6,7 @@
 
 import type { AutoSetupOptions, AutoSetupResult, IAutoSetupClient } from "./auto-setup-types"
 import type { AppConfig } from "~/config/schema"
+import { getApp } from "~/apps/registry"
 import { BaseApiClient } from "./base-api"
 
 interface HuntarrVersion {
@@ -327,8 +328,6 @@ export class HuntarrClient extends BaseApiClient implements IAutoSetupClient {
 
       const version = await this.getVersion()
 
-      const { getApp } = await import("../apps/registry")
-
       for (const appType of HUNTARR_APP_TYPES) {
         const apiKeyEnvName = `API_KEY_${appType.toUpperCase()}`
         const apiKey = env[apiKeyEnvName]
@@ -385,7 +384,6 @@ export class HuntarrClient extends BaseApiClient implements IAutoSetupClient {
     results: Array<{ app: string; success: boolean; message?: string }>
   }> {
     const results: Array<{ app: string; success: boolean; message?: string }> = []
-    const { getApp } = await import("../apps/registry")
 
     for (const appConfig of apps) {
       if (!appConfig.enabled) continue

@@ -30,6 +30,7 @@ import { APPS } from "~/apps/registry"
 import { saveConfig } from "~/config/manager"
 import { APP_CATEGORIES } from "~/config/schema"
 import { createPageLayout } from "~/ui/components/PageLayout"
+import { readEnv } from "~/utils/env"
 
 // Default monitoring options
 const DEFAULT_CHECKS: MonitorOptions = {
@@ -277,7 +278,7 @@ export class MonitorDashboard extends BoxRenderable {
 
   private clearPanel(panel: BoxRenderable): void {
     const children = panel.getChildren()
-    children.forEach((c) => panel.remove(c.id))
+    children.forEach((c) => panel.remove(c))
   }
 
   private renderCategoriesPanel(): void {
@@ -636,7 +637,6 @@ export class MonitorDashboard extends BoxRenderable {
     if (!selectedApp) return
 
     // Read API key from env file
-    const { readEnv } = await import("~/utils/env")
     const env = await readEnv()
     const apiKey = env[`API_KEY_${selectedApp.id.toUpperCase()}`]
 
@@ -870,9 +870,9 @@ export class MonitorDashboard extends BoxRenderable {
   private cleanup(): void {
     this._renderer.keyInput.off("keypress", this.keyHandler)
     // Remove self from parent container
-    if (this.parent && this.id) {
+    if (this.parent) {
       try {
-        this.parent.remove(this.id)
+        this.parent.remove(this)
       } catch {
         /* ignore removal errors */
       }

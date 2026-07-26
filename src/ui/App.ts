@@ -73,7 +73,7 @@ export class App {
     // Clear all children from container
     const children = this.screenContainer.getChildren()
     for (const child of children) {
-      this.screenContainer.remove(child.id)
+      this.screenContainer.remove(child)
     }
 
     switch (screen) {

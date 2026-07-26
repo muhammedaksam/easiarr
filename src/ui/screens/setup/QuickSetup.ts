@@ -81,7 +81,7 @@ export class QuickSetup {
     // Clear all children from container
     const children = this.container.getChildren()
     for (const child of children) {
-      this.container.remove(child.id)
+      this.container.remove(child)
     }
 
     switch (this.step) {
@@ -264,7 +264,7 @@ export class QuickSetup {
     // Clear all children from container
     const children = this.container.getChildren()
     for (const child of children) {
-      this.container.remove(child.id)
+      this.container.remove(child)
     }
 
     const { container: page, content } = createPageLayout(this.renderer, {

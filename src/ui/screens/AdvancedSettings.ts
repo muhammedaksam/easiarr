@@ -55,7 +55,7 @@ export class AdvancedSettings {
     }
     const children = this.container.getChildren()
     for (const child of children) {
-      this.container.remove(child.id)
+      this.container.remove(child)
     }
   }
 

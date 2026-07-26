@@ -158,7 +158,7 @@ export class ApplicationSelector extends BoxRenderable {
   private updateWarnings() {
     // Clear existing
     const children = this.warningBox.getChildren()
-    children.forEach((c) => this.warningBox.remove(c.id))
+    children.forEach((c) => this.warningBox.remove(c))
 
     const warnings = this.getConflictWarnings()
 

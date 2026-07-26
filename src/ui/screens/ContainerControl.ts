@@ -175,7 +175,7 @@ export class ContainerControl {
   private clearPanel(panel: BoxRenderable): void {
     const children = [...panel.getChildren()]
     for (const child of children) {
-      if (child.id) panel.remove(child.id)
+      panel.remove(child)
     }
   }
 

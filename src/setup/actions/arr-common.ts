@@ -66,6 +66,7 @@ export async function setupArrRootFolders(ctx: SetupContext): Promise<SetupResul
       if (existing.length === 0) {
         const options: AddRootFolderOptions = { path: def.rootFolder.path }
         if (app.id === "lidarr") options.name = "Music"
+        if (app.id === "readarr") options.name = "Books"
         await client.addRootFolder(options)
         configured++
       }

@@ -385,12 +385,10 @@ export class ApiKeyViewer extends BoxRenderable {
   public destroy() {
     this.cliRenderer.keyInput.off("keypress", this.keyHandler)
     if (this.parent) {
-      if (this.id) {
-        try {
-          this.parent.remove(this.id)
-        } catch {
-          /* ignore */
-        }
+      try {
+        this.parent.remove(this)
+      } catch {
+        /* ignore */
       }
     }
   }
