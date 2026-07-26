@@ -160,10 +160,31 @@ export class ArrApiClient {
   }
 
   async addRootFolder(pathOrOptions: string | AddRootFolderOptions): Promise<RootFolder> {
-    const body = typeof pathOrOptions === "string" ? { path: pathOrOptions } : pathOrOptions
+    const options: AddRootFolderOptions =
+      typeof pathOrOptions === "string" ? { path: pathOrOptions } : { ...pathOrOptions }
+
+    if (!options.name) {
+      const folderName = options.path.split("/").filter(Boolean).pop() || "Media"
+      options.name = folderName.charAt(0).toUpperCase() + folderName.slice(1)
+    }
+
+    if (!options.defaultQualityProfileId) {
+      const qProfiles = await this.getQualityProfiles()
+      if (qProfiles.length > 0) {
+        options.defaultQualityProfileId = qProfiles[0].id
+      }
+    }
+
+    if (!options.defaultMetadataProfileId) {
+      const mProfiles = await this.getMetadataProfiles()
+      if (mProfiles.length > 0) {
+        options.defaultMetadataProfileId = mProfiles[0].id
+      }
+    }
+
     return this.request<RootFolder>("/rootfolder", {
       method: "POST",
-      body: JSON.stringify(body),
+      body: JSON.stringify(options),
     })
   }
 

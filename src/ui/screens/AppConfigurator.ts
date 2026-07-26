@@ -5,7 +5,12 @@
 
 import { BoxRenderable, CliRenderer, KeyEvent, TextRenderable } from "@opentui/core"
 
-import { ArrApiClient, createQBittorrentConfig, createSABnzbdConfig } from "~/api/arr-api"
+import {
+  AddRootFolderOptions,
+  ArrApiClient,
+  createQBittorrentConfig,
+  createSABnzbdConfig,
+} from "~/api/arr-api"
 import { QBittorrentClient } from "~/api/qbittorrent-api"
 import { getApp } from "~/apps/registry"
 import { AppId, EasiarrConfig } from "~/config/schema"
@@ -203,7 +208,8 @@ export class AppConfigurator extends BoxRenderable {
     try {
       const appConfig = this.config.apps.find((a) => a.id === appId)
       const port = appConfig?.port ?? appDef.defaultPort
-      const client = new ArrApiClient(appId, port, apiKey)
+      const apiVersion = appDef.rootFolder?.apiVersion || "v3"
+      const client = new ArrApiClient("localhost", port, apiKey, apiVersion)
 
       // Check current root folder
       const rootFolders = await client.getRootFolders()
@@ -219,7 +225,10 @@ export class AppConfigurator extends BoxRenderable {
 
       // Add root folder if missing
       if (!hasCorrectRoot && targetPath) {
-        await client.addRootFolder(targetPath)
+        const options: AddRootFolderOptions = { path: targetPath }
+        if (appId === "lidarr") options.name = "Music"
+        if (appId === "readarr") options.name = "Books"
+        await client.addRootFolder(options)
       }
 
       result.status = "success"
