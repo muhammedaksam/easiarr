@@ -5,7 +5,12 @@
 
 import { BoxRenderable, CliRenderer, KeyEvent, TextRenderable } from "@opentui/core"
 
-import { AddRootFolderOptions, ArrApiClient, createQBittorrentConfig, createSABnzbdConfig } from "~/api/arr-api"
+import {
+  AddRootFolderOptions,
+  ArrApiClient,
+  createQBittorrentConfig,
+  createSABnzbdConfig,
+} from "~/api/arr-api"
 import { QBittorrentClient } from "~/api/qbittorrent-api"
 import { getApp } from "~/apps/registry"
 import { AppId, EasiarrConfig } from "~/config/schema"
