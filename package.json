@@ -56,20 +56,20 @@
     "@types/bcrypt": "^6.0.0",
     "@types/bun": "latest",
     "@types/jest": "^30.0.0",
-    "@types/node": "^26.0.1",
-    "eslint": "^10.6.0",
+    "@types/node": "^26.1.1",
+    "eslint": "^10.8.0",
     "eslint-plugin-import": "^2.32.0",
     "jest": "^30.4.2",
     "jiti": "^2.7.0",
-    "prettier": "^3.9.1",
-    "ts-jest": "^29.4.11",
-    "typescript-eslint": "^8.62.0"
+    "prettier": "^3.9.6",
+    "ts-jest": "^29.4.12",
+    "typescript-eslint": "^8.65.0"
   },
   "peerDependencies": {
     "typescript": "^5.9.3"
   },
   "dependencies": {
-    "@opentui/core": "^0.4.2",
+    "@opentui/core": "^0.4.5",
     "bcrypt": "^6.0.0",
     "socket.io-client": "^4.8.3",
     "yaml": "^2.9.0"
