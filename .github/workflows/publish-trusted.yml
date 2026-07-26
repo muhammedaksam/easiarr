@@ -47,4 +47,4 @@ jobs:
 
       # Publish using OIDC authentication (no NPM_TOKEN needed)
       - name: Publish to npm
-        run: npm publish --access public --no-git-checks
+        run: npm publish --access public
