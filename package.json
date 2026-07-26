@@ -1,6 +1,6 @@
 {
   "name": "@muhammedaksam/easiarr",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "description": "TUI tool for generating docker-compose files for the *arr media ecosystem with 41 apps, TRaSH Guides best practices, VPN routing, and Traefik reverse proxy support",
   "module": "dist/index.js",
   "type": "module",
